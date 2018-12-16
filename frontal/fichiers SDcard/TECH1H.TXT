@@ -1,0 +1,2 @@
+" size="1" maxlength="4"  /> sec<br></p></form>
+<form method="get" ><p><label for="per_date">heure per.</label> : <input type="text" name="per_date__" id="per_date" value="

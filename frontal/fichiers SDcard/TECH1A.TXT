@@ -1,0 +1,4 @@
+<a href=page.html?reset_____: target=_self>reset</a>  <br><br>
+<a href=page.html?stop_wr___: target=_self>start/stop write</a>  <br>
+<a href=page.html?sd_da_seul: target=_self>data_save seul</a>  <br>
+<a href=page.html?dump_sd___: target=_self>dump SDcard</a> (
