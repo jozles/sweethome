@@ -53,7 +53,7 @@ WiFiClient cliext;              // client externe du serveur local
   int   periMess;           // diag de réception de message
 
   char* fonctions={"set_______ack_______etat______reset_____sleep_____testaoff__testa_on__testboff__testb_on__last_fonc_"};
-  uint8_t fset_______,fack_______,fetat______,freset_____,fsleep_____,ftestAoff__,ftestA_on__;
+  uint8_t fset_______,fack_______,fetat______,freset_____,fsleep_____,ftestaoff__,ftesta_on__,ftestboff__,ftestb_on__;;
   int   nbfonct,fonction;      // la dernière fonction reçue
 
   float temp;
@@ -109,78 +109,6 @@ void  readTemp();
 void  ordreExt();
 void  swAction();
 
-#ifdef _SERVER_MODE
-void ordreExt()
-{
-  cliext = server.available();
-
-  if (cliext) {
-    Serial.println("\nCliext");
-    String input = "";                    // buffer ligne
-    headerHttp = "";                      // buffer en-tête
-    while (cliext.connected()) {
-      if (cliext.available()) {
-        char c = cliext.read();
-        headerHttp+=c;                    //remplissage en-tête
-        Serial.write(c);
-        if (c == '\n') {                  // LF fin de ligne
-            if (input.length() == 0) {    // si ligne vide fin de requête
-              //Serial.println("\n 2 fois LF fin de la requête HTTP");
-              break;                      // sortie boucle while
-            }
-            else {input = "";}            // si 1 LF vidage buffer ligne pour recevoir la ligne suivante
-        }
-        else if(c != '\r'){input+=c;}   // remplissage ligne
-      }
-    }
-    // headerHttp contient la totalité de l'en-tête 
-    //
-    // format message "GET /FFFFFFFFFF=nnnn....CC" FFFFFFFFFF instruction (ETAT___, SET____ etc)
-    //                                             nnnn nombre de car décimal zéros à gauche 
-    //                                             .... éventuels arguments de la fonction
-    //                                             CC crc
-    int v0=headerHttp.indexOf("GET /");
-    char nom[LENNOM+1];
-    if(v0>=0){                            // si commande GET trouvée, décodage nom fonction 
-        memcpy(nom,&headerHttp[0]+v0+5,LENNOM);nom[LENNOM]='\0';
-        fonction=(strstr(fonctions,nom)-fonctions)/LENNOM;
-    }
-    Serial.print("reçu message fonction=");Serial.println(fonction);
-    // si fonction trouvée, check data puis action selon 
-    
-    if(fonction<nbfonct && fonction >=0){
-      int jj=4,ii=convStrToNum(&headerHttp[0]+v0+5+10+1,&jj);
-      Serial.print("len=");Serial.print(ii);
-      headerHttp[v0+5+10+1+ii+2]=0x00;                             // place une fin
-      Serial.print(" ");Serial.println(headerHttp+v0);
-    }
-    if(checkData(&headerHttp[v0+5+10+1])==MESSOK){
-      switch(fonction){
-            case 0:break;                      // set (à traiter)
-            case 1:break;                      // ack ne devrait pas se produire (page html seulement)
-            case 2: cstRec.talkStep=1;break;   // etat -> dataread/save   http://192.168.0.6:80/etat______=0006AB8B
-            case 3:break;                      // sleep (future use)
-            case 4:break;                      // reset (future use)
-            case 5:digitalWrite(PINSWA,CLOSA);break; // test off A        http://192.168.0.6:80/testaoff__=0006AB8B
-            case 6:digitalWrite(PINSWA,OPENA);break; // test on  A        http://192.168.0.6:80/testa_on__=0006AB8B
-            case 7:digitalWrite(PINSWB,CLOSB);break; // test off B        http://192.168.0.6:80/testboff__=0006AB8B
-            case 8:digitalWrite(PINSWB,OPENB);break; // test on  B        http://192.168.0.6:80/testb_on__=0006AB8B
-            
-            default:break;
-      }
-      char etat[]="done______=0006AB8B\0";
-      talkClient(etat);
-      Serial.println();
-    }
-    cntreq++;
-    cliext.stop();
-    headerHttp="";
-  }                     // une éventuelle connexion a été traitée
-}
-
-
-#endif def_SERVER_MODE
-
 void debug(int cas){
   if(cntdebug[cas]==0 || cas==1){
     Serial.print("debug");Serial.print(cas);Serial.print(" ");
@@ -219,15 +147,18 @@ void setup()
   if(digitalRead(PINDTA==0) || digitalRead(PININTA)==0 || (digitalRead(PININTA)!=0 && digitalRead(PININTB)!=0)){cntIntA=1;}
 #endif PM==NO_MODE
 
-
   nbfonct=(strstr(fonctions,"last_fonc_")-fonctions)/LENNOM;
   fset_______=(strstr(fonctions,"set_______")-fonctions)/LENNOM;
   fack_______=(strstr(fonctions,"ack_______")-fonctions)/LENNOM;
   fetat______=(strstr(fonctions,"etat______")-fonctions)/LENNOM;
   freset_____=(strstr(fonctions,"reset_____")-fonctions)/LENNOM;
   fsleep_____=(strstr(fonctions,"sleep_____")-fonctions)/LENNOM;  
+  ftestaoff__=(strstr(fonctions,"testaoff__")-fonctions)/LENNOM;
+  ftesta_on__=(strstr(fonctions,"testa_on__")-fonctions)/LENNOM;
+  ftestboff__=(strstr(fonctions,"testboff__")-fonctions)/LENNOM;  
+  ftestb_on__=(strstr(fonctions,"testb_on__")-fonctions)/LENNOM;
 
-
+  delay(2000);
   Serial.begin(115200);
 
   delay(100);
@@ -325,13 +256,17 @@ void loop(){        //=============================================
     readTemp();
     
 #if  POWER_MODE!=NO_MODE
-  while(cstRec.talkStep!=0){talkServer();yield();}
+  
+  while(cstRec.talkStep!=0){
+    Serial.print("   talkStep=");Serial.println(cstRec.talkStep);
+    yield();talkServer();}
 
 /* sauvegarde variables permanentes avant sleep ou power off */
   writeConstant();
 
-  Serial.print("durée ");Serial.print(millis());Serial.print(" - ");Serial.print(dateon);Serial.print(" = ");
-  Serial.println(millis()-dateon);
+  Serial.print("durée ");Serial.print(millis());Serial.print(" - ");
+  Serial.print(dateon);Serial.print(" = ");Serial.print(millis()-dateon);
+  Serial.print("   talkStep=");Serial.println(cstRec.talkStep);
   delay(10); // purge serial
 
 
@@ -488,6 +423,75 @@ switch(cstRec.talkStep){
 }
 
 #ifdef _SERVER_MODE
+
+void ordreExt()
+{
+  cliext = server.available();
+
+  if (cliext) {
+    Serial.println("\nCliext");
+    String input = "";                    // buffer ligne
+    headerHttp = "";                      // buffer en-tête
+    while (cliext.connected()) {
+      if (cliext.available()) {
+        char c = cliext.read();
+        headerHttp+=c;                    //remplissage en-tête
+        Serial.write(c);
+        if (c == '\n') {                  // LF fin de ligne
+            if (input.length() == 0) {    // si ligne vide fin de requête
+              //Serial.println("\n 2 fois LF fin de la requête HTTP");
+              break;                      // sortie boucle while
+            }
+            else {input = "";}            // si 1 LF vidage buffer ligne pour recevoir la ligne suivante
+        }
+        else if(c != '\r'){input+=c;}   // remplissage ligne
+      }
+    }
+    // headerHttp contient la totalité de l'en-tête 
+    //
+    // format message "GET /FFFFFFFFFF=nnnn....CC" FFFFFFFFFF instruction (ETAT___, SET____ etc)
+    //                                             nnnn nombre de car décimal zéros à gauche 
+    //                                             .... éventuels arguments de la fonction
+    //                                             CC crc
+    int v0=headerHttp.indexOf("GET /");
+    char nom[LENNOM+1];
+    if(v0>=0){                            // si commande GET trouvée, décodage nom fonction 
+        memcpy(nom,&headerHttp[0]+v0+5,LENNOM);nom[LENNOM]='\0';
+        fonction=(strstr(fonctions,nom)-fonctions)/LENNOM;
+    }
+    Serial.print("reçu message fonction=");Serial.println(fonction);
+    // si fonction trouvée, check data puis action selon 
+    
+    if(fonction<nbfonct && fonction >=0){
+      int jj=4,ii=convStrToNum(&headerHttp[0]+v0+5+10+1,&jj);
+      Serial.print("len=");Serial.print(ii);
+      headerHttp[v0+5+10+1+ii+2]=0x00;                             // place une fin
+      Serial.print(" ");Serial.println(headerHttp+v0);
+    }
+    if(checkData(&headerHttp[v0+5+10+1])==MESSOK){
+      switch(fonction){
+            case 0:break;                      // set (à traiter)
+            case 1:break;                      // ack ne devrait pas se produire (page html seulement)
+            case 2: cstRec.talkStep=1;break;   // etat -> dataread/save   http://192.168.0.6:80/etat______=0006AB8B
+            case 3:break;                      // sleep (future use)
+            case 4:break;                      // reset (future use)
+            case 5:digitalWrite(PINSWA,CLOSA);break; // test off A        http://192.168.0.6:80/testaoff__=0006AB8B
+            case 6:digitalWrite(PINSWA,OPENA);break; // test on  A        http://192.168.0.6:80/testa_on__=0006AB8B
+            case 7:digitalWrite(PINSWB,CLOSB);break; // test off B        http://192.168.0.6:80/testboff__=0006AB8B
+            case 8:digitalWrite(PINSWB,OPENB);break; // test on  B        http://192.168.0.6:80/testb_on__=0006AB8B
+            
+            default:break;
+      }
+      char etat[]="done______=0006AB8B\0";
+      talkClient(etat);
+      Serial.println();
+    }
+    cntreq++;
+    cliext.stop();
+    headerHttp="";
+  }                     // une éventuelle connexion a été traitée
+}
+
 void talkClient(char* etat) // réponse à une requête
 {
             /* en-tête réponse HTTP */
@@ -501,7 +505,7 @@ void talkClient(char* etat) // réponse à une requête
             cliext.print(etat);Serial.print(etat);
             cliext.println("</body></html>");
 }
-#endif _SERVER_MODE
+#endif def_SERVER_MODE
 
 //***************** utilitaires
 
@@ -690,8 +694,10 @@ void readTemp()
 
 #if POWER_MODE==PO_MODE
       long ms=millis();           // attente éventuelle de la fin de la conversion initiée à l'allumage
-      Serial.print("debConv=");Serial.print(debConv);Serial.print(" millis()=");Serial.print(ms);Serial.print(" Tconversion=");Serial.println(TCONVERSION);
-      if((ms-debConv)<TCONVERSION){delay(TCONVERSION-(ms-debConv));}
+      Serial.print("debConv=");Serial.print(debConv);Serial.print(" millis()=");Serial.print(ms);
+      Serial.print(" Tconversion=");Serial.print(TCONVERSION);Serial.print(" delay=");Serial.println(TCONVERSION-(ms-debConv));
+      if((ms-debConv)<TCONVERSION){
+        delay(TCONVERSION-(ms-debConv));}
 #endif PM==PO_MODE
 
       temp=ds1820.readDs(WPIN);
@@ -722,5 +728,5 @@ void readTemp()
 #if POWER_MODE==NO_MODE
     }   // test boucle tempTime
 #endif PM==NO_MODE
-  }
+  }     // talkStep
 }
