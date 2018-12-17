@@ -23,7 +23,8 @@
  * 1.9 normalisation du format de communication
  *     automate pour talkServer
  * 1.a paramètres pour switchs, pulse etc ; 3 modes pour l'alim : DS PO NO    
- *     (à tester) réception commande (ordreExt)
+ *     réception commandes (ordreExt) opérationnelle (cdes testa_on__ testb_on__ testaoff__ testboff__)
+ *     config hardware selon carte.
  *  
 Modifier : 
   
@@ -83,10 +84,10 @@ Modifier :
 
 #define POWER_MODE NO_MODE            // <------------- mode compil 
 
-#if POWER_MODE!=DS_MODE
+#if POWER_MODE==NO_MODE
   #define _SERVER_MODE
   /* Mode server */
-#endif PM!=DS_MODE
+#endif PM==NO_MODE
 
 // stockage deep sleep / power off  (EEPROM pour PO_MODE seul )
 
