@@ -382,7 +382,7 @@ Serial.print("début péritable ; remote_IP ");serialPrintIp(remote_IP_cur);Seri
                       xradioTableHtml(cli,*periIntVal,"peri_intv\0",2,*periIntNb,3);
                       numTableHtml(cli,'b',periDetNb,"peri_detnb",1,1);
                       cli->print("<td>");
-                      for(uint8_t k=0;k<*periDetNb;k++){char oi[2]={'O','I'};byte b=*periDetVal; b=b >> k*2;b&=0x01;cli->print(oi[b]);if(k<*periDetNb-2){cli->print("<br>");}}
+                      for(uint8_t k=0;k<*periDetNb;k++){char oi[2]={'O','I'};byte b=*periDetVal; b=b >> k*2;b&=0x01;cli->print(oi[b]);if(k<*periDetNb-1){cli->print("<br>");}}
                       cli->println("</td>");
                       cli->print("<td><input type=\"text\" name=\"peri_mac__\" value=\"");for(int k=0;k<6;k++){cli->print(chexa[periMacr[k]/16]);cli->print(chexa[periMacr[k]%16]);}
                          ;cli->println("\" size=\"11\" maxlength=\"12\" ><br><br>");

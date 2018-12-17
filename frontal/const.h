@@ -20,13 +20,13 @@
  *      ntp cassé
  * 1.1f restructuration communications (dataread/save;set;ack)      
  *      shmess reçoit assySet, inpSet (à venir assyRead/Save inpRead/Save)
- * 1.1g suppression accueil et fonctions associées      
+ * 1.1g suppression accueil et fonctions associées, mise en place perisend(cliext)      
  *     
  *      
  * à faire :
  *     
  *      créer une table mac/ip/date-heure des password valides (qui ont donné un mot de passe ok) et effacer après un délai d'inutilisation
- *      revoir complètement l'accueil
+ *      dédoubler cli (cli, cliper) pour traiter séparément l'accès navigateur et l'accès périf.
  */
 
 #define DS3231_I2C_ADDRESS 0x68         // adresse 3231 sur bus I2C
