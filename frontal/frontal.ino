@@ -64,7 +64,7 @@ extern "C" {
 
   int8_t  numfonct[NBVAL];             // les fonctions trouvées 
   char*   fonctions="per_temp__start_wr__peri_pass_dump_sd___dispo_____done______per_refr__stop_refr_per_date__reset_____password__sd_pos____data_save_data_read_peri_parm_peri_cur__peri_refr_peri_nom__peri_mac__acceuil___peri_tableperi_prog_peri_sondeperi_pitchperi_pmo__peri_detnbperi_intnbperi_intv0peri_intv1peri_intv2peri_intv3peri_dispoperi_dispoperi_imn__peri_imc__peri_pon__peri_pof__peri_imd__last_fonc_";  //};
-  int     nbfonct=0,facceuil=0,fdatasave=0,fperiIntVal=0,fperiDetSs=0;         // nombre fonctions, valeur pour acceuil, data_save_ et fonctions quadruples
+  int     nbfonct=0,facceuil=0,fdatasave=0,fperiIntVal=0,fperiDetSs=0,fdone=0;         // nombre fonctions, valeur pour acceuil, data_save_ et fonctions quadruples
   char    valeurs[LENVALEURS];         // les valeurs associées à chaque fonction trouvée
   uint16_t nvalf[NBVAL];               // offset dans valeurs[] des valeurs trouvées (séparées par '\0')
   char*   valf;                        // pointeur dans valeurs en cours de décodage
@@ -231,6 +231,7 @@ void setup() {                              // =================================
   facceuil=(strstr(fonctions,"accueil___")-fonctions)/LENNOM;
   fdatasave=(strstr(fonctions,"data_save_")-fonctions)/LENNOM;
   fperiIntVal=(strstr(fonctions,"peri_intv0")-fonctions)/LENNOM;
+  fdone=(strstr(fonctions,"done______")-fonctions)/LENNOM;
     
   periInit();
   passok=FAUX;
@@ -318,7 +319,7 @@ void setup() {                              // =================================
   sdstore_textdh(&fhisto,".3","RE","<br>\n ");
 
   Serial.println("fin setup");
-
+/*
    while(1){
             Serial.println("\ntest appel server perif");
             delay(2000);
@@ -327,8 +328,10 @@ void setup() {                              // =================================
             int z=messToServer(&cliext,perihost,periport,bufServer);
             Serial.println(z);
             uint8_t fonct;
-            periMess=getServerResponse(&cliext,bufServer,LBUFSERVER,&fonct);
-            Serial.println(periMess);
+            if(z==MESSOK){
+              periMess=getServerResponse(&cliext,bufServer,LBUFSERVER,&fonct);
+              Serial.println(periMess);
+            }
             purgeServer(&cliext);
             
             delay(2000);
@@ -336,11 +339,13 @@ void setup() {                              // =================================
             memcpy(bufServer,"GET /testboff__=0006AB8B",24);
             z=messToServer(&cliext,perihost,periport,bufServer);
             Serial.println(z);
-            periMess=getServerResponse(&cliext,bufServer,LBUFSERVER,&fonct);
-            Serial.println(periMess);
+            if(z==MESSOK){
+              periMess=getServerResponse(&cliext,bufServer,LBUFSERVER,&fonct);
+              Serial.println(periMess);
+            }
             purgeServer(&cliext);
-            
    }
+*/   
 }
 
 /*=================== fin setup ============================ */
@@ -687,7 +692,7 @@ int periParamsHtml(EthernetClient* cli,char* host,int port)
             memcpy(bufServer,"GET /\0",6);
             zz=messToServer(cli,host,port,bufServer);
             Serial.println(zz);
-            if(zz==MESSOK}{
+            if(zz==MESSOK){
               uint8_t fonct;
               zz=periMess=getServerResponse(&cliext,bufServer,LBUFSERVER,&fonct);
               if(zz==MESSOK && fonct!=fdone){zz=MESSFON;}
