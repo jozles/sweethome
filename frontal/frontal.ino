@@ -39,8 +39,6 @@ extern "C" {
   EthernetClient cli;               // client du serveur local
   #define TO_SERV 600 // sec
   EthernetClient cliext;            // client de serveur externe  
-  const char* perihost = "192.168.0.6";
-  const int   periport = 80;
 
 
 #ifdef _MODE_DEVT
@@ -63,7 +61,7 @@ extern "C" {
   int     chge_pwd=FAUX;               // interdit le chargement du mot de passe si pas d'affichage de la page de saisie         
 
   int8_t  numfonct[NBVAL];             // les fonctions trouvées 
-  char*   fonctions="per_temp__start_wr__peri_pass_dump_sd___dispo_____done______per_refr__stop_refr_per_date__reset_____password__sd_pos____data_save_data_read_peri_parm_peri_cur__peri_refr_peri_nom__peri_mac__acceuil___peri_tableperi_prog_peri_sondeperi_pitchperi_pmo__peri_detnbperi_intnbperi_intv0peri_intv1peri_intv2peri_intv3peri_dispoperi_dispoperi_imn__peri_imc__peri_pon__peri_pof__peri_imd__last_fonc_";  //};
+  char*   fonctions="per_temp__start_wr__peri_pass_dump_sd___test2sw___done______per_refr__stop_refr_per_date__reset_____password__sd_pos____data_save_data_read_peri_parm_peri_cur__peri_refr_peri_nom__peri_mac__acceuil___peri_tableperi_prog_peri_sondeperi_pitchperi_pmo__peri_detnbperi_intnbperi_intv0peri_intv1peri_intv2peri_intv3peri_dispoperi_dispoperi_imn__peri_imc__peri_pon__peri_pof__peri_imd__last_fonc_";  //};
   int     nbfonct=0,facceuil=0,fdatasave=0,fperiIntVal=0,fperiDetSs=0,fdone=0;         // nombre fonctions, valeur pour acceuil, data_save_ et fonctions quadruples
   char    valeurs[LENVALEURS];         // les valeurs associées à chaque fonction trouvée
   uint16_t nvalf[NBVAL];               // offset dans valeurs[] des valeurs trouvées (séparées par '\0')
@@ -131,6 +129,7 @@ extern "C" {
   byte*     periBegOfRecord;
   byte*     periEndOfRecord;
 
+  byte      lastIpAddr[4]; 
 
   // alimentation DS3231
 #define PINVCCDS 19   // alim + DS3231
@@ -212,7 +211,7 @@ int  periParamsHtml(EthernetClient* cli,char* host,int port);
 void periDataRead();
 void packVal2(byte* value,byte* val);
 void frecupptr(char* nomfonct,uint8_t* v,uint8_t* b,uint8_t lenpersw);
-//void testPageHtml();
+void test2Switchs();
 
 
 void setup() {                              // ====================================
@@ -320,32 +319,9 @@ void setup() {                              // =================================
 
   Serial.println("fin setup");
 /*
-   while(1){
-            Serial.println("\ntest appel server perif");
-            delay(2000);
-            memset(bufServer,'\0',32);
-            memcpy(bufServer,"GET /testb_on__=0006AB8B",24);
-            int z=messToServer(&cliext,perihost,periport,bufServer);
-            Serial.println(z);
-            uint8_t fonct;
-            if(z==MESSOK){
-              periMess=getServerResponse(&cliext,bufServer,LBUFSERVER,&fonct);
-              Serial.println(periMess);
-            }
-            purgeServer(&cliext);
-            
-            delay(2000);
-            memset(bufServer,'\0',32);
-            memcpy(bufServer,"GET /testboff__=0006AB8B",24);
-            z=messToServer(&cliext,perihost,periport,bufServer);
-            Serial.println(z);
-            if(z==MESSOK){
-              periMess=getServerResponse(&cliext,bufServer,LBUFSERVER,&fonct);
-              Serial.println(periMess);
-            }
-            purgeServer(&cliext);
-   }
-*/ 
+  lastIpAddr[0]=192;lastIpAddr[1]=168;lastIpAddr[2]=0;lastIpAddr[3]=7;
+  while(1){test2Switchs();}
+ */
 }
 
 /*=================== fin setup ============================ */
@@ -468,8 +444,8 @@ void loop()                             // =====================================
                         password[j]=valeurs[i*LENVAL+j+5];if(pass[j]==0){j=LENVAL;}else if(password[j]!=pass[j]){passok=FAUX;}}
                         if(passok==FAUX){sdstore_textdh(&fhisto,"pw","ko",strSD);}
                         }break;
-              case 3: dumpsd();break;
-              case 4: break;                                                                                // dispo
+              case 3: Serial.println("============================= *******************");dumpsd();break;
+              case 4: Serial.println("============================= *******************");test2Switchs();break;                                                                      // test2sw
               case 5: break;                                                                                // done
               case 6: perrefr=0;conv_atob(valf,(int16_t*)&perrefr);break;
               case 7: break;
@@ -601,8 +577,7 @@ void periDataRead()             // traitement d'une chaine "dataSave" ou "dataRe
                                 // charge la valeur reçue (valf+2+1+41+1) dans periRec (periIntVal)
                                 // charge la valeur reçue (valf+2+1+43+1) dans periRec (periDetVal)
                                 // charge l'addr IP du périphérique dans periRec (periIpAddr)
-                                // prépare les variables pour la réponse (set) à data_read_ ou data_save_ 
-                                // assemblée par periParamsHtml()
+                               
 {
   int i=0;
   char* k;
@@ -632,6 +607,7 @@ void periDataRead()             // traitement d'une chaine "dataSave" ou "dataRe
   }                     // si pas trouvé place libre periCur=i=0 
   if(periCur!=0){
     Serial.println("place libre ou Mac connu");
+   
     strncpy((char*)periMacr,(char*)periMacBuf,6);//Serial.print("periMacr avt save=");serialPrintMac(periMacr);
     k=valf+2+1+17+1;*periLastVal=convStrToNum(k,&i);        // température si save
     k+=i;convStrToNum(k,&i);                                // age si save
@@ -649,31 +625,32 @@ void periDataRead()             // traitement d'une chaine "dataSave" ou "dataRe
   }
 }
 
-void periSend()                 // configure periParamsHtml pour envoyer un set_______ à un périf serveur
+void periSend()                 // configure periParamsHtml pour envoyer un set_______ à un périph serveur
 {
   char ipaddr[16];memset(ipaddr,'\0',16);
   charIp(periIpAddr,ipaddr);
-  if(periParamsHtml(&cliext,perihost,periport)==MESSOK){
-    char date14[14];alphaNow(date14);packDate(periLastDateIn,date14+2);  
+  if(periParamsHtml(&cliext,ipaddr,80)==MESSOK){
+    char date14[14];alphaNow(date14);packDate(periLastDateIn,date14+2);
   }
 }
 
 int periParamsHtml(EthernetClient* cli,char* host,int port)        
-                   // status retour de messToServer ou getServerResponse ou fonct invalide
+                   // status retour de messToServer ou getHttpResponse ou fonct invalide
                    // (doit être done___)
                    // periCur est à jour (0 ou n) et periMess contient le diag du dataread/save reçu
                    // un message de paramètres pour périph ; 
                    // soit encapsulé dans <body>...</body></html>\n\r en réponse à dataread/save etc
-                   // soit envoyé à un serveur via GET (dans ce cas port != 0)
-{                  // format fonction__=nnnndatas...cc
-                   // datas NN_mm.mm.mm.mm.mm.mm_AAMMJJHHMMSS_nn..._
+                   // soit envoyé à un périph-serveur via GET (dans ce cas port != 0)
+                   // format nomfonction_=nnnndatas...cc                nnnn len mess ; cc crc
+                   // datas NN_mm.mm.mm.mm.mm.mm_AAMMJJHHMMSS_nn..._    NN numpériph ; mm.mm... mac
+{                   
   char message[LENMESS]={'\0'};
   char nomfonct[LENNOM+1]={'\0'};
   int zz;
   
-  if((periCur!=0) && (what==1) && (port=0)){strcpy(nomfonct,"ack_______");}
+  if((periCur!=0) && (what==1) && (port==0)){strcpy(nomfonct,"ack_______");}    // ack pour datasave (what=1)
   else strcpy(nomfonct,"set_______");
-
+//Serial.print("periCur=");Serial.print(periCur);Serial.print(" what=");Serial.print(what);Serial.print(" port=");Serial.print(port);Serial.print(" nomfonct=");Serial.println(nomfonct);
   char date14[15];alphaNow(date14);
 
   assySet(message,periCur,periDiag(periMess),date14);
@@ -695,7 +672,7 @@ int periParamsHtml(EthernetClient* cli,char* host,int port)
             Serial.println(zz);
             if(zz==MESSOK){
               uint8_t fonct;
-              zz=periMess=getServerResponse(&cliext,bufServer,LBUFSERVER,&fonct);
+              zz=getHttpResponse(&cliext,bufServer,LBUFSERVER,&fonct);
               if(zz==MESSOK && fonct!=fdone){zz=MESSFON;}
               Serial.println(zz);
             }
@@ -942,6 +919,41 @@ void frecupptr(char* libfonct,uint8_t* v,uint8_t* b,uint8_t lenpersw)
    //uint8_t typenb=(*(libfonct+1)-64)%16;      // num bit
    
    *v=((*libfonct-48)*lenpersw+(*(libfonct+1)-MAXSW*16)/16)&0x0f;   // num octet de type
-   *b=(*(libfonct+1)-MAXSW*16)%16;                                // N° de bit dans l'octet de type d'action
-
+   *b=(*(libfonct+1)-MAXSW*16)%16;                                  // N° de bit dans l'octet de type d'action
 }
+
+
+void test2Switchs()
+{
+
+  char ipAddr[16];memset(ipAddr,'\0',16);
+  charIp(lastIpAddr,ipAddr);
+  for(int x=0;x<4;x++){
+Serial.print(x);Serial.print(" test2sw ");Serial.println(ipAddr);
+    testSwitch("GET /testb_on__=0006AB8B",ipAddr,80);
+    delay(1000);
+    testSwitch("GET /testa_on__=0006AB8B",ipAddr,80);
+    delay(1000);
+    testSwitch("GET /testboff__=0006AB8B",ipAddr,80);
+    delay(1000);
+    testSwitch("GET /testaoff__=0006AB8B",ipAddr,80);
+    delay(1000);
+  }
+}
+
+void testSwitch(char* command,char* perihost,int periport)
+{
+            uint8_t fonct;
+            
+            memset(bufServer,'\0',32);
+            memcpy(bufServer,command,24);
+   Serial.print(perihost);Serial.print(" ");Serial.println(bufServer);
+            int z=messToServer(&cliext,perihost,periport,bufServer);
+            Serial.println(z);
+            if(z==MESSOK){
+              periMess=getHttpResponse(&cliext,bufServer,LBUFSERVER,&fonct);
+              Serial.println(periMess);
+            }
+            purgeServer(&cliext);
+}
+

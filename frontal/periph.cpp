@@ -45,6 +45,7 @@ extern byte*     periEndOfRecord;
 extern int8_t    periMess;                     // code diag réception message (voir MESSxxx shconst.h)
 extern byte      periMacBuf[6]; 
 
+extern byte      lastIpAddr[4];
 
 extern char strdate[33];
 extern char temp[3],temp0[3],humid[3];
@@ -206,6 +207,7 @@ int periSave(int num)
   for(i=0;i<PERIRECLEN;i++){fperi.write(periRec[i]);}
   //for(i=0;i<PERIRECLEN+1;i++){fperi.write(periRec[i]);}      // ajouter les longueurs des variables ajoutées avant de modifier PERIRECLEN
   fperi.close();
+  for(int x=0;x<4;x++){lastIpAddr[x]=periIpAddr[x];}
   return SDOK;
 }
 

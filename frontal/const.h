@@ -49,9 +49,6 @@
 #endif _MODE_DEVT
 
 
-
-
-
 #define LENNOM 10   // nbre car nom de fonction
 #define NBVAL 64    // nbre maxi fonct/valeurs pour getnv() --- les noms de fonctions font 10 caractères + 2 séparateurs + la donnée associée = LENVAL
                     // taille macxi pour GET (IE)=2048  ; pour POST plusieurs mega 

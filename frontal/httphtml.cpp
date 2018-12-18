@@ -160,7 +160,7 @@ int dumpsd()                 // liste le fichier de la carte sd
 
 void lnkTableHtml(EthernetClient* cli,char* nomfonct,char* lib)
 {
-  cli->println("<a href=page.html?");cli->print(nomfonct);cli->print(": target=_self>");
+  cli->print("<a href=page.html?");cli->print(nomfonct);cli->print(": target=_self>");
   cli->print(lib);cli->println("</a>");
 }
 
@@ -343,6 +343,7 @@ Serial.print("début péritable ; remote_IP ");serialPrintIp(remote_IP_cur);Seri
           
           lnkTableHtml(cli,"reset_____","reset");
           lnkTableHtml(cli,"peri_table","refresh");
+          lnkTableHtml(cli,"test2sw___","testsw");
 
               numTableHtml(cli,'i',(uint32_t*)&perrefr,"per_refr__",4,0);cli->print("<input type=\"submit\" value=\"ok\">    ");//cli->println("    ");
               lnkTableHtml(cli,"dump_sd___","dump SDcard");
