@@ -100,21 +100,25 @@ int messToServer(WiFiClient* cli,const char* host,const int port,char* data)    
 #endif
 {
   byte crc;
-  int v;
+  int w=0;
+  int v=MESSOK;
+  long beg=millis();
 
     Serial.print("connexion serveur ");
-    Serial.print(host);Serial.print("/");Serial.print(port);
+    Serial.print(host);Serial.print(":");Serial.print(port);
     Serial.print("...");
-    if(!cli->connect(host,port)){
-      Serial.println(" échouée");v=MESSCX;}
-    else{
+    while(!cli->connect(host,port)){
+        delay(100);Serial.print(w++);
+        if((millis()-beg)>TO_HTTPCX){
+            Serial.println(" échouée");
+            v=MESSCX;
+            break;
+        }
+    }
+    if(v==MESSOK){
       Serial.println(" ok");
-
       cli->print(data);
-      //Serial.println(data);
-      cli->print("\r\n");
-      cli->print(" HTTP/1.1\r\n Connection:close\r\n\r\n");
-      v=MESSOK;
+      cli->print("\r\n HTTP/1.1\r\n Connection:close\r\n\r\n");
     }
     return v;
 }

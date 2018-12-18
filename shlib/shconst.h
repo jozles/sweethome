@@ -2,7 +2,7 @@
 #define _SHCONST_H_
 
 
-#define PERIF
+//#define PERIF
 
 #ifdef PERIF
 #define PINLED 0                    //  0 = ESP-12  ; 2 = ESP-01
@@ -53,8 +53,8 @@
 #define SRVPASS "17515A\0"
 #define LENSRVPASS 6
 
-#define TOINCHCLI 4000          // msec max attente car server
-
+#define TOINCHCLI 4000        // msec max attente car server
+#define TO_HTTPCX 4000        // nbre maxi retry connexion serveur
 
 #define SLOWBLINK 2000
 #define FASTBLINK 500
