@@ -87,6 +87,8 @@ enum {OFF,ON};
 #define MESSFULL -5
 #define MESSSYS  -6
 #define MESSCX   -7
+#define MESSNUMP -8
+#define MESSMAC  -9
 
 #define NBMESS   8  // OK ne compte pas
 

@@ -167,13 +167,14 @@ int checkData(char* data)            // controle la structure des données d'un 
 */
   else if(calcCrc(data,ii)!=c){i=MESSCRC;}
   else i=MESSOK;
+
   Serial.print("\nlen/crc calc ");
   Serial.print(strlen(data));Serial.print("/");Serial.print(calcCrc(data,ii),HEX);
-  Serial.print(" Checkdata=");Serial.println(i);
+  Serial.print(" checkData=");Serial.println(i);
   return i;
 }
 
-int subData(char* data,uint8_t* fonction)   // extraction de la fonction et checkData
+int checkHttpData(char* data,uint8_t* fonction)   // checkData et extraction de la fonction
 {
     char noms[LENNOM+1];
     int q=0;
@@ -188,10 +189,10 @@ int subData(char* data,uint8_t* fonction)   // extraction de la fonction et chec
 }
 
 #ifndef PERIF
-int getServerResponse(EthernetClient* cli, char* data,int lmax,uint8_t* fonction)  // attend un message d'un serveur ; ctle longueur et crc
+int getHttpResponse(EthernetClient* cli, char* data,int lmax,uint8_t* fonction)  // attend un message d'un serveur ; ctle longueur et crc
 #endif  PERIF
 #ifdef PERIF
-int getServerResponse(WiFiClient* cli, char* data,int lmax,uint8_t* fonction)      // attend un message d'un serveur ; ctle longueur et crc
+int getHttpResponse(WiFiClient* cli, char* data,int lmax,uint8_t* fonction)      // attend un message d'un serveur ; ctle longueur et crc
 #endif  PERIF
 // format <body>contenu...</body></html>\n\r                        la fonction est décodée et les données sont chargées
 // contenu fonction__=nnnn_datacrc                                  renvoie les codes "MESSxxx"
@@ -204,7 +205,7 @@ int getServerResponse(WiFiClient* cli, char* data,int lmax,uint8_t* fonction)   
   q=waitRefCli(cli,body,strlen(body),bufServer,0);
   if(q==MESSOK){q=waitRefCli(cli,bodyend,strlen(bodyend),data,lmax-strlen(bodyend));}
   if(q==MESSOK){
-    q=subData(data,fonction);
+    q=checkHttpData(data,fonction);
   }
   return q;
 }
