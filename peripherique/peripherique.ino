@@ -297,53 +297,54 @@ void loop() {
 
 // ===============================================================================
 
-void fServer(uint8_t foncwaited,bool rs)            // gestion du message set ou ack du serveur ;
-                                                    //    réceptionne la réponse après data_read ou data_save (rs=VRAI)
-                                                    //    contrôle de la fonction, de la longueur, du crc 
-                                                    //    sinon bufServer est chargé via le serveur du périph (rs=FAUX)
-                                                    //          les contrôles sont déjà effectués
-                                                    //    contrôle mac addr ;
-                                                    //    si pb -> numPeriph="00" et ipAddr=0
-                                                    //    si ok -> tfr params
+void fServer(uint8_t fwaited)          // réception du message réponse du serveur pour DataRead/Save;
+                                       // contrôles et transfert 
+                                       // retour periMess  
+{      
+        periMess=getHttpResponse(&cli,bufServer,LBUFSERVER,&fonction);
+        if(periMess==MESSOK){
+          if(fonction==fwaited){dataTransfer(bufServer);}
+          else {periMess=MESSFON;}
+        }
+}
+
+void dataTransfer(char* data)           // data sur fonction
+                                        // transfert params (ou pas) selon contrôles
+                                        //    contrôle mac addr et numPeriph ;
+                                        //    si pb -> numPeriph="00" et ipAddr=0
+                                        //    si ok -> tfr params
+                                        // retour periMess
 {
-    byte fromServerMac[6];
-    int  ddata=16;                                  // position du numéro de périphérique
-
-        periMess=1;
-        if(rs){periMess=getServerResponse(&cli,bufServer,LBUFSERVER,&fonction);}        
-
-/*      Serial.print("\nperiMess getSreponse =");Serial.print(periMess);Serial.print(" fset=");
-        Serial.print(fset_______);Serial.print(" fonction=");Serial.println();
-        Serial.print(" numper buf=");Serial.println(bufServer+ddata);  */
-        Serial.print("\nperiMess=");Serial.print(periMess);Serial.print(" fonction=");Serial.println(fonction);
-        if(periMess==MESSOK && fonction==foncwaited && memcmp(bufServer+ddata,"00",2)!=0){     // si com ok, fonction ok et un numéro de périph
-                                                                                               // transfert des données reçues
-          packMac(fromServerMac,(char*)(bufServer+ddata+3));      
-          if(compMac(mac,fromServerMac)){             // && foncwaited==fset_______){ 
-                                                      // actuellement qque soit la fonction on traite les params
-                                                      // le serveur a le même format pour ack et set
-                                                      
-            strncpy(cstRec.numPeriph,bufServer+MPOSNUMPER,2);                     // num périph
+  int  ddata=16;                                  // position du numéro de périphérique  
+  byte fromServerMac[6];
+  
+        periMess=MESSOK;
+        packMac(fromServerMac,(char*)(data+ddata+3));
+        if(memcmp(data+ddata,"00",2)==0){periMess=MESSNUMP;}
+        else if(!compMac(mac,fromServerMac)){periMess=MESSMAC;}
+        else {
+                             // si ok transfert des données                                    
+            strncpy(cstRec.numPeriph,data+MPOSNUMPER,2);                     // num périph
             int sizeRead;
-            cstRec.serverPer=(long)convStrToNum(bufServer+MPOSPERREFR,&sizeRead); // per refresh server
-            cstRec.tempPitch=(long)convStrToNum(bufServer+MPOSPITCH,&sizeRead);   // pitch mesure
+            cstRec.serverPer=(long)convStrToNum(data+MPOSPERREFR,&sizeRead); // per refresh server
+            cstRec.tempPitch=(long)convStrToNum(data+MPOSPITCH,&sizeRead);   // pitch mesure
             cstRec.intCde='\0';
             for(int i=0;i<MAXSW;i++){                                             // 1 byte état/cdes serveur + 4 bytes par switch (voir const.h du frontal)
-              cstRec.intCde |= (*(bufServer+MPOSINTCDE+i)-48)<<(2*(i+1)-1);         // bit cde (bits 8,6,4,2)  
-              conv_atoh((bufServer+MPOSINTPAR0+i*9),&cstRec.actCde[i]);
-              conv_atoh((bufServer+MPOSINTPAR0+i*9+2),&cstRec.desCde[i]);
-              conv_atoh((bufServer+MPOSINTPAR0+i*9+4),&cstRec.onCde[i]);
-              conv_atoh((bufServer+MPOSINTPAR0+i*9+6),&cstRec.offCde[i]);
-              cstRec.pulseMode[i]=(*(bufServer+MPOSPULSMOD+i*2)-48)<<4 | (*(bufServer+MPOSPULSMOD+i*2+1)-48)&0x0F;
-              cstRec.intIPulse[i]=(long)convStrToNum(bufServer+MPOSPULSON0+i*9,&sizeRead);  
-              cstRec.intOPulse[i]=(long)convStrToNum(bufServer+MPOSPULSOF0+i*9,&sizeRead);
+              cstRec.intCde |= (*(data+MPOSINTCDE+MAXSW-1-i)-48)<<(2*(i+1)-1);    // bit cde (bits 8,6,4,2)  
+              conv_atoh((data+MPOSINTPAR0+i*9),&cstRec.actCde[i]);
+              conv_atoh((data+MPOSINTPAR0+i*9+2),&cstRec.desCde[i]);
+              conv_atoh((data+MPOSINTPAR0+i*9+4),&cstRec.onCde[i]);
+              conv_atoh((data+MPOSINTPAR0+i*9+6),&cstRec.offCde[i]);
+              cstRec.pulseMode[i]=(*(data+MPOSPULSMOD+i*2)-48)<<4 | (*(data+MPOSPULSMOD+i*2+1)-48)&0x0F;
+              cstRec.intIPulse[i]=(long)convStrToNum(data+MPOSPULSON0+i*9,&sizeRead);  
+              cstRec.intOPulse[i]=(long)convStrToNum(data+MPOSPULSOF0+i*9,&sizeRead);
             }
             printConstant();
-          }
         }
-        else{
+        if(periMess!=MESSOK){
           memcpy(cstRec.numPeriph,"00",2);cstRec.IpLocal=IPAddress(0,0,0,0);
-        }  
+        }
+        Serial.print("dataTransfer() periMess=");Serial.println(periMess);
 }
 
 
@@ -388,9 +389,9 @@ switch(cstRec.talkStep){
         
   case 5:         // gestion réponse au dataRead
   
-        fServer(fset_______,VRAI);  // récupération adr mac, numPériph, tempPer et tempPitch dans bufServer (ctle CRC & adr mac)
-                                             // le num de périph est mis à 0 si la com ne s'est pas bien passée
-        cstRec.talkStep=6;                   // si le numéro de périphérique n'est pas 00 ---> ok (datasave), ctle réponse et maj params
+        fServer(fset_______);  // récupération adr mac, numPériph, tempPer et tempPitch dans bufServer (ctle CRC & adr mac)
+                               // le num de périph est mis à 0 si la com ne s'est pas bien passée
+        cstRec.talkStep=6;     // si le numéro de périphérique n'est pas 00 ---> ok (datasave), ctle réponse et maj params
         writeConstant();
         break;
       
@@ -409,7 +410,7 @@ switch(cstRec.talkStep){
                   // si la réponse est ok -> terminer
                   // sinon recommencer au prochain timing
                   
-       fServer(fack_______,VRAI);
+       fServer(fack_______);
        // le num de périph a été mis à 0 si la com ne s'est pas bien passée
        cstRec.talkStep=9;
        break;  
@@ -466,23 +467,15 @@ void ordreExt()
     //                                             .... éventuels arguments de la fonction
     //                                             CC crc
     int v0=headerHttp.indexOf("GET /");
-    char nom[LENNOM+1];
-    if(v0>=0){                            // si commande GET trouvée, décodage nom fonction 
-        memcpy(nom,&headerHttp[0]+v0+5,LENNOM);nom[LENNOM]='\0';
-        fonction=(strstr(fonctions,nom)-fonctions)/LENNOM;
-    }
-    Serial.print("reçu message fonction=");Serial.println(fonction);
-    // si fonction trouvée, check data puis action selon 
+    if(v0>=0){                            // si commande GET trouvée contrôles et décodage nom fonction 
+      int jj=4,ii=convStrToNum(&headerHttp[0]+v0+5+10+1,&jj);   // recup eventuelle longueur
+      headerHttp[v0+5+10+1+ii+2]=0x00;    // place une fin ; si long invalide check sera invalide
+      Serial.print("len=");Serial.print(ii);Serial.print(" ");Serial.println(headerHttp+v0);
     
-    if(fonction<nbfonct && fonction >=0){
-      int jj=4,ii=convStrToNum(&headerHttp[0]+v0+5+10+1,&jj);
-      Serial.print("len=");Serial.print(ii);
-      headerHttp[v0+5+10+1+ii+2]=0x00;                             // place une fin
-      Serial.print(" ");Serial.println(headerHttp+v0);
-    }
-    if(checkData(&headerHttp[v0+5+10+1])==MESSOK){
-      switch(fonction){
-            case 0:fServer(fset_______,FAUX);break;  // set
+      if(checkHttpData(&headerHttp[v0+5],&fonction)==MESSOK){
+        Serial.print("reçu message fonction=");Serial.println(fonction);
+        switch(fonction){
+            case 0:dataTransfer(&headerHttp[v0+5]);break;  // set
             case 1:break;                             // ack ne devrait pas se produire (page html seulement)
             case 2: cstRec.talkStep=1;break;          // etat -> dataread/save   http://192.168.0.6:80/etat______=0006AB8B
             case 3:break;                             // sleep (future use)
@@ -493,15 +486,18 @@ void ordreExt()
             case 8:digitalWrite(PINSWB,OPENB);break;  // test on  B        http://192.168.0.6:80/testb_on__=0006AB8B
             
             default:break;
+        }
+        char etat[]="done______=0006AB8B\0";
+        talkClient(etat);
+        Serial.println();
       }
-      char etat[]="done______=0006AB8B\0";
-      talkClient(etat);
-      Serial.println();
-    }
-    cntreq++;
-    cliext.stop();
-    headerHttp="";
-  }                     // une éventuelle connexion a été traitée
+      cntreq++;
+      cliext.stop();
+      headerHttp="";
+    }                     // une éventuelle connexion a été traitée
+                          // si controles ko elle est ignorée
+    purgeServer(&cliext);
+  }
 }
 
 void talkClient(char* etat) // réponse à une requête
@@ -665,8 +661,13 @@ void isrBascB()
 uint8_t rdy(byte modesw,int w) // pour les 3 sources, check bit enable puis etat source ; retour numsource valorisé si valide sinon 0
 {
   if(modesw&0x20 !=0 && (modesw>>4)&0x01==digitalRead(pindet[((modesw>>6)&0x03)])){return 1;}   // détecteur 
-  if(modesw&0x02 !=0 && (modesw & 0x01  ==(cstRec.intCde>>((w+1)*2)&0x01))){return 2;}          // serveur
-  //if(((modesw>>2)&0x02)!=0 && (modesw>>2)&0x01==pulsestatus(){return 3;}                      // timer à traiter
+//  Serial.print(w);Serial.print(" modesw=");Serial.print(modesw,HEX);Serial.print(" ");Serial.print(cstRec.intCde,HEX);Serial.print(" ");
+//  Serial.print(modesw&0x08);Serial.print(" ");Serial.print((modesw>>2)&0x01);Serial.print(" ");Serial.println(cstRec.intCde>>((w+1)*2-1)&0x01);
+  
+  if(((modesw & 0x08) != 0) && (((modesw>>2)&0x01)==((cstRec.intCde>>((w+1)*2-1))&0x01))){return 2;}       // serveur
+
+//if(((modesw>>2)&0x02)!=0 && (modesw>>2)&0x01==pulsestatus(){return 3;}                      // timer à traiter
+
   return 0;
 }
 
@@ -674,14 +675,14 @@ void swAction()                                                            // ch
 { 
   uint8_t swa=0;
   for(int w=0;w<NBSW;w++){
-    Serial.println(w);
     swa=rdy(cstRec.offCde[w],w);
-    //Serial.print(" swa(off)=");Serial.println(swa);
+//    Serial.print(cstRec.onCde[w],HEX);Serial.print(" serv=");Serial.print(cstRec.intCde,HEX);Serial.print(" ");for(int h=MAXSW;h>0;h--){Serial.print((cstRec.intCde>>(h*2-1))&0x01);}
+//    Serial.print(" swa(off)=");Serial.println(swa);
     if(swa!=0){digitalWrite(pinsw[w],OFF);}
     else{
       swa=rdy(cstRec.onCde[w],w);
-      Serial.print(cstRec.onCde[w],HEX);Serial.print(" serv=");Serial.print(cstRec.intCde,BIN);
-      Serial.print(" swa(on)=");Serial.println(swa);
+//      Serial.print(cstRec.onCde[w],HEX);Serial.print(" serv=");Serial.print(cstRec.intCde,HEX);Serial.print(" ");for(int h=MAXSW;h>0;h--){Serial.print((cstRec.intCde>>(h*2-1))&0x01);}
+//      Serial.print(" swa(on)=");Serial.println(swa);
       if(swa!=0){digitalWrite(pinsw[w],ON);swa+=10;}
       else{
         swa=rdy(cstRec.desCde[w],w);
@@ -693,7 +694,7 @@ void swAction()                                                            // ch
         }
       }
     }
-    if(swa!=oldswa[w]){Serial.print("+++++++++++++++++swAction=");Serial.print(w);Serial.print(" ");Serial.println(swa);oldswa[w]=swa;}
+    //if(swa!=oldswa[w]){Serial.print("+++++++++++++++++swAction=");Serial.print(w);Serial.print(" ");Serial.println(swa);oldswa[w]=swa;}
   }
 }
 #endif PM==NO_MODE
