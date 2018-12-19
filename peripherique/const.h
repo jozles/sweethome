@@ -196,6 +196,7 @@ Modifier :
 #define NBRETRY 3               // wifiConnexion
 #define TSERIALBEGIN 100
 #define TDEBOUNCE 50            // msec
+#define PERACT 1000             // millis période scrutation actions switchs 
 
 
 

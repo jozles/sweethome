@@ -22,6 +22,7 @@ extern "C" {
 Ds1820 ds1820;
 
   long dateon=millis();           // awake start time
+  long boucleTime=millis();
 
   const char* ssid;
   const char* password;
@@ -62,6 +63,8 @@ WiFiClient cliext;              // client externe du serveur local
   char  ageSeconds[8];     // secondes 9999999s=115 jours
   long  tempAge=1;         // secondes
   bool  tempchg=FAUX;
+
+  long swActTime=millis();
 
   long  blkTime=millis();
   int   blkPer=2000;
@@ -240,7 +243,7 @@ void loop(){        //=============================================
   else {
 #ifdef  _SERVER_MODE
   debug(2);  
-  if(millis()%1000==0){swAction();}
+  if(millis()>(swActTime+PERACT)){swAction();swActTime=millis();}
 #endif def_SERVER_MODE  
   debug(3);
 
@@ -660,11 +663,15 @@ void isrBascB()
 
 uint8_t rdy(byte modesw,int w) // pour les 3 sources, check bit enable puis etat source ; retour numsource valorisé si valide sinon 0
 {
-  if(modesw&0x20 !=0 && (modesw>>4)&0x01==digitalRead(pindet[((modesw>>6)&0x03)])){return 1;}   // détecteur 
+  if(modesw&0x20 !=0){
+    if((modesw>>4)&0x01==digitalRead(pindet[((modesw>>6)&0x03)])){return 1;}   // détecteur 
+  }
 //  Serial.print(w);Serial.print(" modesw=");Serial.print(modesw,HEX);Serial.print(" ");Serial.print(cstRec.intCde,HEX);Serial.print(" ");
 //  Serial.print(modesw&0x08);Serial.print(" ");Serial.print((modesw>>2)&0x01);Serial.print(" ");Serial.println(cstRec.intCde>>((w+1)*2-1)&0x01);
   
-  if(((modesw & 0x08) != 0) && (((modesw>>2)&0x01)==((cstRec.intCde>>((w+1)*2-1))&0x01))){return 2;}       // serveur
+  if((modesw & 0x08) != 0){
+    if (((modesw>>2)&0x01)==((cstRec.intCde>>((w+1)*2-1))&0x01)){return 2;}       // serveur
+  }
 
 //if(((modesw>>2)&0x02)!=0 && (modesw>>2)&0x01==pulsestatus(){return 3;}                      // timer à traiter
 
