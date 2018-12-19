@@ -96,14 +96,12 @@ void htmlIntro(char* titre,EthernetClient* cli)
 
             cli->println("td, th {");
               cli->println("border: 1px solid #dddddd;");
-              cli->println("text-align: left;");
-              cli->println("padding: 2px;");
-              cli->println("padding-right: 2px;"); 
+              cli->println("text-align: left;"); 
             cli->println("}");
 
             cli->println("#nt1{width:10px;}");
             cli->println("#nt2{width:18px;}");
-            cli->println("#cb1{width:10px; text-align: center};");
+            cli->println("#cb1{width:10px; padding:0px; margin:0px; text-align: center};");
             cli->println("#cb2{width:20px; text-align: center};");
 
           cli->println("</style>");
@@ -164,9 +162,10 @@ void lnkTableHtml(EthernetClient* cli,char* nomfonct,char* lib)
   cli->print(lib);cli->println("</a>");
 }
 
-void numTableHtml(EthernetClient* cli,char type,void * valfonct,char* nomfonct,int len,bool td)
+void numTableHtml(EthernetClient* cli,char type,void * valfonct,char* nomfonct,int len,bool td,int pol)
 {                          
   if(td){cli->print("<td>");}
+  if(pol!=0){cli->print("<font size=\"");cli->print(pol);cli->print("\">");}
   cli->print("<input type=\"text\" name=\"");cli->print(nomfonct);
   if(len<=2){cli->print("\" id=\"nt");cli->print(len);}
   cli->print("\" value=\"");
@@ -181,6 +180,7 @@ void numTableHtml(EthernetClient* cli,char type,void * valfonct,char* nomfonct,i
   }
   int sizeHtml=1;if(len>=3){sizeHtml=2;}if(len>=6){sizeHtml=4;}if(len>=9){sizeHtml=6;}
   cli->print("\" size=\"");cli->print(sizeHtml);cli->print("\" maxlength=\"");cli->print(len);cli->print("\" >");
+  if(pol!=0){cli->print("</font>");}
   if(td){cli->println("</td>");}
 }
 
@@ -245,7 +245,7 @@ void subMPn(EthernetClient* cli,uint8_t sw,uint8_t num)          // n° source d
   uint8_t val=(*(pipm+sw*2)>>((num-1)*2)&0x03) | ((*(pipm+sw*2+1)>>((num-1)+3))&0x04);
   fonc[LENNOM-2]=(char)(0x40 | sw<<4 | num);
   //Serial.print(fonc);Serial.print(" *pipm=");Serial.print(*pipm,HEX);Serial.print(" *(pipm+1)=");Serial.print(*(pipm+1),HEX);Serial.print(" val=");Serial.print(val);
-  numTableHtml(cli,'b',(void*)&val,fonc,1,0);
+  numTableHtml(cli,'b',(void*)&val,fonc,1,0,1);
 }
 
 void subMPc(EthernetClient* cli,uint8_t sw,uint8_t num)          // n° checkbox
@@ -290,10 +290,10 @@ void intModeTableHtml(EthernetClient* cli,byte* valeur,int nbli,int nbtypes)   /
       qfonc[LENNOM-1]=(char)(64);
    
       cli->print("<td><font size=\"2\">");
-      numTableHtml(cli,'l',(periIntPulseOn+i),pfonc,8,0);              // affichage-saisie pulse   
+      numTableHtml(cli,'l',(periIntPulseOn+i),pfonc,8,0,2);              // affichage-saisie pulse   
       subModePulse(cli,i);
       cli->print("<br>(");cli->print(*(periIntPulseCurrOn+i));cli->println(")<br>");
-      numTableHtml(cli,'l',(periIntPulseOff+i),qfonc,8,0);             // affichage-saisie pulse       
+      numTableHtml(cli,'l',(periIntPulseOff+i),qfonc,8,0,2);             // affichage-saisie pulse       
  
       cli->print("<br>(");cli->print(*(periIntPulseCurrOff+i));cli->print(")");
       cli->print("</font></td>");
@@ -303,8 +303,8 @@ void intModeTableHtml(EthernetClient* cli,byte* valeur,int nbli,int nbtypes)   /
         nfonc[LENNOM-1]=(char)(k*16+64);
         uint8_t val=(*(valeur+i*MAXTAC+k)>>6);                          // 4 bytes par sw ; 2 bits gauche n° détecteur + 3*2 bits enable - H/L
         //Serial.print(" *num* ");Serial.print(nfonc);Serial.print(" ");Serial.println(val,HEX);
-        cli->print(nac[k]);
-        numTableHtml(cli,'b',(uint32_t*)&val,nfonc,1,0);                // affichage-saisie n°détec
+        cli->print("<font size=\"2\">");cli->print(nac[k]);cli->print("</font>");
+        numTableHtml(cli,'b',(uint32_t*)&val,nfonc,1,0,2);                // affichage-saisie n°détec
         
         for(int j=5;j>=0;j--){                                           // 3*2 checkbox enable+on/off pour les 3 sources d'un des 4 types de déclenchement du switch 
           cfonc[LENNOM-1]=(char)(k*16+j+64);                            // codage nom de fonction aaaaaaasb ; s n° de switch (0-3) ; b=01tt0bbb tt type ; bbb n° bit (0x40+0x30+0x07)
@@ -329,7 +329,7 @@ Serial.print("début péritable ; remote_IP ");serialPrintIp(remote_IP_cur);Seri
   byte msb=0,lsb=0;                        // pour temp DS3231
   readDS3231temp(&msb,&lsb);
 
-        cli->println("<body>");cli->print("<form method=\"POST \">");
+        cli->println("<body>");cli->println("<form method=\"POST \">");
 
           cli->print(VERSION);
           #ifdef _MODE_DEVT
@@ -342,19 +342,20 @@ Serial.print("début péritable ; remote_IP ");serialPrintIp(remote_IP_cur);Seri
           cli->print(" - temp 3231 ");cli->print(msb);cli->print(".");cli->print(lsb);cli->println("°C<br>");
           
           lnkTableHtml(cli,"reset_____","reset");
+
           lnkTableHtml(cli,"peri_table","refresh");
+          numTableHtml(cli,'i',(uint32_t*)&perrefr,"per_refr__",4,0,0);cli->println("<input type=\"submit\" value=\"ok\">");
+
           lnkTableHtml(cli,"test2sw___","testsw");
-
-              numTableHtml(cli,'i',(uint32_t*)&perrefr,"per_refr__",4,0);cli->print("<input type=\"submit\" value=\"ok\">    ");//cli->println("    ");
-              lnkTableHtml(cli,"dump_sd___","dump SDcard");
-
-              cli->print("(");long sdsiz=fhisto.size();cli->print(sdsiz);cli->println(") ");
-              numTableHtml(cli,'i',(uint32_t*)&sdpos,"sd_pos____",9,0);cli->print("<input type=\"submit\" value=\"ok\">");cli->println("<br>");
+          
+          lnkTableHtml(cli,"dump_sd___","dump SDcard");
+          cli->print("(");long sdsiz=fhisto.size();cli->print(sdsiz);cli->println(") ");
+          numTableHtml(cli,'i',(uint32_t*)&sdpos,"sd_pos____",9,0,0);cli->print("<input type=\"submit\" value=\"ok\">");cli->println("<br>");
 
           cli->println("<table>");
               cli->println("<tr>");
                 cli->println(" ON=VRAI=1=HAUT=CLOSE=GPIO2=ROUGE");
-                cli->println("<th></th><th><br>nom_periph</th><th><br>TH</th><th><br>  V </th><th><br>per</th><th><br>pth</th><th>nb<br>sd</th><th><br>pg</th><th>nb<br>sw</th><th><br>_O_I___</th><th>nb<br>dt</th><th></th><th>mac_addr<br>ip_addr</th><th>version<br>last out<br>last in</th><th></th><th>timer ON <br>timer OFF</th><th>num det _server timer<br>__en/HL  _en/HL en/HL </th>");
+                cli->println("<th></th><th><br>nom_periph</th><th><br>TH</th><th><br>  V </th><th><br>per</th><th><br>pth</th><th>nb<br>sd</th><th><br>pg</th><th>nb<br>sw</th><th><br>_O_I___</th><th>nb<br>dt</th><th></th><th>mac_addr<br>ip_addr</th><th>version<br>last out<br>last in</th><th></th><th>timer ON <br>timer OFF</th><th><font size=\"2\">_num det _ server timer<br>_____en/HL  _en/HL en/HL</font></th>");
               cli->println("</tr>");
 
               for(i=1;i<=NBPERIF;i++){
@@ -369,19 +370,19 @@ Serial.print("début péritable ; remote_IP ");serialPrintIp(remote_IP_cur);Seri
 */
                 cli->println("<tr>");
                   cli->println("<form method=\"POST\">");
-                      numTableHtml(cli,'i',&periCur,"peri_cur__",2,1);
+                      numTableHtml(cli,'i',&periCur,"peri_cur__",2,1,0);
                       cli->print("<td><input type=\"text\" name=\"peri_nom__\" value=\"");
                          cli->print(periNamer);cli->print("\" size=\"12\" maxlength=\"");cli->print(PERINAMLEN-1);cli->print("\" ></td>");
                       cli->print("<td>");cli->print(*periLastVal);cli->print("</td>");
                       cli->print("<td>");cli->print(*periAlim);cli->println("</td>");
-                      numTableHtml(cli,'l',(uint32_t*)periPerRefr,"peri_refr_",5,1);
-                      numTableHtml(cli,'f',periPitch,"peri_pitch",5,1);
-                      numTableHtml(cli,'b',periSondeNb,"peri_sonde",2,1);
+                      numTableHtml(cli,'l',(uint32_t*)periPerRefr,"peri_refr_",5,1,0);
+                      numTableHtml(cli,'f',periPitch,"peri_pitch",5,1,0);
+                      numTableHtml(cli,'b',periSondeNb,"peri_sonde",2,1,0);
                       checkboxTableHtml(cli,(uint8_t*)periProg,"peri_prog_",-1,1);
-                      numTableHtml(cli,'b',periIntNb,"peri_intnb",1,1);
+                      numTableHtml(cli,'b',periIntNb,"peri_intnb",1,1,0);
                       cli->println("<td>");
                       xradioTableHtml(cli,*periIntVal,"peri_intv\0",2,*periIntNb,3);
-                      numTableHtml(cli,'b',periDetNb,"peri_detnb",1,1);
+                      numTableHtml(cli,'b',periDetNb,"peri_detnb",1,1,0);
                       cli->print("<td>");
                       for(uint8_t k=0;k<*periDetNb;k++){char oi[2]={'O','I'};byte b=*periDetVal; b=b >> k*2;b&=0x01;cli->print(oi[b]);if(k<*periDetNb-1){cli->print("<br>");}}
                       cli->println("</td>");

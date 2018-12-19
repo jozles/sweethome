@@ -444,8 +444,8 @@ void loop()                             // =====================================
                         password[j]=valeurs[i*LENVAL+j+5];if(pass[j]==0){j=LENVAL;}else if(password[j]!=pass[j]){passok=FAUX;}}
                         if(passok==FAUX){sdstore_textdh(&fhisto,"pw","ko",strSD);}
                         }break;
-              case 3: Serial.println("============================= *******************");dumpsd();break;
-              case 4: Serial.println("============================= *******************");test2Switchs();break;                                                                      // test2sw
+              case 3: dumpsd();break;
+              case 4: what=0;test2Switchs();break;                                                          // test2sw
               case 5: break;                                                                                // done
               case 6: perrefr=0;conv_atob(valf,(int16_t*)&perrefr);break;
               case 7: break;
@@ -460,7 +460,7 @@ void loop()                             // =====================================
                           }
                         if(passok==FAUX){sdstore_textdh(&fhisto,"pw","ko",strSD);}
                         }break;
-              case 11: sdpos=0;conv_atobl(valf,&sdpos);break;                                               // SD pos
+              case 11: what=0;sdpos=0;conv_atobl(valf,&sdpos);break;                                               // SD pos
               case 12: what=1;periDataRead();break;                                                         // data_save
               case 13: what=3;periDataRead();break;                                                         // data_read
               case 14: what=-1;break;                                                                       // peri_parm
@@ -862,18 +862,6 @@ void conv_atobl(char* ascii,int32_t* bin)
   for(j=0;j<LENVAL;j++){c=ascii[j];if(c>='0' && c<='9'){*bin=*bin*10+c-48;}else{j=LENVAL;}}
 }
 
-/*void serialPrintSave()
-{
-  Serial.print("Save: periPerRefr,periPitch,periLastVal,periAlim,periLastDate,periName,periVers,periIntVal,periDetVal,periIpAddr,periMacr ; periCur=");
-  Serial.println(periCur);
-  Serial.print(*periPerRefr);Serial.print(" ");Serial.print(*periPitch);Serial.print(" ");Serial.print(*periLastVal);
-  Serial.print(" ");Serial.print(*periAlim);Serial.print(" ");char date14[14];unpackDate(periLastDateIn,date14);date14[13]='\0';Serial.print(date14);
-  Serial.print(" ");Serial.print(periNamer);Serial.print(" ");Serial.print(periVers);Serial.print(" ");
-  Serial.print(*periIntVal);Serial.print(" ");Serial.print(*periDetVal);Serial.print(" ");serialPrintIp(periIpAddr);
-  Serial.print(" ");serialPrintMac(periMacr);
-
-}*/
-
 void acceuilHtml(EthernetClient* cli,bool passok)
 {
           if(!passok) 
@@ -891,26 +879,6 @@ void acceuilHtml(EthernetClient* cli,bool passok)
             }
           else periTableHtml(cli);
 }          
-/*   
-        Pour modifier les pages archivées :
-        1) (éventuellement)
-           tester avec des cli.prinbt la modification : enlever les "//" des lignes cli->print du morceau à modifier
-                                                        mettre des "//" devant la ligne htmlPrint() du morceau correspondant
-        2) (éventuellement)
-           contrôler la modif : reporter les modifs dans les lignes strcpy(lineBuff,
-                                enlever les "//" de ces lignes
-                                re-mettre des "//" devant les lignes cli.print (sauf les variables, bien sur !
-        
-        3) (éventuellement modifier directement les lignes "strcopy(linebuff,..." ; 
-           enregistrer la modif : enlever les "//" devant la ligne SD.remove( correspondant au morceau modifié
-                                  enlever  les "//" devant //htmlTest(); avant htmlPrint(cli,&fhtml,"passw.txt"); 20 lignes plus haut
-                                                                                  (remarque **************** pour recharger les fichiers html)
-                                  lors du premier affichage, les modifs sont enregistrées
-                                  Remettre les "//" devant la ligne SD.remove
-                                  Remettre les "//" devant les lignes strcpy(lineBuf
-                                  Remettre les "//" devant la ligne htmlTest(
-*/
-      
 
 void frecupptr(char* libfonct,uint8_t* v,uint8_t* b,uint8_t lenpersw)
 {
@@ -931,13 +899,13 @@ void test2Switchs()
   for(int x=0;x<4;x++){
 Serial.print(x);Serial.print(" test2sw ");Serial.println(ipAddr);
     testSwitch("GET /testb_on__=0006AB8B",ipAddr,80);
-    delay(1000);
+    delay(2000);
     testSwitch("GET /testa_on__=0006AB8B",ipAddr,80);
-    delay(1000);
+    delay(2000);
     testSwitch("GET /testboff__=0006AB8B",ipAddr,80);
-    delay(1000);
+    delay(2000);
     testSwitch("GET /testaoff__=0006AB8B",ipAddr,80);
-    delay(1000);
+    delay(2000);
   }
 }
 
