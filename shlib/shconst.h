@@ -2,7 +2,7 @@
 #define _SHCONST_H_
 
 
-//#define PERIF
+#define PERIF
 
 #ifdef PERIF
 #define PINLED 0                    //  0 = ESP-12  ; 2 = ESP-01
