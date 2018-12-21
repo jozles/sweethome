@@ -535,7 +535,8 @@ void loop()                             // =====================================
           default:acceuilHtml(&cli,passok);break;
           }
           valeurs[0]='\0';
-          cli.stop(); 
+          cli.stop();
+          delay(1); 
       }   // cli.connected
     }     // server.available
 
@@ -678,6 +679,7 @@ int periParamsHtml(EthernetClient* cli,char* host,int port)
             }
             purgeServer(&cliext);
             cli->stop();
+            delay(1);
           }
           return zz;
 }
@@ -912,5 +914,6 @@ void testSwitch(char* command,char* perihost,int periport)
             }
             purgeServer(&cliext);
             cliext.stop();
+            delay(1);
 }
 
