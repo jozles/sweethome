@@ -4,6 +4,8 @@
 
 #define PERIF
 
+#define PORTSERVPERI 1791
+
 #ifdef PERIF
 #define PINLED 0                    //  0 = ESP-12  ; 2 = ESP-01
 #define LEDON LOW
