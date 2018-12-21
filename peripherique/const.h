@@ -80,9 +80,8 @@ Modifier :
 #define THESP01 '1'
 #define THESP12 '2'
 
-#define CARTE VR
-
-#define POWER_MODE NO_MODE            // <------------- mode compil 
+#define CARTE THESP01                 // <------------- modèle carte
+#define POWER_MODE PO_MODE            // <------------- mode compil 
 
 #if POWER_MODE==NO_MODE
   #define _SERVER_MODE
@@ -187,7 +186,7 @@ Modifier :
 
 // timings
 
-#define TCONVERSION 750         // millis délai conversion temp
+#define TCONVERSION 375         // millis délai conversion temp
 #define PERTEMP 60              // secondes période par défaut lecture temp
 #define PERTEMPKO 7200          // secondes période par défaut lecture temp si connexion wifi ko
 #define PERSERV 3600            // secondes période max entre 2 accès server
@@ -196,7 +195,7 @@ Modifier :
 #define NBRETRY 3               // wifiConnexion
 #define TSERIALBEGIN 100
 #define TDEBOUNCE 50            // msec
-#define PERACT 1000             // millis période scrutation actions switchs 
+#define PERACT 100              // millis période scrutation actions switchs 
 
 
 

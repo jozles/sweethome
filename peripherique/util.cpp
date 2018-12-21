@@ -117,6 +117,7 @@ void printConstant()
     Serial.print(i+1);Serial.print("  ");
     Serial.print((cstRec.intCde>>(i*2+1))&0x01);Serial.print("   ");Serial.print(cstRec.pulseMode[i],HEX);Serial.print(" ");Serial.print(cstRec.intOPulse[i]);Serial.print(" ");Serial.println(cstRec.intIPulse[i]);
     subprintConstant(cstRec.actCde[i]);subprintConstant(cstRec.desCde[i]);subprintConstant(cstRec.onCde[i]);subprintConstant(cstRec.offCde[i]);
+    Serial.println();
   }
 }
 

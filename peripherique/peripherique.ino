@@ -40,7 +40,7 @@ Ds1820 ds1820;
 #endif def_MODE_DEVT
 
 WiFiClient cli;                 // client local du serveur externe (utilisé pour dataread/save)
-WiFiServer server(80);
+WiFiServer server(PORTSERVPERI);
 WiFiClient cliext;              // client externe du serveur local
 
   String headerHttp;
@@ -129,14 +129,7 @@ void setup()
 #if POWER_MODE==PO_MODE
   digitalWrite(PINPOFF,LOW);
   pinMode(PINPOFF,OUTPUT);
-  ds1820.convertDs(WPIN);
-  debConv=millis();
 #endif PM==PO_MODE
-
-#if POWER_MODE==NO_MODE
-  ds1820.convertDs(WPIN);
-  delay(TCONVERSION);
-#endif PM==NO_MODE
 
   pinMode(PINLED,OUTPUT);
 #if POWER_MODE==NO_MODE
@@ -164,20 +157,33 @@ void setup()
 
   //delay(2000);
   Serial.begin(115200);
-
   delay(100);
-  Serial.print("\n\n");Serial.print(VERSION);Serial.print(" power_mode=");Serial.print(POWER_MODE);
-  Serial.print(" carte=");Serial.println(CARTE);
+  
 #ifdef _MODE_DEVT
-  Serial.println("Slave 8266 _MODE_DEVT");
+  Serial.print("\nSlave 8266 _MODE_DEVT");
 #endif _MODE_DEVT
-  delay(100);
+
+  Serial.print("\n\n");Serial.print(VERSION);Serial.print(" power_mode=");Serial.print(POWER_MODE);
+  Serial.print(" carte=");Serial.print(CARTE);
 
 #if CONSTANT==EEPROMSAVED
   EEPROM.begin(512);
 #endif
 
 cstRec.cstlen=sizeof(cstRec);
+
+ byte setds[4]={0,0x7f,0x80,0x3f},readds[8];   // 187mS 10 bits accu 0,25°
+ int v=ds1820.setDs(WPIN,setds,readds);if(v==1){Serial.print(" DS1820 version=");Serial.println(readds[0],HEX);}
+ else {Serial.print(" DS1820 error ");Serial.println(v);}
+#if POWER_MODE==NO_MODE
+  ds1820.convertDs(WPIN);
+  delay(TCONVERSION);
+#endif PM==NO_MODE
+#if POWER_MODE==PO_MODE
+  ds1820.convertDs(WPIN);
+  debConv=millis();
+#endif PM==PO_MODE
+
 
 #if POWER_MODE==DS_MODE
 /* si pas sortie de deep sleep faire une conversion 
@@ -199,8 +205,9 @@ cstRec.cstlen=sizeof(cstRec);
     Serial.println("initialisation constantes");
     initConstant();
   }
-Serial.print("ready !DS ; CONSTANT=");Serial.print(CONSTANT);Serial.print(" time=");Serial.println(millis()-debTime);
 #endif PM!=DS_MOD
+
+Serial.print("CONSTANT=");Serial.print(CONSTANT);Serial.print(" time=");Serial.print(millis()-debTime);Serial.println(" ready !");
   yield();
   printConstant();
 

@@ -25,6 +25,7 @@
 
 // possible return status for getDs() function
 // values between -55 to +125 are valid data
+// romDs output family code 256+code 
 
 #define TOPRES -100
 #define CRC_ERR -101 
@@ -64,6 +65,35 @@ void writeDs(uint8_t pin,uint8_t nbbyteout,uint8_t* frameout)
   pinMode(pin,INPUT);
   //Serial.println();
 }
+
+int Ds1820::romDs(uint8_t pin,uint8_t* framein)   // read rom command
+                                                  // romDs should not be used without function command
+                                                  // framein must be at least 8 bytes long
+{                                                 // B = 0x28 ; S = 0x10 , '' = 0x10
+  uint8_t cmd[1]={0x33};
+  int v;
+  
+  v=getDs(pin,cmd,1,framein,8);
+
+  if(v<=TOPRES){return v;}   // error 
+  return framein[0]+256;
+}
+
+int Ds1820::setDs(uint8_t pin,uint8_t* frameout,uint8_t* framein)      // read rom and write scratchpad
+                 // framein must be at least 8 bytes long
+                 // frameout must be at least 4 bytes long : 0 function
+                 //                                          1 High alarm byte (max=0x7f)
+                 //                                          2 Low  alarm byte (min=0x80)
+                 //                                          3 config byte (0xx11111) xx=11 12 bits conv
+{
+  frameout[0]=0x4E;
+  int v=romDs(pin,framein);
+  if(v<256){return v;}       // error
+
+  writeDs(pin,4,frameout);
+  return 1;
+}
+
 
 int Ds1820::convertDs(uint8_t pin)
 {
