@@ -26,7 +26,7 @@
  * à faire :
  *     
  *      créer une table mac/ip/date-heure des password valides (qui ont donné un mot de passe ok) et effacer après un délai d'inutilisation
- *      dédoubler cli (cli, cliper) pour traiter séparément l'accès navigateur et l'accès périf.
+ *      bug sur les enregitrements de peritable : les valeurs de l'enregitrement précédent se propagent... (créer 3 peri, mettre l'addr mac du 2nd à 0, redémarrer)
  */
 
 #define DS3231_I2C_ADDRESS 0x68         // adresse 3231 sur bus I2C

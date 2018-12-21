@@ -11,7 +11,7 @@
 #include "utilether.h"
 #include "periph.h"
 #include "httphtml.h"
-#include "htmlwk.h"
+//#include "htmlwk.h"
 
 
 #ifdef WEMOS
@@ -629,7 +629,7 @@ void periSend()                 // configure periParamsHtml pour envoyer un set_
 {
   char ipaddr[16];memset(ipaddr,'\0',16);
   charIp(periIpAddr,ipaddr);
-  if(periParamsHtml(&cliext,ipaddr,80)==MESSOK){
+  if(periParamsHtml(&cliext,ipaddr,PORTSERVPERI)==MESSOK){
     char date14[14];alphaNow(date14);packDate(periLastDateIn,date14+2);
   }
 }
@@ -677,25 +677,31 @@ int periParamsHtml(EthernetClient* cli,char* host,int port)
               Serial.println(zz);
             }
             purgeServer(&cliext);
+            cli->stop();
           }
           return zz;
 }
 
 int getcde(EthernetClient* cli) // décodage commande reçue selon tables 'cdes' longueur maxi LENCDEHTTP
 {
-  char c='\0',code[4],cde[LENCDEHTTP],pageErr[11]={0};
-  int k=0,ncde=0;
+  char c='\0',cde[LENCDEHTTP];
+  int k=0,ncde=0,ko=0;
   
   while (cli->available() && c!='/' && k<LENCDEHTTP) {
     c=cli->read();Serial.print(c);     // décode la commande 
     if(c!='/'){cde[k]=c;k++;}
     else {cde[k]=0;break;}
     }
-  if (c!='/'){strcpy(code,"400");}                    // pas de commande, message 400 Bad Request
-  else if (strstr(cdes,cde)==0){strcpy(code,"501");}  // commande inconnue 501 Not Implemented
-  else {ncde=1+(strstr(cdes,cde)-cdes)/LENCDEHTTP ;}  // numéro de commande OK (>0)
-  if (ncde<0){while (cli->available()){cli->read();}strcpy(pageErr,"err");strcat(pageErr,code);strcat(pageErr,"txt");htmlPrint(cli,&fhtml,pageErr);}
-  return ncde;                                        // ncd=0 si KO ; 1 à n numéro de commande
+  if (c!='/'){ko=1;}                                                                                            // pas de commande, message 400 Bad Request
+  else if (strstr(cdes,cde)==0){ko=2;}                                                                          // commande inconnue 501 Not Implemented
+  else {ncde=1+(strstr(cdes,cde)-cdes)/LENCDEHTTP ;}                                                            // numéro de commande (ok si >0 && < nbre cdes)
+  if ((ncde<=0) || (ncde>strlen(cdes)/LENCDEHTTP)){ko=1;ncde=0;while (cli->available()){cli->read();}}          // pas de cde valide -> vidage + message
+  switch(ko){
+    case 1:cli->print("<body><br><br> err. 400 Bad Request <br><br></body></html>");break;
+    case 2:cli->print("<body><br><br> err. 501 Not Implemented <br><br></body></html>");break;
+    default:break;
+  }
+  return ncde;                                // ncde=0 si KO ; 1 à n numéro de commande
 }
 
 int analyse(EthernetClient* cli)              // decode la chaine et remplit les tableaux noms/valeurs 
@@ -862,24 +868,6 @@ void conv_atobl(char* ascii,int32_t* bin)
   for(j=0;j<LENVAL;j++){c=ascii[j];if(c>='0' && c<='9'){*bin=*bin*10+c-48;}else{j=LENVAL;}}
 }
 
-void acceuilHtml(EthernetClient* cli,bool passok)
-{
-          if(!passok) 
-            {
-            Serial.println(" saisie pwd");
-            init_params();chge_pwd=VRAI;
-            htmlIntro(NOMSERV,cli);
-
-            //htmlTest();                             // ********************* pour recharger les fichiers html
-            cli->println(VERSION);
-            htmlPrint(cli,&fhtml,"passw.txt");
-            //htmlPrint(cli,&fhtml,"err400.txt");
-      
-            cli->stop();
-            }
-          else periTableHtml(cli);
-}          
-
 void frecupptr(char* libfonct,uint8_t* v,uint8_t* b,uint8_t lenpersw)
 {
    //uint8_t switch=*libfonct-48;               // num source
@@ -898,13 +886,13 @@ void test2Switchs()
   charIp(lastIpAddr,ipAddr);
   for(int x=0;x<4;x++){
 Serial.print(x);Serial.print(" test2sw ");Serial.println(ipAddr);
-    testSwitch("GET /testb_on__=0006AB8B",ipAddr,80);
+    testSwitch("GET /testb_on__=0006AB8B",ipAddr,PORTSERVPERI);
     delay(2000);
-    testSwitch("GET /testa_on__=0006AB8B",ipAddr,80);
+    testSwitch("GET /testa_on__=0006AB8B",ipAddr,PORTSERVPERI);
     delay(2000);
-    testSwitch("GET /testboff__=0006AB8B",ipAddr,80);
+    testSwitch("GET /testboff__=0006AB8B",ipAddr,PORTSERVPERI);
     delay(2000);
-    testSwitch("GET /testaoff__=0006AB8B",ipAddr,80);
+    testSwitch("GET /testaoff__=0006AB8B",ipAddr,PORTSERVPERI);
     delay(2000);
   }
 }
@@ -915,7 +903,7 @@ void testSwitch(char* command,char* perihost,int periport)
             
             memset(bufServer,'\0',32);
             memcpy(bufServer,command,24);
-   Serial.print(perihost);Serial.print(" ");Serial.println(bufServer);
+
             int z=messToServer(&cliext,perihost,periport,bufServer);
             Serial.println(z);
             if(z==MESSOK){
@@ -923,5 +911,6 @@ void testSwitch(char* command,char* perihost,int periport)
               Serial.println(periMess);
             }
             purgeServer(&cliext);
+            cliext.stop();
 }
 

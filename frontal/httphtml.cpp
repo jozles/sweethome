@@ -56,8 +56,8 @@ extern byte*     periDetVal;                   // ptr ds buffer : flag "ON/OFF" 
 extern int8_t    periMess;                     // code diag réception message (voir MESSxxx shconst.h)
 extern byte      periMacBuf[6]; 
 
-
-
+extern void init_params();
+extern int  chge_pwd; //=FAUX;
 
 void cliPrintMac(EthernetClient* cli, byte* mac)
 {
@@ -65,7 +65,6 @@ void cliPrintMac(EthernetClient* cli, byte* mac)
   unpackMac(macBuff,mac);
   cli->print(macBuff);
 }
-
 
 void htmlIntro0(EthernetClient* cli)    // suffisant pour commande péripheriques
 {
@@ -355,7 +354,7 @@ Serial.print("début péritable ; remote_IP ");serialPrintIp(remote_IP_cur);Seri
           cli->println("<table>");
               cli->println("<tr>");
                 cli->println(" ON=VRAI=1=HAUT=CLOSE=GPIO2=ROUGE");
-                cli->println("<th></th><th><br>nom_periph</th><th><br>TH</th><th><br>  V </th><th><br>per</th><th><br>pth</th><th>nb<br>sd</th><th><br>pg</th><th>nb<br>sw</th><th><br>_O_I___</th><th>nb<br>dt</th><th></th><th>mac_addr<br>ip_addr</th><th>version<br>last out<br>last in</th><th></th><th>timer ON <br>timer OFF</th><th><font size=\"2\">_num det _ server timer<br>_____en/HL  _en/HL en/HL</font></th>");
+                cli->println("<th></th><th><br>nom_periph</th><th><br>TH</th><th><br>  V </th><th><br>per</th><th><br>pth</th><th>nb<br>sd</th><th><br>pg</th><th>nb<br>sw</th><th><br>_O_I___</th><th>nb<br>dt</th><th></th><th>mac_addr<br>ip_addr</th><th>version<br>last out<br>last in</th><th></th><th>timer ON <br>timer OFF</th><th><font size=\"2\">_num det _ server timer<br>__en/HL en/HL en/HL</font></th>");
               cli->println("</tr>");
 
               for(i=1;i<=NBPERIF;i++){
@@ -405,6 +404,19 @@ Serial.print("début péritable ; remote_IP ");serialPrintIp(remote_IP_cur);Seri
 Serial.println("fin péritable");
 }
 
+void acceuilHtml(EthernetClient* cli,bool passok)
+{
+          if(!passok){
+            Serial.println(" saisie pwd");
+            init_params();chge_pwd=VRAI;
+            htmlIntro(NOMSERV,cli);
+
+            cli->println(VERSION);
+            cli->println("<body><form method=\"get\" ><p><label for=\"password\">password</label> : <input type=\"password\"");
+            cli->println(" name=\"password__\" id=\"password\" value=\"\" size=\"6\" maxlength=\"8\" ></p></form></body></html>");
+          }
+          else periTableHtml(cli);
+}          
 
 
 

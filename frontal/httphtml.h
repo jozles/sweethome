@@ -3,6 +3,7 @@
 
 int  dumpsd();
 void periTableHtml(EthernetClient* cli);
+void acceuilHtml(EthernetClient* cli,bool passok);
 void htmlIntro0(EthernetClient* cli);
 void htmlIntro(char* titre,EthernetClient* cli);
 void acceuilHtml(EthernetClient* cli,bool passok);

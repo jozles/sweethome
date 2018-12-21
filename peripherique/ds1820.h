@@ -31,13 +31,11 @@ class Ds1820
         int getDs(uint8_t pin,uint8_t* frameout,uint8_t nbbyteout,uint8_t* framein,uint8_t nbbytein);
         byte calcBitCrc(byte shiftReg, byte data_bit);
         float readDs(uint8_t pin);
+        int romDs(uint8_t pin,uint8_t* framein);
+        int setDs(uint8_t pin,uint8_t* frameout,uint8_t* framein);
         int convertDs(uint8_t pin);
 };
 
 #endif // DS1820_H_INCLUDED
-
-
-
-
 
 
