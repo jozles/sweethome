@@ -72,16 +72,20 @@ Modifier :
             Les accés se font via 4 fonctions : 
                 readConstant() (ctle du crc), writeConstant() (géné crc), initConstant() et printConstant
 */
+/* >>> MODES d'ALIM <<< */
+
 #define DS_MODE 'D' // deep Sleep     (pas de loop ; pas de server ; ESP12 reset-GPIO6 connected)
 #define PO_MODE 'P' // power off Mode (pas de loop ; pas de server ; ESP01 GPIO3/RX-Done connected)
 #define NO_MODE 'N' // No stop mode   (loop et server)
+
+/* >>> CARTES <<< */
 
 #define VR      'V'
 #define THESP01 '1'
 #define THESP12 '2'
 
-#define CARTE THESP01                 // <------------- modèle carte
-#define POWER_MODE PO_MODE            // <------------- mode compil 
+#define CARTE VR                      // <------------- modèle carte
+#define POWER_MODE NO_MODE            // <------------- mode compil 
 
 #if POWER_MODE==NO_MODE
   #define _SERVER_MODE
