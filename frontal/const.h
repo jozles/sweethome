@@ -198,12 +198,17 @@
           renvoie  0 connexion pas réussie 
                 ou 1 ok, la donnée est transmise, la connexion n'est pas fermée, le client est valide
 
-  void messToClient(*client,*données)  envoie une page html minimale contenant les données dans <body></body>
+  void periSend()  envoie une page html minimale contenant un message set___ dans <body></body>
           le client doit être connecté ; pas de contrôle                                
+          periSend utilise periParamsHtml(*client,*host,port) avec port!=0
+
+  int periParamsHtml(client,char* host,int port) assemble et envoie un message set___
+          si port=0 dans page html en réponse à une requête GET ou POST ; sinon via une commande GET
+          utilise messToServer
 
   Pour la réception de message :
 
-  int getServerResponse(*client,*données,*diag,lmax,*fonction)     attente d'une page html, 
+  int getHttpResponse(*client,*données,*diag,lmax,*fonction)     attente d'une page html, 
           reçoit et contrôle un message d'une seule fonction
           le client doit être connecté ; renvoie un code MESSxx (voir shconst.h) 
                                                  diag pointe une chaine imprimable selon le code.
@@ -214,7 +219,9 @@
   
   Pour le controle de messages :
 
-  int checkData(*données)    renvoie un code MESSxx (voir shconst.h) 
+  int checkData(*données)    renvoie un code MESSxx (voir shconst.h)
+
+  int checkHttpData(*données, *fonction)   utilise checkData renvoie un code MESSxx et le numéro de la fonction
 
   Pour l'assemblage des messages :
 
@@ -254,13 +261,20 @@
          mécanisme :
                 scrutation des forçages OFF ; si l'un est valide (enable et source dans l'état spécifié), le switch est positionné OFF, fin
                 sinon scrutation des forçages ON ; si l'un est valide, le switch est positionné ON, fin
-                sinon scrutation des désactivations ; si l'une est valide, fin
+                sinon scrutation des désactivations d'impulsion ; si l'une est valide, fin
                 sinon scrutation des activations ; si l'une est "enable" prendre sa position selon la table : HH=H, HL=L, LH=L, LL=H
                       
          3 sources différentes pour forçages et activation/désactivation d'un switch : le serveur, un détecteur parmi 4, son générateur d'impulsions
                 chaque source dispose d'un bit "enable" qui la démasque et d'un bit H/L (active haute ou basse)
 
          mécanisme générateur d'impulsion :
+                2 phases de durée paramétrée ; 
+                  si la 2nde phase est enable, elle se déclenche à la fin de la première
+                  si la première a le bit freeRun set elle se déclenche a la fin de la seconde
+                la phase déclenchée peut commander l'état d'un switch via son bit H/L dans lae paramétrage des sources (si bit enable set)
+                
+                En mode one-shot ou pour démarrer le free-run Le déclenchement de la première phase provient d'un détecteur ou du serveur
+                  
                 si impulsion arrêtée (durée = curr) controler condition de démarrage :
                   bit tONE enable et source de déclenchement valide
                 si impulsion en cours (durée!=curr) et enable màj curr (maxi = durée)
@@ -272,6 +286,11 @@
                 valeur courante de l'impulsion en cours selon phase
                 si arrêt -> pulse invalide
 
+         les détecteurs sont représentés par une variable en mémoire ; pas d'accès direct aux ports
+                le changement d'état d'un port et la mise à jour de la variable sont gérés par une ISR.
+                le débounce est intégré dans la loop
+                la variable mémoire stocke la valeur courante et la valeur précédente.
+                la valeur précédente est mise à jour lors de la lecture par le gestionnaire des impulsions
 
 *  int8          numéro
 *  16 bytes      nom  
@@ -294,16 +313,19 @@
 *     4 bytes       durée TWO 
 *     4 bytes       curr tTWO
 *     2 bytes       controle                   1 bit tONE enable
-*                                              3 bits numéro source déclenchement pulseONE (4 détec ; serveur ; free run ; 0 stop) 
+*                                              1 bit tTWO enable
+*                                              1 bit stop/start serveur (passe à stop en fin d'impulsion en mode one-shot)
+*                                              1 bit détecteur déclenchement enable
+*                                              2 bits numéro détecteur pour déclenchement pulseONE (4 détec) 
 *                                              1 bit declenchement sur état ou front
 *                                              1 bit déclenchement sur H/L
-*                                              1 bit tTWO enable
-*                                              3 bits numéro source arrêt pulseONE / start pulseTWO (forçage sinon à fin de tONE)
-*                                              1 bit declenchement sur état ou front
-*                                              1 bit déclenchement H/L
+*                                              1 bit détecteur arrêt enable
+*                                              2 bits numéro détecteur arrêt pulseONE / start pulseTWO (si bit tTWO enable set) / arrêt pilseTWO
+*                                              1 bit arrêt sur état ou front
+*                                              1 bit arrêt sur H/L
 *                                              1 bit mode (one shoot/free run)
 *                                              1 bit phase H->H-L L->L-H
-*                                              2 bits dispos
+*                                              1 bits dispos
 *  uint8         nbre détecteurs maximum 4 (MAXDET)
 *  byte          1 bits etat ; 1 bit enable
 *  uint8         nbre sondes     maximum 256 (MAXSDE)
