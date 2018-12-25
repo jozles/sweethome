@@ -2,7 +2,7 @@
 #define _SHCONST_H_
 
 
-#define PERIF
+//#define PERIF
 
 #define PORTSERVPERI 1791
 
@@ -107,5 +107,98 @@ enum {OFF,ON};
 
 #define LPERIMESS  5   // len texte diag en réception de message
 
+/* bits structures definitions */
+
+// bit coding
+
+// mask-values
+
+#define VBIT0 0x0001
+#define VBIT1 0x0002
+#define VBIT2 0x0004
+#define VBIT3 0x0008
+#define VBIT4 0x0010
+#define VBIT5 0x0020
+#define VBIT6 0x0040
+#define VBIT7 0x0080
+#define VBIT8 0x0100
+#define VBIT9 0x0200
+#define VBITA 0x0400
+#define VBITB 0x0800
+#define VBITC 0x1000
+#define VBITD 0x2000
+#define VBITE 0x4000
+#define VBITF 0x8000
+
+// positions
+
+#define PBIT0 0x0000
+#define PBIT1 0x0001
+#define PBIT2 0x0002
+#define PBIT3 0x0003
+#define PBIT4 0x0004
+#define PBIT5 0x0005
+#define PBIT6 0x0006
+#define PBIT7 0x0007
+#define PBIT8 0x0008
+#define PBIT9 0x0009
+#define PBITA 0x000A
+#define PBITB 0x000B
+#define PBITC 0x000C
+#define PBITD 0x000D
+#define PBITE 0x000E
+#define PBITF 0x000F
+
+/* SWITCHS CONTROL */
+
+// PULSE MODE = PM
+// time one = TO ; time two = TT ; current = C ; duration = D
+// Server = SR ; free run = FR ; Phase H/L-LH = PH
+// enable = E ; UP/DOWN = U ; H/L = H
+// number = N ; detector on = DI ; off = DO ; ON = I ; OFF = O
+// most significant = MS ; least = LS
+//
+
+#define PMTOE_PB PBITE      // pulse Mode time one enable pos bit
+#define PMTOE_VB VBITE      // val bit
+#define PMTTE_PB PBITD      // time two enable pos bit
+#define PMTTE_VB VBITD
+#define PMSRE_PB PBITC      // server enable pos bit
+#define PMSRE_VB VBITC
+#define PMFRE_PB PBITB      // free run pos bit
+#define PMFRE_VB VBITB
+#define PMPHE_PB PBITA      // phase pos bit
+#define PMPHE_VB VBITA
+#define PMDINMS_PB PBIT9    // Det on number pos ms bit
+#define PMDINMS_VB VBIT9
+#define PMDINLS_PB PBIT8    // det on number pos ls bit
+#define PMDINLS_VB VBIT8
+#define PMDONMS_PB PBIT7    // det off number pos ms bit
+#define PMDONMS_VB VBIT7
+#define PMDONLS_PB PBIT6    // det off number pos ls bit
+#define PMDONLS_VB VBIT6
+#define PMDIE_PB PBIT5      // det on enable pos bit
+#define PMDIE_VB VBIT5
+#define PMDIU_PB PBIT4      // det on UP/DOWN pos bit
+#define PMDIU_VB VBIT4
+#define PMDIH_PB PBIT3      // det on H/L pos bit
+#define PMDIH_VB VBIT3
+#define PMDOE_PB PBIT2
+#define PMDOE_VB VBIT2
+#define PMDOU_PB PBIT1
+#define PMDOU_VB VBIT1
+#define PMDOH_PB PBIT0
+#define PMDOH_VB VBIT0
+
+#define PMDIN_MSK (PMDINMS_VB | PMDINLS_PB)>>PMDINLS_PB // mask de la valeur du numéro de détecteur on
+#define PMDON_MSK (PMDONMS_VB | PMDONLS_VB)>>PMDONLS_PB // mask de la valeur du numéro de détecteur off
+
+// codage car différenciation de fonction
+
+#define PMFNCVAL    0X30    // car d'offset ('0') de la valeur de fonction (*valf)
+#define PMSWCVAL    0x30    // car d'offset ('0') du num de switch dans le nom de fonction
+
+#define PMFNCHAR    0x40    // car d'offset ('@') dans nom de fonction
+#define PMFNSWLS_PB PBIT4   // position ls bit du numéro de sw
 
 #endif // _SHCONST_H_

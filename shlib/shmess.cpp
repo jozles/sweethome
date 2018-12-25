@@ -107,8 +107,12 @@ int messToServer(WiFiClient* cli,const char* host,const int port,char* data)    
     Serial.print("connexion serveur ");
     Serial.print(host);Serial.print(":");Serial.print(port);
     Serial.print("...");
-    while(!cli->connect(host,port)){
-        delay(100);Serial.print(w++);
+#ifndef PERIF
+    cli->stop();
+    delay(1000);
+#endif // PERIF
+    while(!cli->connect(host,port)==1){
+        delay(1000);Serial.print(w++);
         if((millis()-beg)>TO_HTTPCX){
             Serial.println(" échouée");
             v=MESSCX;
