@@ -100,8 +100,7 @@ int messToServer(WiFiClient* cli,const char* host,const int port,char* data)    
 #endif
 {
   byte crc;
-  int w=0;
-  int v=MESSOK;
+  int w=0,v=MESSOK,x;
   long beg=millis();
 
     Serial.print("connexion serveur ");
@@ -111,8 +110,16 @@ int messToServer(WiFiClient* cli,const char* host,const int port,char* data)    
     cli->stop();
     delay(1000);
 #endif // PERIF
-    while(!cli->connect(host,port)==1){
-        delay(1000);Serial.print(w++);
+    x=cli->connect(host,port);
+    while(!x==1){
+        switch(x){
+            case -1:Serial.print("time out");break;
+            case -2:Serial.print("invalid server");break;
+            case -3:Serial.print("truncated");break;
+            case -4:Serial.print("invalid response");break;
+            default:break;
+        }
+        delay(1000);Serial.print(":");Serial.print(w++);Serial.print(" ");
         if((millis()-beg)>TO_HTTPCX){
             Serial.println(" échouée");
             v=MESSCX;

@@ -197,49 +197,53 @@
   Pour l'envoi de message :
 
   int messToServer(*client,const ip,const port,const *données)  connecte à un serveur http et envoie un message
-          renvoie  0 connexion pas réussie 
-                ou 1 ok, la donnée est transmise, la connexion n'est pas fermée, le client est valide
+  (dans shmess)   renvoie  0 connexion pas réussie 
+                  ou 1 ok, la donnée est transmise, la connexion n'est pas fermée, le client est valide
 
-  void periSend()  envoie une page html minimale contenant un message set___ dans <body></body>
-          le client doit être connecté ; pas de contrôle                                
-          periSend utilise periParamsHtml(*client,*host,port) avec port!=0
+  void periSend() envoie une page html minimale contenant un message set___ dans <body></body>
+  (dans frontal)  le client doit être connecté ; pas de contrôle                                
+                  periSend utilise periParamsHtml(*client,*host,port) avec port!=0
 
   int periParamsHtml(client,char* host,int port) assemble et envoie un message set___
-          si port=0 dans page html en réponse à une requête GET ou POST ; sinon via une commande GET
-          utilise messToServer
+  (dans frontal)  si port=0 dans page html en réponse à une requête GET ou POST ; sinon via une commande GET
+                  utilise messToServer
 
+  int buildReadSave(char* nomfonction,char* data)      assemble et envoie dataread/datasave
+  (dans peripherique)                                  (utilise buildMess et messToServer 
+  
   Pour la réception de message :
 
   int getHttpResponse(*client,*données,*diag,lmax,*fonction)     attente d'une page html, 
-          reçoit et contrôle un message d'une seule fonction
-          le client doit être connecté ; renvoie un code MESSxx (voir shconst.h) 
+  (dans shmess)   reçoit et contrôle un message d'une seule fonction
+                  le client doit être connecté ; renvoie un code MESSxx (voir shconst.h) 
                                                  diag pointe une chaine imprimable selon le code.
                                                  le numéro de fonction reçue, la donnée (nnnn...cc)
-          contrôle du temps, de dépassement de capacité, de la longueur et du crc 
+                  contrôle du temps, de dépassement de capacité, de la longueur et du crc 
           
+  void fServer(uint8_t fwaited))    reçoit (via getHttpResponse) et des-assemble (via dataTransfer) 
+  (dans périphérique)               les données des fonction Set/Ack
+                                    utilise bufServer espace permanent de bricolage
+                                    renvoie periMess (MESSFON si inex ou invalide)
+  
   le frontal comme les périphériques sont dans une boucle d'attente de connexion pour la réception de messages via GET OU POST
   
   Pour le controle de messages :
 
   int checkData(*données)    renvoie un code MESSxx (voir shconst.h)
+  (dans shmess)
 
   int checkHttpData(*données, *fonction)   utilise checkData renvoie un code MESSxx et le numéro de la fonction
-
+  (dans shmess)
+  
   Pour l'assemblage des messages :
 
   int buildMess(*fonction, *données, *séparateur)      utilise bufServer espace permanent de bricolage
-                                                       renvoie 0 si décap (ctle préalable) longueur totale sinon
+  (dans shmess)                                        renvoie 0 si décap (ctle préalable) longueur totale sinon
                                                        les messages sont concaténés et le séparateur inséré
 
   void assySet(char* message,int pericur,char* diag,char* date14);
-                                                       assemble les données des fonction Set/Ack
+  (dans shmess)                                        assemble les données des fonction Set/Ack
 
-  int8_t readFonc(char* message,uint8_t foncWaited)    reçoit et des-assemble les données des fonction Set/Ack
-                                                       utilise bufServer espace permanent de bricolage
-                                                       renvoie periMess (MESSFON si inex ou invalide)
-                                                       
-  int read_save(char* fonction,char* data)             assemble et envoie dataread/datasave
-  
 
   STRUCTURE TABLE DES PERIPHERIQUES
 
@@ -273,19 +277,18 @@
                 2 phases de durée paramétrée ; 
                   si la 2nde phase est enable, elle se déclenche à la fin de la première
                   si la première a le bit freeRun set elle se déclenche a la fin de la seconde
-                la phase déclenchée peut commander l'état d'un switch via son bit H/L dans lae paramétrage des sources (si bit enable set)
+                la phase déclenchée peut commander l'état d'un switch via le paramétrage des sources 
                 
-                En mode one-shot ou pour démarrer le free-run Le déclenchement de la première phase provient d'un détecteur ou du serveur
+                Le déclenchement et l'arrêt provient d'un détecteur ou du serveur
                   
-                si impulsion arrêtée (durée = curr) controler condition de démarrage :
+                si impulsions arrêtées (beg==0), condition de démarrage :
                   bit tONE enable et source de déclenchement valide
-                si impulsion en cours (durée!=curr) et enable màj curr (maxi = durée)
-                  (soit tONE soit tTWO en cours ; forçage fin = arrêt : curr = durée) 
-                si tONE en fin (durée=curr) start tTWO si enable
+                si impulsions en cours, arrêt si source d'arrêt valide
+                si tONE en fin (durée=curr) start tTWO si enable sinon arrêt (curr=0)
                 si tTWO en fin si mode oneshoot fin sinon start tONE si enable
          
          valeur d'état générateur :
-                valeur courante de l'impulsion en cours selon phase
+                valeur courante de l'impulsion en cours selon paramètre phase
                 si arrêt -> pulse invalide
 
          les détecteurs sont représentés par une variable en mémoire ; pas d'accès direct aux ports
@@ -311,23 +314,23 @@
 *     1 byte        sources forçage OFF
 *  66 bytes (16+2 bytes / switch) 
 *     4 bytes       durée ONE 4Giga (ou 99 999 999) * 1/100sec   (stop si durée=curr ; start si condition remplie))
-*     4 bytes       curr tONE
+*     4 bytes       beg  tONE
 *     4 bytes       durée TWO 
-*     4 bytes       curr tTWO
+*     4 bytes       beg  tTWO
 *     2 bytes       controle                   1 bit tONE enable
 *                                              1 bit tTWO enable
-*                                              1 bit stop/start serveur (passe à stop en fin d'impulsion en mode one-shot)
-*                                              1 bit détecteur déclenchement enable
-*                                              2 bits numéro détecteur pour déclenchement pulseONE (4 détec) 
+*                                              1 bit stop serveur si 1 pulse stoppé
+*                                              1 bit détecteur de déclenchement enable
+*                                              2 bits numéro détecteur pour déclenchement pulseONE (parmi 4 détec) 
 *                                              1 bit declenchement sur état ou front
 *                                              1 bit déclenchement sur H/L
-*                                              1 bit détecteur arrêt enable
-*                                              2 bits numéro détecteur arrêt pulseONE / start pulseTWO (si bit tTWO enable set) / arrêt pilseTWO
+*                                              1 bit détecteur d'arrêt enable
+*                                              2 bits numéro détecteur d'arrêt pulse
 *                                              1 bit arrêt sur état ou front
 *                                              1 bit arrêt sur H/L
 *                                              1 bit mode (one shoot/free run)
 *                                              1 bit phase H->H-L L->L-H
-*                                              1 bits dispos
+*                                              1 bits dispo
 *  uint8         nbre détecteurs maximum 4 (MAXDET)
 *  byte          1 bits etat ; 1 bit enable
 *  uint8         nbre sondes     maximum 256 (MAXSDE)

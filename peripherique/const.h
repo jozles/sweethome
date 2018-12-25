@@ -23,8 +23,10 @@
  * 1.9 normalisation du format de communication
  *     automate pour talkServer
  * 1.a paramètres pour switchs, pulse etc ; 3 modes pour l'alim : DS PO NO    
- *     réception commandes (ordreExt) opérationnelle (cdes testa_on__ testb_on__ testaoff__ testboff__)
  *     config hardware selon carte.
+ *     réception commandes (ordreExt) opérationnelle (cdes testa_on__ testb_on__ testaoff__ testboff__)
+ *     pilotage des switchs via on/off du serveur opérationnelle.
+ * 1.b ajout des valeurs courantes de pulse et image des detecteurs dans cstRec
  *  
 Modifier : 
   
@@ -71,17 +73,28 @@ Modifier :
             l'avant dernière variable la version du soft qui a alimenté la structure
             Les accés se font via 4 fonctions : 
                 readConstant() (ctle du crc), writeConstant() (géné crc), initConstant() et printConstant
+
+     Pulse :
+
+            Le démarrage, l'arrêt et l'avancement des timers est opéré 
+
+     Detecteurs :
+     
 */
+/* >>> MODES d'ALIM <<< */
+
 #define DS_MODE 'D' // deep Sleep     (pas de loop ; pas de server ; ESP12 reset-GPIO6 connected)
 #define PO_MODE 'P' // power off Mode (pas de loop ; pas de server ; ESP01 GPIO3/RX-Done connected)
 #define NO_MODE 'N' // No stop mode   (loop et server)
+
+/* >>> CARTES <<< */
 
 #define VR      'V'
 #define THESP01 '1'
 #define THESP12 '2'
 
-#define CARTE THESP01                 // <------------- modèle carte
-#define POWER_MODE PO_MODE            // <------------- mode compil 
+#define CARTE VR                      // <------------- modèle carte
+#define POWER_MODE NO_MODE            // <------------- mode compil 
 
 #if POWER_MODE==NO_MODE
   #define _SERVER_MODE
@@ -96,8 +109,6 @@ Modifier :
 #if  POWER_MODE!=PO_MODE
   #define CONSTANT RTCSAVED
   #define CONSTANTADDR 64    // adresse des constantes dans la mémoire RTC (mots 4 octets = 256)
-//  #define NBRECEEPROM 53  
-// 525000 minutes par an soit 10,5 millions sur 20 ans soit 105 records @ 100K Eeprom write
 #endif PM!=PO_MODE
 
 #if POWER_MODE==PO_MODE
@@ -186,40 +197,43 @@ Modifier :
 
 // timings
 
-#define TCONVERSION 375         // millis délai conversion temp
-#define PERTEMP 60              // secondes période par défaut lecture temp
-#define PERTEMPKO 7200          // secondes période par défaut lecture temp si connexion wifi ko
-#define PERSERV 3600            // secondes période max entre 2 accès server
-#define TOINCHCLI 4000          // msec max attente car server
-#define WIFI_TO_CONNEXION 5000  // msec
-#define NBRETRY 3               // wifiConnexion
+#define TCONVERSION 375           // millis délai conversion temp
+#define PERTEMP 60                // secondes période par défaut lecture temp
+#define PERTEMPKO 7200            // secondes période par défaut lecture temp si connexion wifi ko
+#define PERSERV 3600              // secondes période max entre 2 accès server
+#define TOINCHCLI 4000            // msec max attente car server
+#define WIFI_TO_CONNEXION 5000    // msec
+#define NBRETRY 3                 // wifiConnexion
 #define TSERIALBEGIN 100
-#define TDEBOUNCE 50            // msec
-#define PERACT 100              // millis période scrutation actions switchs 
+#define TDEBOUNCE 50              // msec
+#define PERCTL 100                // millis période scrutation controles (switchs, pulses, detecteurs) 
 
 
 
 typedef struct {
   uint8_t   cstlen;
   char      numPeriph[2];
-  uint16_t  serverTime;       // temps écoulé depuis la dernière cx au serveur
-  uint16_t  serverPer;        // période (sec) de cx au serveur
-  uint16_t  tempPer;          // période (sec) de mesure thermomètre (PERTEMP ou PERTEMPKO)
-  uint8_t   tempPitch;        // seuil de variation de la temp pour cx au serveur
+  uint16_t  serverTime;           // temps écoulé depuis la dernière cx au serveur
+  uint16_t  serverPer;            // période (sec) de cx au serveur
+  uint16_t  tempPer;              // période (sec) de mesure thermomètre (PERTEMP ou PERTEMPKO)
+  uint8_t   tempPitch;            // seuil de variation de la temp pour cx au serveur
   int16_t   oldtemp;
-  uint8_t   talkStep;           // pointeur pour l'automate talkServer()
-  byte      intCde;             // 2 bits par sw cde/état = *periIntVal = bits 8(sw4), 6(sw3), 4(sw2), 2(sw1) commande
-  byte      actCde[MAXSW];      // cdes d'activation (MAXSW=4 1 mot)
-  byte      desCde[MAXSW];      // cdes désactivation
-  byte      onCde[MAXSW];       // cdes forçage ON
-  byte      offCde[MAXSW];      // cdes forçage OFF
-  uint16_t  pulseMode[MAXSW];   // mode pulse
-  uint32_t  intIPulse[MAXSW];   // durée pulse ON
-  uint32_t  intOPulse[MAXSW];   // durée pulse OFF
-  IPAddress IpLocal;            // 1 mot
+  uint8_t   talkStep;             // pointeur pour l'automate talkServer()
+  byte      intCde;               // 2 bits par sw cde/état = *periIntVal = bits 8(sw4), 6(sw3), 4(sw2), 2(sw1) commande
+  byte      actCde[MAXSW];        // cdes d'activation (MAXSW=4 1 mot)
+  byte      desCde[MAXSW];        // cdes désactivation
+  byte      onCde[MAXSW];         // cdes forçage ON
+  byte      offCde[MAXSW];        // cdes forçage OFF
+  uint16_t  pulseMode[MAXSW];     // mode pulse
+  uint32_t  durPulseOne[MAXSW];   // durée pulse 1
+  uint32_t  durPulseTwo[MAXSW];   // durée pulse 2
+  uint32_t  begPulseOne[MAXSW];   // temps debut pulse 1
+  uint32_t  begPulseTwo[MAXSW];   // temps debut pulse 2
+  uint8_t   memDetec[MAXDET];     // image mem des détecteurs
+  IPAddress IpLocal;              // 1 mot
   char      cstVers[4];       
-  uint8_t   cstcrc;             // doit toujours être le dernier : utilisé pour calculer sa position
-                        // total 76 = 19 mots
+  uint8_t   cstcrc;               // doit toujours être le dernier : utilisé pour calculer sa position
+             // total 112 = 28 mots
 } constantValues;
 
 /*enum rst_reason {
@@ -234,5 +248,4 @@ typedef struct {
 */
 
 #endif // CONST_H_INCLUDED
-
 

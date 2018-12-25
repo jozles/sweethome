@@ -90,8 +90,8 @@ void initConstant()  // inits mise sous tension
   memcpy(cstRec.onCde,"\0\0\0\0",4);      // mode sw
   memcpy(cstRec.offCde,"\0\0\0\0",4);     // mode sw  
   memcpy(cstRec.pulseMode,"\0\0\0\0",4);  // mode pulse
-  memset(cstRec.intIPulse,'\0',8);        // durée pulses (MAXSW=4 2 mots)
-  memset(cstRec.intOPulse,'\0',8);        // durée pulses (MAXSW=4 2 mots)  
+  memset(cstRec.durPulseOne,'\0',8);        // durée pulses (MAXSW=4 2 mots)
+  memset(cstRec.durPulseTwo,'\0',8);        // durée pulses (MAXSW=4 2 mots)
   cstRec.IpLocal=IPAddress(0,0,0,0);
   memcpy(cstRec.cstVers,VERSION,4);
   Serial.println("initConstant");
@@ -115,7 +115,7 @@ void printConstant()
   
   for(int i=0;i<NBSW;i++){
     Serial.print(i+1);Serial.print("  ");
-    Serial.print((cstRec.intCde>>(i*2+1))&0x01);Serial.print("   ");Serial.print(cstRec.pulseMode[i],HEX);Serial.print(" ");Serial.print(cstRec.intOPulse[i]);Serial.print(" ");Serial.println(cstRec.intIPulse[i]);
+    Serial.print((cstRec.intCde>>(i*2+1))&0x01);Serial.print("   ");Serial.print(cstRec.pulseMode[i],HEX);Serial.print(" ");Serial.print(cstRec.durPulseTwo[i]);Serial.print(" ");Serial.println(cstRec.durPulseOne[i]);
     subprintConstant(cstRec.actCde[i]);subprintConstant(cstRec.desCde[i]);subprintConstant(cstRec.onCde[i]);subprintConstant(cstRec.offCde[i]);
     Serial.println();
   }

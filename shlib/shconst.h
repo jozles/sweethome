@@ -2,7 +2,7 @@
 #define _SHCONST_H_
 
 
-//#define PERIF
+#define PERIF
 
 #define PORTSERVPERI 1791
 
@@ -10,7 +10,7 @@
 #define PINLED 0                    //  0 = ESP-12  ; 2 = ESP-01
 #define LEDON LOW
 #define LEDOFF HIGH
-#endif PERIF
+#endif defPERIF
 #ifndef PERIF
 #define PINLED 13
 #define LEDON HIGH
@@ -159,7 +159,7 @@ enum {OFF,ON};
 // most significant = MS ; least = LS
 //
 
-#define PMTOE_PB PBITE      // pulse Mode time one enable pos bit
+#define PMTOE_PB PBITE      // time one enable pos bit
 #define PMTOE_VB VBITE      // val bit
 #define PMTTE_PB PBITD      // time two enable pos bit
 #define PMTTE_VB VBITD
@@ -169,7 +169,7 @@ enum {OFF,ON};
 #define PMFRE_VB VBITB
 #define PMPHE_PB PBITA      // phase pos bit
 #define PMPHE_VB VBITA
-#define PMDINMS_PB PBIT9    // Det on number pos ms bit
+#define PMDINMS_PB PBIT9    // det on number pos ms bit
 #define PMDINMS_VB VBIT9
 #define PMDINLS_PB PBIT8    // det on number pos ls bit
 #define PMDINLS_VB VBIT8
@@ -183,11 +183,11 @@ enum {OFF,ON};
 #define PMDIU_VB VBIT4
 #define PMDIH_PB PBIT3      // det on H/L pos bit
 #define PMDIH_VB VBIT3
-#define PMDOE_PB PBIT2
+#define PMDOE_PB PBIT2      // det off enable pos bit
 #define PMDOE_VB VBIT2
-#define PMDOU_PB PBIT1
+#define PMDOU_PB PBIT1      // det off UP/DOWN pos bit
 #define PMDOU_VB VBIT1
-#define PMDOH_PB PBIT0
+#define PMDOH_PB PBIT0      // det off H/L pos bit
 #define PMDOH_VB VBIT0
 
 #define PMDIN_MSK (PMDINMS_VB | PMDINLS_PB)>>PMDINLS_PB // mask de la valeur du numéro de détecteur on
@@ -196,7 +196,6 @@ enum {OFF,ON};
 // codage car différenciation de fonction
 
 #define PMFNCVAL    0X30    // car d'offset ('0') de la valeur de fonction (*valf)
-#define PMSWCVAL    0x30    // car d'offset ('0') du num de switch dans le nom de fonction
 
 #define PMFNCHAR    0x40    // car d'offset ('@') dans nom de fonction
 #define PMFNSWLS_PB PBIT4   // position ls bit du numéro de sw

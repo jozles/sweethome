@@ -64,7 +64,8 @@ WiFiClient cliext;              // client externe du serveur local
   long  tempAge=1;         // secondes
   bool  tempchg=FAUX;
 
-  long swActTime=millis();
+  long ctlTime=millis();    // timer stepper switchs, pulses, détecteurs
+  uint8_t ctlStep=0;        // stepper 
 
   long  blkTime=millis();
   int   blkPer=2000;
@@ -76,6 +77,7 @@ WiFiClient cliext;              // client externe du serveur local
 
   uint8_t pinsw[4]={PINSWA,PINSWB,PINSWC,PINSWD};   // les switchs
   uint8_t pindet[4]={PINDTA,PINDTB,PINDTC,PINDTD};  // les détecteurs
+  uint8_t staPulse[MAXSW]={1,1,1,1};                // l'état des pulses  
 
   int   i=0,j=0,k=0;
   uint8_t oldswa[]={0,0,0,0};         // 1 par switch
@@ -101,6 +103,7 @@ int  talkServer();
 void talkClient(char* etat);
 
 int act2sw(int sw1,int sw2);
+uint8_t runPulse(uint8_t sw);
 
 void isrBascA();
 void isrBascB();
@@ -250,7 +253,19 @@ void loop(){        //=============================================
   else {
 #ifdef  _SERVER_MODE
   debug(2);  
-  if(millis()>(swActTime+PERACT)){swAction();swActTime=millis();}
+    if(millis()>(ctlTime+PERCTL)){
+      switch(ctlStep++){
+        case 1:swAction();break;
+        //case 2:evalDetec();break;
+        //case 3:chgPulse();break;
+        case 4:staPulse[0]=runPulse(0);break;
+        case 5:staPulse[1]=runPulse(1);break;
+        case 6:staPulse[2]=runPulse(2);break;
+        case 7:staPulse[3]=runPulse(3);break;        
+        case 9:ctlStep=0;break;
+        default:break;
+      }
+    }
 #endif def_SERVER_MODE  
   debug(3);
 
@@ -346,8 +361,8 @@ void dataTransfer(char* data)           // data sur fonction
               conv_atoh((data+MPOSINTPAR0+i*9+4),&cstRec.onCde[i]);
               conv_atoh((data+MPOSINTPAR0+i*9+6),&cstRec.offCde[i]);
               cstRec.pulseMode[i]=(*(data+MPOSPULSMOD+i*2)-48)<<4 | (*(data+MPOSPULSMOD+i*2+1)-48)&0x0F;
-              cstRec.intIPulse[i]=(long)convStrToNum(data+MPOSPULSON0+i*9,&sizeRead);  
-              cstRec.intOPulse[i]=(long)convStrToNum(data+MPOSPULSOF0+i*9,&sizeRead);
+              cstRec.durPulseOne[i]=(long)convStrToNum(data+MPOSPULSON0+i*9,&sizeRead);  
+              cstRec.durPulseTwo[i]=(long)convStrToNum(data+MPOSPULSOF0+i*9,&sizeRead);
             }
             printConstant();
         }
@@ -664,6 +679,56 @@ void isrBascB()
   act2sw(-1,0);
   cntIntB++;
   debTime=millis();debPer=TDEBOUNCE;
+}
+
+
+/* pulse control --------------------- 
+
+    pulse states  > 20=1 ; > 10=0 ; < 10=halted
+*/
+
+#define PUSTG1  11     // 0 - start1
+#define PUSTA   2      // arrêté
+#define PUSTH   3      // stoppé
+#define PUSTR1  14     // 0 - running1
+#define PUSTR2  25     // 1 - running2
+#define PUSTF1  6      // fin 1
+#define PUSTF2  7      // fin 2
+#define PUSTG2  28     // 1 - start2
+#define PUSTGF  19     // 0 - start1 free run
+#define PUSTSE  0      // system error
+
+uint8_t runPulse(uint8_t sw)                               // état pulse sw
+{
+  if(sw<NBSW){
+
+    bool enOne=(cstRec.pulseMode[sw] & PMTOE_VB) != 0;
+    bool enTwo=(cstRec.pulseMode[sw] & PMTTE_VB) != 0;
+    bool freeRun=(cstRec.pulseMode[sw] & PMFRE_VB) != 0;
+    bool runing1=cstRec.begPulseOne[sw] != 0;
+    bool runing2=cstRec.begPulseTwo[sw] != 0;
+    bool endOne=(millis()/1000-cstRec.begPulseOne[sw]) >= cstRec.durPulseOne[sw];
+    bool endTwo=(millis()/1000-cstRec.begPulseTwo[sw]) >= cstRec.durPulseTwo[sw];
+    bool stopD=digitalRead(pindet[(cstRec.pulseMode[sw]>>PMDONLS_PB)&0x0003])==PMDOH_VB;
+    bool enStp=(cstRec.pulseMode[sw] & PMDOE_VB) != 0;
+    bool stopS=(cstRec.pulseMode[sw] & PMSRE_VB) != 0;
+    bool stopPulse=(enStp && stopD) || stopS;
+    bool startD=digitalRead(pindet[(cstRec.pulseMode[sw]>>PMDINLS_PB)&0x0003]) == PMDIH_VB;
+    bool enStart=(cstRec.pulseMode[sw] & PMDIE_VB) != 0;
+    bool startPulse= enStart && startD;
+  
+    if(enOne && !runing1 && (!enTwo || !runing2) && startPulse){cstRec.begPulseOne[sw]=millis();cstRec.begPulseTwo[sw]=0;return PUSTG1;}  // start 1                      
+    if((!enOne || !runing1) && (!enTwo || !runing2)){return PUSTA;}                                                                       // arrêté
+    if(stopPulse){cstRec.begPulseOne[sw]=0;cstRec.begPulseTwo[sw]=0;return PUSTH;}                                                        // stoppé
+    if(runing1 && !endOne){return PUSTR1;}                                                                                                // running1
+    if(runing2 && !endTwo){return PUSTR2;}                                                                                                // running2
+    if(runing1 && endOne && !enTwo){cstRec.begPulseOne[sw]=0;cstRec.begPulseTwo[sw]=0;return PUSTF1;}                                     // fin 1
+    if(runing2 && endTwo && (!enOne || !freeRun)){cstRec.begPulseOne[sw]=0;cstRec.begPulseTwo[sw]=0;return PUSTF2;}                       // fin 2
+    if(runing1 && endOne && enTwo && !stopPulse){cstRec.begPulseOne[sw]=0;cstRec.begPulseTwo[sw]=millis();return PUSTG2;}                 // start 2
+    if(runing2 && endTwo && enOne && freeRun && !stopPulse){cstRec.begPulseOne[sw]=millis();cstRec.begPulseTwo[sw]=0;return PUSTGF;}      // start 1 free run
+    
+    return PUSTSE;   // system error
+  }
 }
 
 /* switchs action -------------------- */
