@@ -190,7 +190,7 @@ void xradioTableHtml(EthernetClient* cli,byte valeur,char* nomfonct,byte nbval,i
       byte b,a=valeur; a=a >> i*2 ;b=a&0x01;a&=0x02;a=a>>1;          // mode periIntVal        a bit poids fort commande ; b bit poids faible état
       for(int j=0;j<nbval;j++){
         if(type&0x02!=0){
-          cli->print("<input type=\"radio\" name=\"");cli->print(nomfonct);cli->print((char)(i+48));cli->print("\" value=\"");cli->print((char)(48+j));cli->print("\"");
+          cli->print("<input type=\"radio\" name=\"");cli->print(nomfonct);cli->print((char)(i+48));cli->print("\" value=\"");cli->print((char)(PMFNCVAL+j));cli->print("\"");
           if(a==j){cli->print(" checked");}cli->print("/>");
         }
       }
@@ -224,8 +224,8 @@ void subMPn(EthernetClient* cli,uint8_t sw,uint8_t num)          // bits OTSFPpp
 
   char fonc[]="peri_pmo__\0";
   uint16_t pipm=*(periIntPulseMode+sw);
-  uint8_t val=((pipm>>num)&0x03);
-  fonc[LENNOM-2]=(char)(0x40 | sw<<4 | num);                     // [LENNOM-1]='_'
+  uint8_t val=((pipm>>num)&PMDON_MSK);                           // peu importe d'utiliser PMDON ou PMDIN le mask est le même
+  fonc[LENNOM-2]=(char)(PMFNCHAR | sw<<PMFNSWLS_PB | num);                     // [LENNOM-1]='_'
 
   numTableHtml(cli,'b',(void*)&val,fonc,1,0,1);
 }
@@ -237,38 +237,39 @@ void subMPc(EthernetClient* cli,uint8_t sw,uint8_t num)          // bits OTSFPpp
 {
   char fonc[]="peri_pmo__\0";
   uint16_t pipm=*(periIntPulseMode+sw);
-  uint8_t val=((pipm>>num)&0x01);
-  fonc[LENNOM-1]=(char)(0x40 | sw<<4 | num);                     // [LENNOM-2]='_'
+  uint8_t val=((pipm>>num)&0x01);                                              // checkbox mask toujours 1
+  fonc[LENNOM-1]=(char)(PMFNCHAR | sw<<PMFNSWLS_PB | num);                     // [LENNOM-2]='_'
   
   checkboxTableHtml(cli,&val,fonc,-1,0);
 }
 
 void subModePulseOn(EthernetClient* cli,uint8_t numsw)   // modes pulses  ; le num de detecteur et ses 3 checkbox
 {
-  subMPn(cli,numsw,8);  // num de det pour ON
-  subMPc(cli,numsw,2);  // checkbox enable det ON
-  subMPc(cli,numsw,1);  // checkbox UP/DOWN pour det ON
-  subMPc(cli,numsw,0);  // checkbox H/L pour det ON
+  subMPn(cli,numsw,PMDINLS_PB);  // num de det pour ON
+  subMPc(cli,numsw,PMDIE_PB);  // checkbox enable det ON
+  subMPc(cli,numsw,PMDIU_PB);  // checkbox UP/DOWN pour det ON
+  subMPc(cli,numsw,PMDIH_PB);  // checkbox H/L pour det ON
 }
 void subModePulseOff(EthernetClient* cli,uint8_t numsw)   // modes pulses  ; le num de detecteur et ses 3 checkbox
 {
-  subMPn(cli,numsw,6);  // num de det pour OFF
-  subMPc(cli,numsw,5);  // checkbox enable det OFF
-  subMPc(cli,numsw,4);  // checkbox UP/DOWN pour det OFF
-  subMPc(cli,numsw,3);  // checkbox H/L pour det OFF
+  subMPn(cli,numsw,PMDONLS_PB);  // num de det pour OFF
+  subMPc(cli,numsw,PMDOE_PB);  // checkbox enable det OFF
+  subMPc(cli,numsw,PMDOU_PB);  // checkbox UP/DOWN pour det OFF
+  subMPc(cli,numsw,PMDOH_PB);  // checkbox H/L pour det OFF
 }
 
-void subModePulseTime(EthernetClient* cli,uint8_t numsw,uint32_t* pulse,uint32_t* dur,char* fonc1,char* fonc2,char onoff)
+void subModePulseTime(EthernetClient* cli,uint8_t numsw,uint32_t* pulse,uint32_t* dur,char* fonc1,char* fonc2,char onetwo,char onoff)
 {
       uint16_t pipm=*(periIntPulseMode+numsw);
-      uint8_t val=(pipm>>(13+(onoff&0x01)))&0x01;
+      uint8_t val,pbit=PMTTE_PB;if(onetwo=='O'){pbit=PMTOE_PB;}
+      val=(pipm>>pbit)&0x01;                                        // checkbox mask toujours 1
       cli->print("<font size=\"2\">");
-      fonc1[LENNOM-1]=onoff;
-      checkboxTableHtml(cli,&val,fonc1,-1,0);                       // bits enable pulse
+      fonc1[LENNOM-1]=onetwo;
+      checkboxTableHtml(cli,&val,fonc1,-1,0);                       // bit enable pulse
       numTableHtml(cli,'l',(pulse+numsw),fonc2,8,0,2);              // affichage-saisie pulse   
-      if(onoff=='O'){subModePulseOn(cli,numsw);}
+      if(onoff=='I'){subModePulseOn(cli,numsw);}                    // detecteur+checkbox pour on ou off
       else{subModePulseOff(cli,numsw);}
-      char a[7];sprintf(a,"%06d",*(dur+numsw));a[6]='\0';
+      char a[8];sprintf(a,"%08d",*(dur+numsw));a[7]='\0';
       cli->print("<br>(");cli->print(a);cli->println(")</font>");
 }
 
@@ -279,8 +280,8 @@ void intModeTableHtml(EthernetClient* cli,byte* valeur,int nbli,int nbtypes)   /
 {
   char nfonc[]="peri_imn__\0";            // transporte le numéro de detecteur des sources
   char cfonc[]="peri_imc__\0";            // transporte la valeur des bits des sources
-  char pfonc[]="peri_pon__\0";            // transporte la valeur pulse One
-  char qfonc[]="peri_pof__\0";            // transporte la valeur pulse Two
+  char pfonc[]="peri_pto__\0";            // transporte la valeur pulse time One
+  char qfonc[]="peri_ptt__\0";            // transporte la valeur pulse time Two
   char rfonc[]="peri_sfp__\0";            // transporte les bits SFP et enable pulse de periPulseMode (LENNOM-1= 'S','F','P','O','I')
 
   char nac[]="ADOI";                      // nom du type d'acttion (activ/désactiv/ON/OFF)
@@ -289,28 +290,32 @@ void intModeTableHtml(EthernetClient* cli,byte* valeur,int nbli,int nbtypes)   /
       nfonc[LENNOM-2]=(char)(i+48);
       cfonc[LENNOM-2]=(char)(i+48);
       rfonc[LENNOM-2]=(char)(i+48);
-      pfonc[LENNOM-2]=(char)(i+48);
-      qfonc[LENNOM-2]=(char)(i+48);
-      pfonc[LENNOM-1]=(char)(64);
-      qfonc[LENNOM-1]=(char)(64);
+      pfonc[LENNOM-2]=(char)(i+PMFNCVAL);
+      qfonc[LENNOM-2]=(char)(i+PMFNCVAL);
+      //pfonc[LENNOM-1]=(char)(64);
+      //qfonc[LENNOM-1]=(char)(64);
       
 
       cli->print("<td>");
-      subModePulseTime(cli,i,periIntPulseOn,periIntPulseCurrOn,rfonc,pfonc,'O');
+      subModePulseTime(cli,i,periIntPulseOn,periIntPulseCurrOn,rfonc,pfonc,'O','I');
       cli->print("  <font size=\"1\">___E U/D H/L</font><br>");
-      subModePulseTime(cli,i,periIntPulseOff,periIntPulseCurrOff,rfonc,qfonc,'T');  
+      subModePulseTime(cli,i,periIntPulseOff,periIntPulseCurrOff,rfonc,qfonc,'T','O');  
 
                                                                  // bits xOTSFPppqqcbafed
                                                                  // pp N° detect ON  num bit 8 ; f,e,d checkbox enable, up/down, H/L ; num 5 à 3
                                                                  // qq N° detect OFF num bit 6 ; c,b,a checkbox enable, up/down, H/L ; num 2 à 0
                                                                  // tOne enable ; tTwo enable ; Server ; Free run ; Phase ; x dispo
-      uint8_t val=((*(periIntPulseMode+i)>>12)&0x01+48);rfonc[LENNOM-1]='S';
+      uint8_t val;
+      
       cli->print("<font size=\"1\">SFP</font>");
+      
+      val=((*(periIntPulseMode+i)>>PMSRE_PB)&0x01+PMFNCVAL);rfonc[LENNOM-1]='S';      
       checkboxTableHtml(cli,&val,rfonc,-1,0);                    // bit S
-      val=((*(periIntPulseMode+i)>>11)&0x01)+48;rfonc[LENNOM-1]='F';
+      val=((*(periIntPulseMode+i)>>PMFRE_PB)&0x01)+PMFNCVAL;rfonc[LENNOM-1]='F';
       checkboxTableHtml(cli,&val,rfonc,-1,0);                    // bit F
-      val=((*(periIntPulseMode+i)>>10)&0x01)+48;rfonc[LENNOM-1]='P';
+      val=((*(periIntPulseMode+i)>>PMPHE_PB)&0x01)+PMFNCVAL;rfonc[LENNOM-1]='P';
       checkboxTableHtml(cli,&val,rfonc,-1,0);                    // bit P
+      
       cli->print("</td>");
       
       cli->print("<td>");                                               // colonne des types d'action  
