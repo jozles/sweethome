@@ -292,10 +292,10 @@
                 si arrêt -> pulse invalide
 
          les détecteurs sont représentés par une variable en mémoire ; pas d'accès direct aux ports
-                le changement d'état d'un port et la mise à jour de la variable sont gérés par une ISR.
-                le débounce est intégré dans la loop
-                la variable mémoire stocke la valeur courante et la valeur précédente.
-                la valeur précédente est mise à jour lors de la lecture par le gestionnaire des impulsions
+                le changement d'état d'un port et la mise à jour de la variable sont gérés par isrDet().
+                la variable mémoire stocke la valeur courante, la valeur précédente et un bit enable 
+                      4 bits / détecteur (param LENDET) ; DETBITEN / DETBITCUR / DETBITPRE / DETBITDIS (dispo)
+                le débounce est intégré dans la loop ainsi que l'effacement du bit de valeur précédente après un tour. 
 
 *  int8          numéro
 *  16 bytes      nom  
@@ -328,8 +328,11 @@
 *                                              2 bits numéro détecteur d'arrêt pulse
 *                                              1 bit arrêt sur état ou front
 *                                              1 bit arrêt sur H/L
-*                                              1 bit mode (one shoot/free run)
-*                                              1 bit phase H->H-L L->L-H
+*                                              2 bits cycle : (représentés par F et P dans periTable)
+*                                                 00 selon la config (undefined cycle) 
+*                                                 01 free run (après déclenchement nécessite une condition stop pour s'arrêter ; reprend si la condition disparait)
+*                                                 10 one shot
+*                                                 11 one shot terminé
 *                                              1 bits dispo
 *  uint8         nbre détecteurs maximum 4 (MAXDET)
 *  byte          1 bits etat ; 1 bit enable

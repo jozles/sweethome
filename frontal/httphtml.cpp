@@ -269,7 +269,7 @@ void subModePulseTime(EthernetClient* cli,uint8_t numsw,uint32_t* pulse,uint32_t
       numTableHtml(cli,'l',(pulse+numsw),fonc2,8,0,2);              // affichage-saisie pulse   
       if(onoff=='I'){subModePulseOn(cli,numsw);}                    // detecteur+checkbox pour on ou off
       else{subModePulseOff(cli,numsw);}
-      char a[8];sprintf(a,"%08d",*(dur+numsw));a[7]='\0';
+      char a[8];sprintf(a,"%06d",*(dur+numsw));a[6]='\0';
       cli->print("<br>(");cli->print(a);cli->println(")</font>");
 }
 
@@ -298,7 +298,7 @@ void intModeTableHtml(EthernetClient* cli,byte* valeur,int nbli,int nbtypes)   /
 
       cli->print("<td>");
       subModePulseTime(cli,i,periIntPulseOn,periIntPulseCurrOn,rfonc,pfonc,'O','I');
-      cli->print("  <font size=\"1\">___E U/D H/L</font><br>");
+      cli->print("  <font size=\"1\">__E U/D H/L</font><br>");
       subModePulseTime(cli,i,periIntPulseOff,periIntPulseCurrOff,rfonc,qfonc,'T','O');  
 
                                                                  // bits xOTSFPppqqcbafed

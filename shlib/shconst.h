@@ -62,6 +62,8 @@
 #define FASTBLINK 500
 #define PULSEBLINK 40
 /* code blink  (valeurs impaires bloquantes) */
+/* code courant+100 reset (sauf impairs ofcourse) */
+#define BCODEONBLINK      98  // allume jusqu'au prochain blink
 #define BCODEPERIRECLEN   3   // PERIRECLEN trop petit -> blocage
 #define BCODEPBNTP        2   // pas de service NTP
 #define BCODEWAITWIFI     4   // attente WIFI
@@ -165,10 +167,14 @@ enum {OFF,ON};
 #define PMTTE_VB VBITD
 #define PMSRE_PB PBITC      // server enable pos bit
 #define PMSRE_VB VBITC
-#define PMFRE_PB PBITB      // free run pos bit
-#define PMFRE_VB VBITB
-#define PMPHE_PB PBITA      // phase pos bit
-#define PMPHE_VB VBITA
+#define PMCMS_PB PBITB      // cycle msb ; 00 selon config ; 01 free run
+#define PMCMS_VB VBITB
+#define PMCLS_PB PBITA      // cycle lsb ; 10 one shot ; 11 one shot terminé
+#define PMCLS_VB VBITA
+    #define UDCYCLE  0x00
+    #define FREERUN  0x01
+    #define ONESHOT  0x02
+    #define ONESHOTX 0x03
 #define PMDINMS_PB PBIT9    // det on number pos ms bit
 #define PMDINMS_VB VBIT9
 #define PMDINLS_PB PBIT8    // det on number pos ls bit
@@ -192,6 +198,18 @@ enum {OFF,ON};
 
 #define PMDIN_MSK (PMDINMS_VB | PMDINLS_PB)>>PMDINLS_PB // mask de la valeur du numéro de détecteur on
 #define PMDON_MSK (PMDONMS_VB | PMDONLS_VB)>>PMDONLS_PB // mask de la valeur du numéro de détecteur off
+
+// détecteurs (memDetec)
+
+#define LENDET 4            // nbre bits / détecteur
+#define DETEN_VB VBIT0      // val  bit enable
+#define DETEN_PB PBIT0
+#define DETCUR_VB VBIT1     // val bit état courant
+#define DETCUR_PB PBIT1
+#define DETPRE_VB VBIT2     // val bit état précédent
+#define DETPRE_PB PBIT2
+#define DETDIS_VB VBIT3     // (dispo)
+#define DETDIS_PB PBIT3
 
 // codage car différenciation de fonction
 

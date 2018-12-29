@@ -32,26 +32,30 @@ bool readConstant()
 
 #if CONSTANT==RTCSAVED
   int temp=CONSTANTADDR;
+  byte buf[4];
+  system_rtc_mem_read(temp,&buf,4); // charge la longueur telle qu'enregistrée
+  cstRec.cstlen=buf[0];
   system_rtc_mem_read(temp,&cstRec,cstRec.cstlen);
 #endif
 
 #if CONSTANT==EEPROMSAVED
-  for(int temp=1;temp<cstRec.cstlen;temp++){               // temp=1 : skip len
+  cstRec.cstlen=EEPROM.read((int)(CONSTANTADDR));  // charge la longueur telle qu'enregistrée
+  for(int temp=0;temp<cstRec.cstlen;temp++){        
     *(cstRecA+temp)=EEPROM.read((int)(temp+CONSTANTADDR));
-    //Serial.print(*(cstRecA+temp),HEX);Serial.print(" ");
-    }
-  //Serial.println();
-
+  }
 #endif
-for(int k=0;k<4;k++){Serial.print(cstRec.cstVers[k]);}
-Serial.print(" readConstant ");Serial.print((long)cstRecA,HEX);Serial.print(" len=");Serial.print(cstRec.cstlen);Serial.print(" crc=");Serial.print(cstRec.cstcrc,HEX);Serial.print(" calc_crc=");
-byte calc_crc=calcCrc(cstRecA,(char*)&cstRec.cstcrc-cstRecA);Serial.println(calc_crc,HEX);
-if(cstRec.cstcrc==calc_crc){return 1;}
+
+for(int k=0;k<4;k++){Serial.print(cstRecA[cstRec.cstlen-8+k]);}          // affichage version ; cstRec.cstVers[k]);}
+Serial.print(" readConstant ");Serial.print((long)cstRecA,HEX);Serial.print(" len=");Serial.print(cstRec.cstlen);Serial.print(" crc=");Serial.print(*(cstRecA+cstRec.cstlen-1),HEX);Serial.print(" calc_crc=");
+byte calc_crc=calcCrc(cstRecA,(int)cstRec.cstlen-1);Serial.println(calc_crc,HEX);
+if(*(cstRecA+cstRec.cstlen-1)==calc_crc){return 1;}
 return 0;
 }
 
 void writeConstant()
 {
+cstRec.cstlen=sizeof(cstRec);
+memcpy(cstRec.cstVers,VERSION,4);
 cstRec.cstcrc=calcCrc(cstRecA,(char*)&cstRec.cstcrc-cstRecA); 
 // la longueur totale de la structure est plus grande que la position du crc !
   
@@ -68,7 +72,8 @@ cstRec.cstcrc=calcCrc(cstRecA,(char*)&cstRec.cstcrc-cstRecA);
   }
   EEPROM.commit();
 #endif
-Serial.print("writeConstant ");Serial.print((long)cstRecA,HEX);
+Serial.print("writeConstant ");for(int h=0;h<4;h++){Serial.print(cstRec.cstVers[h]);};Serial.print(" ");
+Serial.print((long)cstRecA,HEX);
 Serial.print(" len=");Serial.print((char*)&cstRec.cstcrc-cstRecA);
 Serial.print("/");Serial.print(cstRec.cstlen);
 Serial.print(" crc=");Serial.println(cstRec.cstcrc,HEX);
@@ -93,6 +98,7 @@ void initConstant()  // inits mise sous tension
   memset(cstRec.durPulseOne,'\0',8);        // durée pulses (MAXSW=4 2 mots)
   memset(cstRec.durPulseTwo,'\0',8);        // durée pulses (MAXSW=4 2 mots)
   cstRec.IpLocal=IPAddress(0,0,0,0);
+  cstRec.memDetec=MEMDINIT;
   memcpy(cstRec.cstVers,VERSION,4);
   Serial.println("initConstant");
   writeConstant();

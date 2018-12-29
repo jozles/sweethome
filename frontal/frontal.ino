@@ -508,15 +508,15 @@ void loop()                             // =====================================
                               uint16_t c=0;
                               //Serial.print(" periIntPulseMode=");Serial.print(*(periIntPulseMode+sw),HEX);Serial.print(" sw=");Serial.print(sw);Serial.print(" b=");Serial.println((char)b);
                                 switch (b){
-                                  case 'S':c=PMSRE_PB;break;
-                                  case 'F':c=PMFRE_PB;break;
-                                  case 'P':c=PMPHE_PB;break;
-                                  case 'O':c=PMTOE_PB;break;
-                                  case 'T':c=PMTTE_PB;break;
+                                  case 'S':c=PMSRE_VB;break;
+                                  case 'F':c=PMCLS_VB;break;
+                                  case 'P':c=PMCMS_VB;break;
+                                  case 'O':c=PMTOE_VB;break;
+                                  case 'T':c=PMTTE_VB;break;
                                   default:break;
                                 }
                               *(periIntPulseMode+sw) &= ~c;if(d==1){*(periIntPulseMode+sw) |= c;}
-                              //Serial.print(" periIntPulseMode=");Serial.print(*(periIntPulseMode+sw),HEX);Serial.print(" d=");Serial.print(d,BIN);Serial.print(" c=");Serial.println(c,BIN);
+                              Serial.print(" periIntPulseMode=");Serial.print(*(periIntPulseMode+sw),HEX);Serial.print(" d=");Serial.print(d,BIN);Serial.print(" c=");Serial.println(c,BIN);
                               }break;          // periIntMode bits SFP et enable
               case 33: what=5;{uint8_t v=0,b=0;frecupptr(libfonctions+2*i,&v,&b,MAXTAC);             // numéro détecteur
                               *(periIntMode+v) &= 0x3f;*(periIntMode+v) |= (*valf&0x03)<<6;
@@ -524,10 +524,13 @@ void loop()                             // =====================================
               case 34: what=5;{uint8_t v=0,b=0;frecupptr(libfonctions+2*i,&v,&b,MAXTAC);
                               *(periIntMode+v) &= maskbit[b*2];if(*valf&0x01!=0){*(periIntMode+v) |= maskbit[b*2+1];} 
                               };break;         // periIntMode 6 checkbox
-              case 35: what=5;{int sw=*libfonctions+2*i-PMFNCVAL;
+              case 35: what=5;{int sw=*(libfonctions+2*i)-PMFNCVAL;
+                              //Serial.print("libfonctions=");Serial.print(*(libfonctions+2*i));Serial.print(" - ");Serial.println(libfonctions+2*i);
+                              //Serial.print("PulseOn+sw=");Serial.print(*(periIntPulseOn+sw));Serial.print(" sw=");Serial.print(sw);Serial.print(" valf=");Serial.print(valf);
                               *(periIntPulseOn+sw)=0;*(periIntPulseOn+sw)=(uint32_t)convStrToNum(valf,&j);
+                              //Serial.print(" ");Serial.println(*(periIntPulseOn+sw));
                               };break;         // peri Pulse On
-              case 36: what=5;{int sw=*libfonctions+2*i-PMFNCVAL;
+              case 36: what=5;{int sw=*(libfonctions+2*i)-PMFNCVAL;
                               *(periIntPulseOff+sw)=0;*(periIntPulseOff+sw)=(uint32_t)convStrToNum(valf,&j);
                               };break;        // peri Pulse Off
               default:break;
@@ -611,7 +614,7 @@ void periDataRead()             // traitement d'une chaine "dataSave" ou "dataRe
   
   if(periCur!=0){       // le périph a un numéro, ctle de l'adr mac
     periLoad(periCur);
-    Serial.print("periCur=");Serial.print(periCur);Serial.print(" periIntVal=");Serial.println(*periIntVal,HEX); 
+    Serial.print("periCur=");Serial.print(periCur);Serial.print(" periIntVal=");Serial.print(*periIntVal,HEX); 
     if(!compMac(periMacBuf,periMacr)){periCur=0;}}
   else {                // periCur=0 d'abord recherche si mac connu   
     for(i=1;i<=NBPERIF;i++){periLoad(i);if(compMac(periMacBuf,periMacr)){periCur=i;i=NBPERIF+1;}}
@@ -675,7 +678,7 @@ int periParamsHtml(EthernetClient* cli,char* host,int port)
 
           *bufServer='\0';
           buildMess(nomfonct,message,"");            // bufServer complété   
-
+          
           packDate(periLastDateOut,date14+2);periSave(periCur);
 
           if(port==0){                               // réponse à dataRead/Save
@@ -698,6 +701,7 @@ int periParamsHtml(EthernetClient* cli,char* host,int port)
             cli->stop();
             delay(1);
           }
+          //Serial.print(" periIntPulseMode=");for(int h=0;h<4;h++){Serial.print(*(periIntPulseMode+h),HEX);Serial.print(" ");}Serial.println();
           return zz;
 }
 
@@ -732,6 +736,7 @@ int analyse(EthernetClient* cli)              // decode la chaine et remplit les
   int i=0,j=0,k=0;
   char c,cpc='\0';                         // cpc pour convertir les séquences %hh 
   char noms[LENNOM+1]={0},nomsc[LENNOM-1];noms[LENNOM]='\0';nomsc[LENNOM-2]='\0';
+  memset(libfonctions,0x00,sizeof(libfonctions));
 
       nvalf[0]=0;
       memset(valeurs,0,LENVALEURS);
@@ -751,7 +756,7 @@ int analyse(EthernetClient* cli)              // decode la chaine et remplit les
             Serial.print(c);
             if (!termine){
           
-              if (nom==FAUX && (c=='?' || c=='&')){nom=VRAI;val=FAUX;j=0;memset(noms,' ',LENNOM);if(i<NBVAL){i++;};Serial.println();}  // fonction suivante ; i indice fonction courante ; numfonct[i] N° fonction trouvée
+              if (nom==FAUX && (c=='?' || c=='&')){nom=VRAI;val=FAUX;j=0;memset(noms,' ',LENNOM);if(i<NBVAL){i++;};Serial.println(libfonctions+2*(i-1));}  // fonction suivante ; i indice fonction courante ; numfonct[i] N° fonction trouvée
               if (nom==VRAI && (c==':' || c=='=')){                                    
                 nom=FAUX;val=VRAI;
                 nvalf[i+1]=nvalf[i]+1;

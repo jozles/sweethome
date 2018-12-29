@@ -67,6 +67,7 @@ WiFiClient cliext;              // client externe du serveur local
   long ctlTime=millis();    // timer stepper switchs, pulses, détecteurs
   uint8_t ctlStep=0;        // stepper 
 
+  extern uint8_t nbreBlink;
   long  blkTime=millis();
   int   blkPer=2000;
   long  debTime=millis();   // pour mesurer la durée power on
@@ -74,10 +75,17 @@ WiFiClient cliext;              // client externe du serveur local
   int   debPer=TDEBOUNCE;
   int   cntIntA=0;
   int   cntIntB=0;
+  long  detTime[MAXDET]={millis(),millis(),millis(),millis()};    // temps pour debounce
+  long  detFlTime[MAXDET]={millis(),millis(),millis(),millis()};  // temps pour effacement flancs
 
-  uint8_t pinsw[4]={PINSWA,PINSWB,PINSWC,PINSWD};   // les switchs
-  uint8_t pindet[4]={PINDTA,PINDTB,PINDTC,PINDTD};  // les détecteurs
-  uint8_t staPulse[MAXSW]={1,1,1,1};                // l'état des pulses  
+  uint8_t pinSw[MAXSW]={PINSWA,PINSWB,PINSWC,PINSWD};    // les switchs
+  uint8_t pinDet[MAXDET]={PINDTA,PINDTB,PINDTC,PINDTD};  // les détecteurs
+  uint8_t pinDir[MAXDET]={0,0,0,0};                      // prochain état des détecteurs
+  //typedef void (*isr)();
+  //isr     isrD[]={&isrD0,&isrD1,&isrD2,&isrD3}         
+  void (*isrD[4])(void);
+  
+  uint8_t staPulse[MAXSW]={1,1,1,1};                     // l'état des pulses  
 
   int   i=0,j=0,k=0;
   uint8_t oldswa[]={0,0,0,0};         // 1 par switch
@@ -105,13 +113,17 @@ void talkClient(char* etat);
 int act2sw(int sw1,int sw2);
 uint8_t runPulse(uint8_t sw);
 
-void isrBascA();
-void isrBascB();
-void initIntPin();
+void isrDet(uint8_t det);
+void isrD0();
+void isrD1();
+void isrD2();
+void isrD3();
+void initIntPin(uint8_t det);
 
 bool  wifiConnexion(const char* ssid,const char* password);
 int   dataSave();
-int   dataRead();  
+int   dataRead();
+void  dataTransfer(char* data);  
 void  readTemp();
 void  ordreExt();
 void  swAction();
@@ -145,6 +157,12 @@ void setup()
   pinMode(PININTA,INPUT_PULLUP);
   pinMode(PININTB,INPUT_PULLUP);
   if(digitalRead(PINDTA==0) || digitalRead(PININTA)==0 || (digitalRead(PININTA)!=0 && digitalRead(PININTB)!=0)){cntIntA=1;}
+
+ isrD[0]=isrD0;
+ isrD[1]=isrD1;
+ isrD[2]=isrD2;
+ isrD[3]=isrD3;
+          
 #endif PM==NO_MODE
 
   nbfonct=(strstr(fonctions,"last_fonc_")-fonctions)/LENNOM;
@@ -176,7 +194,7 @@ void setup()
 cstRec.cstlen=sizeof(cstRec);
 
  byte setds[4]={0,0x7f,0x80,0x3f},readds[8];   // 187mS 10 bits accu 0,25°
- int v=ds1820.setDs(WPIN,setds,readds);if(v==1){Serial.print(" DS1820 version=");Serial.println(readds[0],HEX);}
+ int v=ds1820.setDs(WPIN,setds,readds);if(v==1){Serial.print(" DS1820 version=0x");Serial.println(readds[0],HEX);}
  else {Serial.print(" DS1820 error ");Serial.println(v);}
 #if POWER_MODE==NO_MODE
   ds1820.convertDs(WPIN);
@@ -208,19 +226,20 @@ cstRec.cstlen=sizeof(cstRec);
     Serial.println("initialisation constantes");
     initConstant();
   }
+  cstRec.memDetec!=MEMDINIT;
 #endif PM!=DS_MOD
 
 Serial.print("CONSTANT=");Serial.print(CONSTANT);Serial.print(" time=");Serial.print(millis()-debTime);Serial.println(" ready !");
   yield();
+  for(int g=0;g<MAXSW;g++){cstRec.begPulseOne[g]=0;cstRec.begPulseTwo[g]=0;}
   printConstant();
 
 #if POWER_MODE==NO_MODE
-    /* connexion au wifi (clignotement led 50/50 en attente) */
-    while(!wifiConnexion(ssid1,password1)){ledblink(BCODEWAITWIFI);delay(FASTBLINK);} // delay(500);digitalWrite(PINLED,!digitalRead(PINLED));} 
+    wifiConnexion(ssid1,password1); 
+
 #ifdef  _SERVER_MODE
     server.begin();
     Serial.println("server-begin");
-
 #endif  def_SERVER_MODE
     
 }    // fin setup NO_MODE
@@ -243,39 +262,59 @@ void loop(){        //=============================================
 #ifdef  _SERVER_MODE
   ordreExt(); // réception ordre ext ?
 #endif def_SERVER_MODE  
-  debug(0);
+  //debug(0);
    
   if(cstRec.talkStep!=0){
-    debug(1);
+    //debug(1);
     talkServer();
     writeConstant();
     }
   else {
 #ifdef  _SERVER_MODE
-  debug(2);  
-    if(millis()>(ctlTime+PERCTL)){
-      switch(ctlStep++){
-        case 1:swAction();break;
-        //case 2:evalDetec();break;
-        //case 3:chgPulse();break;
-        case 4:staPulse[0]=runPulse(0);break;
-        case 5:staPulse[1]=runPulse(1);break;
-        case 6:staPulse[2]=runPulse(2);break;
-        case 7:staPulse[3]=runPulse(3);break;        
-        case 9:ctlStep=0;break;
-        default:break;
+    //debug(2);  
+      if(millis()>(ctlTime+PERCTL)){
+        switch(ctlStep++){
+          case 1:break;
+          case 2:swAction();break;
+          //case 3:evalDetec();break;
+          //case 4:chgPulse();break;
+          case 4:staPulse[0]=runPulse(0);
+            Serial.print(0);Serial.print(" ");
+            Serial.print(cstRec.pulseMode[0],HEX);Serial.print(" ");
+            Serial.print(staPulse[0],HEX);Serial.print(" ");
+            Serial.print(cstRec.begPulseOne[0]);Serial.print("-");Serial.print(cstRec.begPulseTwo[0]);
+            Serial.print("| detect=");Serial.print(cstRec.memDetec,HEX);
+            Serial.print("/h=");Serial.print((cstRec.pulseMode[0]>>PMDIH_PB)&0x0001);
+            Serial.print("/e=");Serial.print(cstRec.pulseMode[0]&PMDIE_VB,HEX);
+            Serial.print(" num=");Serial.print(pinDet[(cstRec.pulseMode[0]>>PMDINLS_PB)&0x0003]);
+            Serial.print(" ");Serial.println(millis()/1000);break;
+          case 5:staPulse[1]=runPulse(1);break;
+          case 6:staPulse[2]=runPulse(2);break;
+          case 7:staPulse[3]=runPulse(3);break;
+          case 9:ctlStep=0;
+            for(int det=0;det<MAXDET;det++){                          // effacement flancs détecteurs après (au moins) un tour complet 
+              if(millis()>detFlTime[det]+PERCTL*10){
+                cstRec.memDetec &= ~(DETPRE_VB<<(LENDET*det));        // effacement précédent
+                cstRec.memDetec |= (((DETCUR_VB>>(DETCUR_PB+LENDET*det))&0x0001)<<(DETPRE_PB+LENDET*det));  // remplacement
+              }
+            }
+            break;
+          default:break;
+        }
+        ctlTime=millis();
       }
-    }
 #endif def_SERVER_MODE  
-  debug(3);
+    //debug(3);
 
-  ledblink(0);
+    ledblink(0);
 
 /* debounce switchs sur interrupt */
-  if(millis()>debTime+debPer && debPer!=0){
-    initIntPin();
+  for(int det=0;det<MAXDET;det++){
+    if(detTime[det]!=0 && (millis()>(detTime[det]+TDEBOUNCE))){
+      detTime[det]=0; 
+      initIntPin(det);
+    }
   }
-
 #endif PM==NO_MODE
 
 /* tous modes */
@@ -309,6 +348,7 @@ void loop(){        //=============================================
 #endif PM==PO_MODE
 
 while(1){};
+
 } //  fin setup si != NO_MODE
 
 void loop() {
@@ -327,6 +367,7 @@ void fServer(uint8_t fwaited)          // réception du message réponse du serv
                                        // retour periMess  
 {      
         periMess=getHttpResponse(&cli,bufServer,LBUFSERVER,&fonction);
+        Serial.print("gHResp() periMess=");Serial.println(periMess);
         if(periMess==MESSOK){
           if(fonction==fwaited){dataTransfer(bufServer);}
           else {periMess=MESSFON;}
@@ -342,6 +383,7 @@ void dataTransfer(char* data)           // data sur fonction
 {
   int  ddata=16;                                  // position du numéro de périphérique  
   byte fromServerMac[6];
+  byte hh,ll;
   
         periMess=MESSOK;
         packMac(fromServerMac,(char*)(data+ddata+3));
@@ -360,7 +402,10 @@ void dataTransfer(char* data)           // data sur fonction
               conv_atoh((data+MPOSINTPAR0+i*9+2),&cstRec.desCde[i]);
               conv_atoh((data+MPOSINTPAR0+i*9+4),&cstRec.onCde[i]);
               conv_atoh((data+MPOSINTPAR0+i*9+6),&cstRec.offCde[i]);
-              cstRec.pulseMode[i]=(*(data+MPOSPULSMOD+i*2)-48)<<4 | (*(data+MPOSPULSMOD+i*2+1)-48)&0x0F;
+              conv_atoh((data+MPOSPULSMOD+i*5),&hh);
+              conv_atoh((data+MPOSPULSMOD+i*5+2),&ll);
+              cstRec.pulseMode[i]=hh*256+ll;
+              //Serial.print(i);Serial.print("=>");Serial.print(cstRec.pulseMode[i],HEX);Serial.print(" in=");Serial.println(data+MPOSPULSMOD+i*5);
               cstRec.durPulseOne[i]=(long)convStrToNum(data+MPOSPULSON0+i*9,&sizeRead);  
               cstRec.durPulseTwo[i]=(long)convStrToNum(data+MPOSPULSOF0+i*9,&sizeRead);
             }
@@ -393,7 +438,7 @@ switch(cstRec.talkStep){
   case 3:    
       while((retry<NBRETRY)&&!wifiConnexion(ssid,password)){delay(1000);retry++;}
       if(retry>=NBRETRY && cstRec.talkStep==1){cstRec.talkStep=2;}
-      else if(retry>=NBRETRY && cstRec.talkStep==2){cstRec.talkStep=99;}
+      else if(retry>=NBRETRY && cstRec.talkStep==2){cstRec.talkStep=98;}
       else {
         cstRec.talkStep=4;
         WiFi.macAddress(mac);
@@ -427,7 +472,7 @@ switch(cstRec.talkStep){
       else {  
         v=dataSave();Serial.print("dsave v=");Serial.println(v);
         if(v==MESSOK){cstRec.talkStep=7;}
-        else {cstRec.talkStep=9;}
+        else {cstRec.talkStep=99;}
       }
       break;
 
@@ -447,8 +492,11 @@ switch(cstRec.talkStep){
        cstRec.talkStep=0;
        break;
 
-  case 99:      // pas réussi à connecter au WiFi ; tempo 2h
+
+  case 98:      // pas réussi à connecter au WiFi ; tempo 2h
         cstRec.serverPer=PERTEMPKO;
+
+  case 99:      // mauvaise réponse du serveur ou wifi ko ; raz numPeriph
         memcpy(cstRec.numPeriph,"00",2);
         cstRec.talkStep=0;
         writeConstant();
@@ -568,12 +616,12 @@ int buildReadSave(char* nomfonction,char* data)          //   connecte et transf
 
       sb=strlen(message);
       message[sb]=(char)(NBSW+48);                                    // nombre switchs    
-      for(i=(NBSW-1);i>=0;i--){message[sb+1+(NBSW-1)-i]=(char)(48+digitalRead(pinsw[i]));}    // état
+      for(i=(NBSW-1);i>=0;i--){message[sb+1+(NBSW-1)-i]=(char)(48+digitalRead(pinSw[i]));}    // état
       if(NBSW<MAXSW){for(i=NBSW;i<MAXSW;i++){message[sb+1+i]='x';}}message[sb+5]='_';
 
       sb+=MAXSW+2;
       message[sb]=(char)(NBDET+48);                                   // nombre détecteurs    
-      for(i=(NBDET-1);i>=0;i--){message[sb+1+(NBDET-1)-i]=(char)(48+digitalRead(pindet[i]));}  // état 
+      for(i=(NBDET-1);i>=0;i--){message[sb+1+(NBDET-1)-i]=(char)(48+(cstRec.memDetec>>(DETCUR_PB+LENDET*i))&0x0001);}  // état 
       if(NBDET<MAXDET){for(i=NBDET;i<MAXDET;i++){message[sb+1+i]='x';}}message[sb+5]='_';
       strcpy(message+sb+1+MAXDET,"_\0");
       if(strlen(message)>LENVAL-4){Serial.print("******* LENVAL ***** MESSAGE ******");ledblink(BCODELENVAL);}
@@ -606,7 +654,8 @@ bool wifiConnexion(const char* ssid,const char* password)
   long beg=millis();
   bool cxok=VRAI;
 
-
+    ledblink(BCODEONBLINK);
+    
   //if(WiFi.status()!=WL_CONNECTED){ 
 
     //WiFi.forceSleepWake(); //WiFi.forceSleepEnd();       // réveil modem
@@ -629,12 +678,12 @@ bool wifiConnexion(const char* ssid,const char* password)
       }
   
     if(cxok){
-      Serial.println("connected");
-      Serial.print("local IP : ");Serial.println(WiFi.localIP());
+      if(nbreBlink==BCODEWAITWIFI){ledblink(BCODEWAITWIFI+100);}
+      Serial.print(" connected ; local IP : ");Serial.println(WiFi.localIP());
       if(cstRec.IpLocal!=WiFi.localIP()){cstRec.IpLocal=WiFi.localIP();writeConstant();}
       
       }
-    else {Serial.println("\nfailed");}
+    else {Serial.println("\nfailed");if(nbreBlink==0){ledblink(BCODEWAITWIFI);}}
     //}
   return cxok;
 }
@@ -647,6 +696,9 @@ void modemsleep()
 }
 
 #if POWER_MODE==NO_MODE 
+
+/* interruptions détecteurs */
+/*
 void initIntPin()
 {
   if(cntIntA<=cntIntB){attachInterrupt(digitalPinToInterrupt(PININTA), isrBascA, FALLING);}
@@ -666,7 +718,7 @@ void isrBascA()
  // interruptions inactives le temps du debounce
   detachInterrupt(PININTA);
   //detachInterrupt(PININTB);
-  act2sw(0,-1);
+//  act2sw(0,-1);
   cntIntA++;
   debTime=millis();debPer=TDEBOUNCE;
 }
@@ -680,52 +732,101 @@ void isrBascB()
   cntIntB++;
   debTime=millis();debPer=TDEBOUNCE;
 }
+*/
+
+void initIntPin(uint8_t det)
+{
+  Serial.print(det);Serial.println(" ********************* initIntPin");
+  if(pinDir[det]==0){attachInterrupt(digitalPinToInterrupt(pinDet[det]),isrD[det], FALLING);}
+  else {attachInterrupt(digitalPinToInterrupt(pinDet[det]),isrD[det], RISING);}
+}
+
+void isrD0(){detachInterrupt(pinDet[0]);isrDet(0);}
+void isrD1(){detachInterrupt(pinDet[1]);isrDet(1);}
+void isrD2(){detachInterrupt(pinDet[2]);isrDet(2);}
+void isrD3(){detachInterrupt(pinDet[3]);isrDet(3);}
+
+void isrDet(uint8_t det)      
+{
+  Serial.print(det);Serial.println(" ********************* isrDet");
+  cstRec.memDetec &= ~(DETCUR_VB<<(LENDET*det));              // raz état courant
+  cstRec.memDetec |=  (pinDir[det])<<(DETCUR_PB+LENDET*det);   // état courant
+  if(pinDir[det]++ >1 ){pinDir[det]=0;}
+  cstRec.memDetec &= ~(DETPRE_VB<<(LENDET*det));              // raz état précédent
+  cstRec.memDetec |= (pinDir[det])<<(DETPRE_PB+LENDET*det);  // état précédent !!! après inversion pinDir
+  detTime[det] = millis();
+  detFlTime[det]= millis();
+}
 
 
 /* pulse control --------------------- 
 
-    pulse states  > 20=1 ; > 10=0 ; < 10=halted
+    pulse states  (PUACT!=0 active, PURMD reason ; PUACT=0 inactive, PUSMD reason) 
 */
+#define PUCNT 0x01    // 0 pulse 1 ; 1 pulse 2
+#define PUACT 0x02    // 1 active ; 0 halted
+#define PURMD 0x0C    // 01 start ; 10 running ; 11 free run
+#define PUSMD 0x30    // 01 stop ; 10 fin ; 11 idle
 
-#define PUSTG1  11     // 0 - start1
-#define PUSTA   2      // arrêté
-#define PUSTH   3      // stoppé
-#define PUSTR1  14     // 0 - running1
-#define PUSTR2  25     // 1 - running2
-#define PUSTF1  6      // fin 1
-#define PUSTF2  7      // fin 2
-#define PUSTG2  28     // 1 - start2
-#define PUSTGF  19     // 0 - start1 free run
+#define PUSTG1  0x06   // 0 - start1
+#define PUSTA   0x30   // idle
+#define PUSTH   0x10   // stoppé
+#define PUSTR1  0x0A   // 0 - running1
+#define PUSTR2  0x0B   // 1 - running2
+#define PUSTF1  0x20   // fin 1
+#define PUSTF2  0x21   // fin 2
+#define PUSTG2  0x07   // 1 - start2
+#define PUSTGF  0x0E   // 0 - start1 free run
+#define PUSTOS  0x0F   // fin oneshot
 #define PUSTSE  0      // system error
+// test running 
 
-uint8_t runPulse(uint8_t sw)                               // état pulse sw
+
+uint8_t runPulse(uint8_t sw)                               // get état pulse sw
 {
   if(sw<NBSW){
 
+    uint8_t numDetOn=(cstRec.pulseMode[sw]>>PMDINLS_PB)&0x0003;
+    uint8_t numDetOff=(cstRec.pulseMode[sw]>>PMDONLS_PB)&0x0003;
+
     bool enOne=(cstRec.pulseMode[sw] & PMTOE_VB) != 0;
     bool enTwo=(cstRec.pulseMode[sw] & PMTTE_VB) != 0;
-    bool freeRun=(cstRec.pulseMode[sw] & PMFRE_VB) != 0;
+    uint8_t cycle=((cstRec.pulseMode[sw] & (PMCLS_VB | PMCMS_VB))>>PMCLS_PB);
+    bool udcycle = cycle == UDCYCLE;
+    bool freeRun = cycle == FREERUN ;
+    bool oneshot = cycle == ONESHOT ;
+    bool oneshotx= cycle == ONESHOTX ;
     bool runing1=cstRec.begPulseOne[sw] != 0;
     bool runing2=cstRec.begPulseTwo[sw] != 0;
     bool endOne=(millis()/1000-cstRec.begPulseOne[sw]) >= cstRec.durPulseOne[sw];
     bool endTwo=(millis()/1000-cstRec.begPulseTwo[sw]) >= cstRec.durPulseTwo[sw];
-    bool stopD=digitalRead(pindet[(cstRec.pulseMode[sw]>>PMDONLS_PB)&0x0003])==PMDOH_VB;
+    
+    bool edgeStop=((cstRec.pulseMode[sw] & PMDOU_VB) == 0) || ((cstRec.memDetec>>(DETPRE_PB+numDetOff*LENDET))&0x0001 != (cstRec.memDetec>>(DETCUR_PB+numDetOff*LENDET))&0x0001);
+    bool stopD=((cstRec.memDetec>>(DETEN_PB+numDetOff*LENDET))&0x001 !=0) && ((cstRec.memDetec>>(DETCUR_PB+numDetOff*LENDET))&0x0001 == ((cstRec.pulseMode[sw]>>PMDOH_PB)&0x0001));
     bool enStp=(cstRec.pulseMode[sw] & PMDOE_VB) != 0;
     bool stopS=(cstRec.pulseMode[sw] & PMSRE_VB) != 0;
-    bool stopPulse=(enStp && stopD) || stopS;
-    bool startD=digitalRead(pindet[(cstRec.pulseMode[sw]>>PMDINLS_PB)&0x0003]) == PMDIH_VB;
-    bool enStart=(cstRec.pulseMode[sw] & PMDIE_VB) != 0;
-    bool startPulse= enStart && startD;
+    bool stopPulse=(enStp && stopD && edgeStop) || stopS;
+
+    bool edgeStart=((cstRec.pulseMode[sw] & PMDIU_VB) == 0) || ((cstRec.memDetec>>(DETPRE_PB+numDetOn*LENDET))&0x0001 != (cstRec.memDetec>>(DETCUR_PB+numDetOn*LENDET))&0x0001);
+    bool startD=((cstRec.memDetec>>(DETEN_PB+numDetOn*LENDET))&0x001 !=0) && ((cstRec.memDetec>>(DETCUR_PB+numDetOn*LENDET))&0x0001 == ((cstRec.pulseMode[sw]>>PMDIH_PB)&0x0001));
+    bool enStart=((cstRec.pulseMode[sw] & PMDIE_VB ) != 0 ) && !oneshotx ;
+    bool startPulse= enStart && startD && edgeStart;
   
-    if(enOne && !runing1 && (!enTwo || !runing2) && startPulse){cstRec.begPulseOne[sw]=millis();cstRec.begPulseTwo[sw]=0;return PUSTG1;}  // start 1                      
+    if(enOne && !runing1 && (!enTwo || !runing2) && startPulse){
+      cstRec.begPulseOne[sw]=millis()/1000;cstRec.begPulseTwo[sw]=0;return PUSTG1;}                                                       // start 1                      
     if((!enOne || !runing1) && (!enTwo || !runing2)){return PUSTA;}                                                                       // arrêté
     if(stopPulse){cstRec.begPulseOne[sw]=0;cstRec.begPulseTwo[sw]=0;return PUSTH;}                                                        // stoppé
     if(runing1 && !endOne){return PUSTR1;}                                                                                                // running1
     if(runing2 && !endTwo){return PUSTR2;}                                                                                                // running2
     if(runing1 && endOne && !enTwo){cstRec.begPulseOne[sw]=0;cstRec.begPulseTwo[sw]=0;return PUSTF1;}                                     // fin 1
     if(runing2 && endTwo && (!enOne || !freeRun)){cstRec.begPulseOne[sw]=0;cstRec.begPulseTwo[sw]=0;return PUSTF2;}                       // fin 2
-    if(runing1 && endOne && enTwo && !stopPulse){cstRec.begPulseOne[sw]=0;cstRec.begPulseTwo[sw]=millis();return PUSTG2;}                 // start 2
-    if(runing2 && endTwo && enOne && freeRun && !stopPulse){cstRec.begPulseOne[sw]=millis();cstRec.begPulseTwo[sw]=0;return PUSTGF;}      // start 1 free run
+    if(runing1 && endOne && enTwo && !stopPulse){cstRec.begPulseOne[sw]=0;cstRec.begPulseTwo[sw]=millis()/1000;return PUSTG2;}            // start 2
+    if(runing2 && endTwo && enOne && freeRun && !stopPulse){cstRec.begPulseOne[sw]=millis()/1000;cstRec.begPulseTwo[sw]=0;return PUSTGF;} // start 1 free run
+    if(runing2 && endTwo && oneshot){
+      cstRec.begPulseOne[sw]=0;cstRec.begPulseTwo[sw]=0;
+      cstRec.pulseMode[sw] &= ~(PMCLS_VB | PMCMS_VB); // effacement
+      cstRec.pulseMode[sw] |= (ONESHOTX<<PMCLS_PB);  // remplacement
+      return PUSTOS;} // fin oneshot
     
     return PUSTSE;   // system error
   }
@@ -733,44 +834,46 @@ uint8_t runPulse(uint8_t sw)                               // état pulse sw
 
 /* switchs action -------------------- */
 
-uint8_t rdy(byte modesw,int w) // pour les 3 sources, check bit enable puis etat source ; retour numsource valorisé si valide sinon 0
+uint8_t rdy(byte modesw,int sw) // pour les 3 sources, check bit enable puis etat source ; retour numsource valorisé si valide sinon 0
 {
   if(modesw&0x20 !=0){
-    if((modesw>>4)&0x01==digitalRead(pindet[((modesw>>6)&0x03)])){return 1;}   // détecteur 
-  }
+    if(((modesw>>4)&0x01==cstRec.memDetec>>(DETCUR_PB+LENDET*sw)) && (cstRec.memDetec&(DETEN_VB<<LENDET*sw)!=0)){return 1;}   // ok détecteur
+  }                                                                                                                           // flanc à traiter
 //  Serial.print(w);Serial.print(" modesw=");Serial.print(modesw,HEX);Serial.print(" ");Serial.print(cstRec.intCde,HEX);Serial.print(" ");
 //  Serial.print(modesw&0x08);Serial.print(" ");Serial.print((modesw>>2)&0x01);Serial.print(" ");Serial.println(cstRec.intCde>>((w+1)*2-1)&0x01);
   
   if((modesw & 0x08) != 0){
-    if (((modesw>>2)&0x01)==((cstRec.intCde>>((w+1)*2-1))&0x01)){return 2;}       // serveur
+    if (((modesw>>2)&0x01)==((cstRec.intCde>>((sw+1)*2-1))&0x01)){return 2;}     // ok serveur
   }
 
-//if(((modesw>>2)&0x02)!=0 && (modesw>>2)&0x01==pulsestatus(){return 3;}                      // timer à traiter
+  if(sw==0){Serial.print(" mode=");Serial.print(modesw,HEX);Serial.print(" sta=");Serial.print(staPulse[sw],HEX);Serial.print(" sta&puact=");Serial.print(staPulse[sw]&PUACT,HEX);}
+  if(((modesw&0x02)!=0) && ((staPulse[sw]&PUACT)!=0) && ((modesw&0x01)==(staPulse[sw]&0x01))){return 3;}    // ok timer
 
-  return 0;
+  return 0;                                                                     // ko 
 }
 
-void swAction()                                                            // check cétat des switchs à changer
+void swAction()                                                                 // check cde des switchs
 { 
   uint8_t swa=0;
   for(int w=0;w<NBSW;w++){
-    swa=rdy(cstRec.offCde[w],w);
+    swa=rdy(cstRec.offCde[w],w);if(w==0){Serial.print(" swaOff=");Serial.println(swa);}
 //    Serial.print(cstRec.onCde[w],HEX);Serial.print(" serv=");Serial.print(cstRec.intCde,HEX);Serial.print(" ");for(int h=MAXSW;h>0;h--){Serial.print((cstRec.intCde>>(h*2-1))&0x01);}
 //    Serial.print(" swa(off)=");Serial.println(swa);
-    if(swa!=0){digitalWrite(pinsw[w],OFF);}
+    if(swa!=0){digitalWrite(pinSw[w],OFF);}
     else{
-      swa=rdy(cstRec.onCde[w],w);
+      swa=rdy(cstRec.onCde[w],w);if(w==0){Serial.print(" swaOn=");Serial.println(swa);}
 //      Serial.print(cstRec.onCde[w],HEX);Serial.print(" serv=");Serial.print(cstRec.intCde,HEX);Serial.print(" ");for(int h=MAXSW;h>0;h--){Serial.print((cstRec.intCde>>(h*2-1))&0x01);}
 //      Serial.print(" swa(on)=");Serial.println(swa);
-      if(swa!=0){digitalWrite(pinsw[w],ON);swa+=10;}
+      if(swa!=0){digitalWrite(pinSw[w],ON);swa+=10;}
       else{
+        /*digitalWrite(pinsw[w],OFF);
         swa=rdy(cstRec.desCde[w],w);
-        //Serial.print(" swa(des)=");Serial.println(swa);
+        Serial.print(" swa(des)=");Serial.println(swa);
         if(swa!=0){swa+=20;}                                               // à traiter
         else{
           swa=rdy(cstRec.actCde[w],w);if(swa!=0){swa+=30;}                 // à traiter
-          //Serial.print(" swa(act)=");Serial.println(swa);
-        }
+          Serial.print(" swa(act)=");Serial.println(swa);
+        }*/
       }
     }
     //if(swa!=oldswa[w]){Serial.print("+++++++++++++++++swAction=");Serial.print(w);Serial.print(" ");Serial.println(swa);oldswa[w]=swa;}

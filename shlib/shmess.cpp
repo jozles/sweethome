@@ -67,10 +67,12 @@ void purgeServer(EthernetClient* cli)
 void purgeServer(WiFiClient* cli)
 #endif // PERIF
 {
-    Serial.print(" purge ");
-    while (cli->available()){Serial.print(cli->read());delay(1);}
+    if(cli->connected()){
+        Serial.print(" purge ");
+        while (cli->available()){Serial.print(cli->read());delay(1);}
+        Serial.println();
+    }
     cli->stop();
-    Serial.println();
 }
 
 
@@ -107,8 +109,7 @@ int messToServer(WiFiClient* cli,const char* host,const int port,char* data)    
     Serial.print(host);Serial.print(":");Serial.print(port);
     Serial.print("...");
 #ifndef PERIF
-    cli->stop();
-    delay(1000);
+    purgeServer(cli);
 #endif // PERIF
     x=cli->connect(host,port);
     while(!x==1){
@@ -117,7 +118,7 @@ int messToServer(WiFiClient* cli,const char* host,const int port,char* data)    
             case -2:Serial.print("invalid server");break;
             case -3:Serial.print("truncated");break;
             case -4:Serial.print("invalid response");break;
-            default:break;
+            default:Serial.print("unknown reason");break;
         }
         delay(1000);Serial.print(":");Serial.print(w++);Serial.print(" ");
         if((millis()-beg)>TO_HTTPCX){
@@ -183,9 +184,10 @@ int checkData(char* data)            // controle la structure des données d'un 
   else if(calcCrc(data,ii)!=c){i=MESSCRC;}
   else i=MESSOK;
 
-  Serial.print("\nlen/crc calc ");
+/*  Serial.print("\nlen/crc calc ");
   Serial.print(strlen(data));Serial.print("/");Serial.print(calcCrc(data,ii),HEX);
   Serial.print(" checkData=");Serial.println(i);
+*/
   return i;
 }
 
@@ -222,6 +224,7 @@ int getHttpResponse(WiFiClient* cli, char* data,int lmax,uint8_t* fonction)     
   if(q==MESSOK){
     q=checkHttpData(data,fonction);
   }
+  Serial.println();
   return q;
 }
 
@@ -303,13 +306,14 @@ void assySet(char* message,int periCur,char* diag,char* date14)
                     sprintf(message+v1+k*(8+1),"%08u",*(periIntPulseOn+k));
                     memcpy(message+v1+(k+1)*8+k,"_\0",2);
                 }
-Serial.println(message);
+//Serial.println(message);
                 v1+=MAXSW*2*(8+1);
                 for(int k=0;k<MAXSW;k++){           // 2 bytes pulse Mode (hh*2) /sw
-                conv_htoa(message+v1,(byte*)periIntPulseMode+1+k*3);
-                conv_htoa(message+v1+2,(byte*)periIntPulseMode+k*3);
-                memcpy(message+v1+4,"_\0",2);
+                conv_htoa(message+v1+k*(4+1),(byte*)periIntPulseMode+1+k*2);
+                conv_htoa(message+v1+k*(4+1)+2,(byte*)periIntPulseMode+k*2);
+                memcpy(message+v1+k*(4+1)+4,"_\0",2);
                 }
+//Serial.println(message);
             }  // pericur != 0
 #endif  ndef PERIF
 #define MSETDIAG    88+4*2*9+4*5                         //  =180

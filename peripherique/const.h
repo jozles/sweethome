@@ -1,7 +1,7 @@
 #ifndef CONST_H_INCLUDED
 #define CONST_H_INCLUDED
 
-#define VERSION "1.a_"
+#define VERSION "1.b_"
 /* 1.1 allumage/extinction modem
  * 1.2 ajout voltage (n.nn) dans message ; modif unpackMac
  * 1.3 deep sleep (PERTEMP) ; gestion EEPROM ; conversion temp pendant sleep
@@ -141,6 +141,8 @@ Modifier :
 #define PINDTD 13   // pin entrée détect bit 3  sur la même entrée.
 #define PININTA 12  // in interupt
 #define PININTB 14  // in interupt
+#define PININTC 13  // in interupt
+#define MEMDINIT 0x1111 // bits enable
 #define PINPOFF 3   // power off TPL5111 (RX ESP01)
 #endif CARTE==VR
 
@@ -166,6 +168,7 @@ Modifier :
 #define PINDTD 5    // pin entrée détect bit 3  sur la même entrée.
 #define PININTA 5   // in interupt
 #define PININTB 5   // in interupt
+#define MEMDINIT 0x0000 // bits enable memDetec
 #define PINPOFF 3   // power off TPL5111 (RX ESP01)
 #endif CARTE==THESP01
 
@@ -229,7 +232,7 @@ typedef struct {
   uint32_t  durPulseTwo[MAXSW];   // durée pulse 2
   uint32_t  begPulseOne[MAXSW];   // temps debut pulse 1
   uint32_t  begPulseTwo[MAXSW];   // temps debut pulse 2
-  uint8_t   memDetec[MAXDET];     // image mem des détecteurs
+  uint16_t  memDetec;             // image mem des détecteurs (4 bits par détecteur)
   IPAddress IpLocal;              // 1 mot
   char      cstVers[4];       
   uint8_t   cstcrc;               // doit toujours être le dernier : utilisé pour calculer sa position
