@@ -41,23 +41,26 @@ extern char*     periNamer;                    // ptr ds buffer : description p�
 extern char*     periVers;                     // ptr ds buffer : version logiciel du périphérique
 extern byte*     periMacr;                     // ptr ds buffer : mac address 
 extern byte*     periIpAddr;                   // ptr ds buffer : Ip address
-extern byte*     periIntNb;                    // ptr ds buffer : Nbre d'interrupteurs (0 aucun ; maxi 4(MAXSW)            
-extern byte*     periIntVal;                   // ptr ds buffer : état/cde des inter  
-extern byte*     periIntMode;                  // ptr ds buffer : Mode fonctionnement inters (4 bytes par switch)           
-extern uint32_t* periIntPulseOn;               // ptr ds buffer : durée pulses sec ON (0 pas de pulse)
-extern uint32_t* periIntPulseOff;              // ptr ds buffer : durée pulses sec OFF(mode astable)
-extern uint32_t* periIntPulseCurrOn;           // ptr ds buffer : temps courant pulses ON
-extern uint32_t* periIntPulseCurrOff;          // ptr ds buffer : temps courant pulses OFF
-extern uint16_t* periIntPulseMode;             // ptr ds buffer : mode pulses 
+extern byte*     periSwNb;                    // ptr ds buffer : Nbre d'interrupteurs (0 aucun ; maxi 4(MAXSW)            
+extern byte*     periSwVal;                   // ptr ds buffer : état/cde des inter  
+extern byte*     periSwMode;                  // ptr ds buffer : Mode fonctionnement inters (4 bytes par switch)           
+extern uint32_t* periSwPulseOne;               // ptr ds buffer : durée pulses sec ON (0 pas de pulse)
+extern uint32_t* periSwPulseTwo;              // ptr ds buffer : durée pulses sec OFF(mode astable)
+extern uint32_t* periSwPulseCurrOne;           // ptr ds buffer : temps courant pulses ON
+extern uint32_t* periSwPulseCurrTwo;          // ptr ds buffer : temps courant pulses OFF
+extern byte*     periSwPulseCtl;             // ptr ds buffer : mode pulses 
 extern uint8_t*  periSondeNb;                  // ptr ds buffer : nbre sonde
 extern boolean*  periProg;                     // ptr ds buffer : flag "programmable"
 extern byte*     periDetNb;                    // ptr ds buffer : Nbre de détecteurs maxi 4 (MAXDET)
 extern byte*     periDetVal;                   // ptr ds buffer : flag "ON/OFF" si détecteur (2 bits par détec))
+extern float*    periThOffset;                 // ptr ds buffer : offset correctif sur mesure température
 extern int8_t    periMess;                     // code diag réception message (voir MESSxxx shconst.h)
 extern byte      periMacBuf[6]; 
 
 extern void init_params();
 extern int  chge_pwd; //=FAUX;
+
+extern byte mask[];
 
 void cliPrintMac(EthernetClient* cli, byte* mac)
 {
@@ -161,10 +164,10 @@ void lnkTableHtml(EthernetClient* cli,char* nomfonct,char* lib)
   cli->print(lib);cli->println("</a>");
 }
 
-void numTableHtml(EthernetClient* cli,char type,void * valfonct,char* nomfonct,int len,bool td,int pol)
+void numTableHtml(EthernetClient* cli,char type,void * valfonct,char* nomfonct,int len,uint8_t td,int pol)
 {                          
-  if(td){cli->print("<td>");}
-  if(pol!=0){cli->print("<font size=\"");cli->print(pol);cli->print("\">");}
+  if(td==1 || td==2){cli->print("<td>");}
+  if(pol!=0){cli->print("<font size=\"");cli->print(pol);cli->println("\">");}
   cli->print("<input type=\"text\" name=\"");cli->print(nomfonct);
   if(len<=2){cli->print("\" id=\"nt");cli->print(len);}
   cli->print("\" value=\"");
@@ -180,14 +183,14 @@ void numTableHtml(EthernetClient* cli,char type,void * valfonct,char* nomfonct,i
   int sizeHtml=1;if(len>=3){sizeHtml=2;}if(len>=6){sizeHtml=4;}if(len>=9){sizeHtml=6;}
   cli->print("\" size=\"");cli->print(sizeHtml);cli->print("\" maxlength=\"");cli->print(len);cli->print("\" >");
   if(pol!=0){cli->print("</font>");}
-  if(td){cli->println("</td>");}
+  if(td==1 || td==3){cli->println("</td>");}
 }
 
 void xradioTableHtml(EthernetClient* cli,byte valeur,char* nomfonct,byte nbval,int nbli,byte type)
 {
     for(int i=0;i<nbli;i++){
       char oi[]="OI";
-      byte b,a=valeur; a=a >> i*2 ;b=a&0x01;a&=0x02;a=a>>1;          // mode periIntVal        a bit poids fort commande ; b bit poids faible état
+      byte b,a=valeur; a=a >> i*2 ;b=a&0x01;a&=0x02;a=a>>1;          // mode periSwVal        a bit poids fort commande ; b bit poids faible état
       for(int j=0;j<nbval;j++){
         if(type&0x02!=0){
           cli->print("<input type=\"radio\" name=\"");cli->print(nomfonct);cli->print((char)(i+48));cli->print("\" value=\"");cli->print((char)(PMFNCVAL+j));cli->print("\"");
@@ -199,9 +202,9 @@ void xradioTableHtml(EthernetClient* cli,byte valeur,char* nomfonct,byte nbval,i
     }
 }
 
-void checkboxTableHtml(EthernetClient* cli,uint8_t* val,char* nomfonct,int etat,bool td)
+void checkboxTableHtml(EthernetClient* cli,uint8_t* val,char* nomfonct,int etat,uint8_t td)
 {
-  if(td){cli->print("<td>");}
+  if(td==1 || td==2){cli->print("<td>");}
   cli->print("\n<input type=\"checkbox\" name=\"");cli->print(nomfonct);cli->print("\" id=\"cb1\" value=\"1\"");
   if((*val & 0x01)!=0){cli->print(" checked");}
   cli->print(">");
@@ -212,130 +215,120 @@ void checkboxTableHtml(EthernetClient* cli,uint8_t* val,char* nomfonct,int etat,
         case 0 :cli->print("OFF");break;
         default:break;
       }
-  if(td){cli->println("</td>");}
+  if(td==1 || td==3){cli->print("</td>");}
+  cli->println();
 }
 
-
-void subMPn(EthernetClient* cli,uint8_t sw,uint8_t num)          // bits OTSFPppqqcbafed
-                                                                 // pp N° detect ON  num bit 8 ; f,e,d checkbox enable, up/down, H/L ; num 5 à 3
-                                                                 // qq N° detect OFF num bit 6 ; c,b,a checkbox enable, up/down, H/L ; num 2 à 0
-                                                                 // tOne enable ; tTwo enable ; Server ; Free run ; Phase
+void subMPn(EthernetClient* cli,uint8_t sw,uint8_t num,uint8_t nb)   // numbox transportant une valeur avec fonction peri_pmo__
+                                                                // nb est le nombre de bits de la valeur
+                                                                // num le numéro du lsb dans le switch de periSwPulseCtl
+                                                                // le caractère LENNOM-2 est le numéro de sw sur 3 bits (+PMFNCHAR) et bit 0x10=1
+                                                                // le caractère LENNOM-1 est le numéro du lsb(+PMFNCHAR) dans periSwPulseCtl 
 {
-
   char fonc[]="peri_pmo__\0";
-  uint16_t pipm=*(periIntPulseMode+sw);
-  uint8_t val=((pipm>>num)&PMDON_MSK);                           // peu importe d'utiliser PMDON ou PMDIN le mask est le même
-  fonc[LENNOM-2]=(char)(PMFNCHAR | sw<<PMFNSWLS_PB | num);                     // [LENNOM-1]='_'
+  uint64_t pipm;memcpy(&pipm,((char*)(periSwPulseCtl+sw*PMSWLEN)),PMSWLEN);
+  uint8_t val=(pipm>>num)&mask[nb];                          
+  fonc[LENNOM-2]=(char)(PMFNCHAR+sw);      
+  fonc[LENNOM-1]=(char)(PMFNCHAR+num);
 
   numTableHtml(cli,'b',(void*)&val,fonc,1,0,1);
 }
 
-void subMPc(EthernetClient* cli,uint8_t sw,uint8_t num)          // bits OTSFPppqqcbafed
-                                                                 // pp N° detect ON  num bit 8 ; f,e,d checkbox enable, up/down, H/L ; num 5 à 3
-                                                                 // qq N° detect OFF num bit 6 ; c,b,a checkbox enable, up/down, H/L ; num 2 à 0
-                                                                 // tOne enable ; tTwo enable ; Server ; Free run ; Phase
+void subMPc(EthernetClient* cli,uint8_t sw,uint8_t num)         // checkbox transportant un bit avec fonction peri_pmo__
+                                                                // num le numéro du bit dans le switch de periSwPulseCtl
+                                                                // le caractère LENNOM-2 est le numéro de sw sur 3 bits (+PMFNCHAR)
+                                                                // le caractère LENNOM-1 est le numéro du bit(+PMFNCHAR) dans periSwPulseCtl 
 {
   char fonc[]="peri_pmo__\0";
-  uint16_t pipm=*(periIntPulseMode+sw);
-  uint8_t val=((pipm>>num)&0x01);                                              // checkbox mask toujours 1
-  fonc[LENNOM-1]=(char)(PMFNCHAR | sw<<PMFNSWLS_PB | num);                     // [LENNOM-2]='_'
+  uint64_t pipm;memcpy(&pipm,((char*)(periSwPulseCtl+sw*PMSWLEN)),PMSWLEN);
+  uint8_t val=(pipm>>num)&0x01;
+  fonc[LENNOM-2]=(char)(PMFNCHAR+sw);
+  fonc[LENNOM-1]=(char)(PMFNCHAR+num);                     
   
   checkboxTableHtml(cli,&val,fonc,-1,0);
 }
 
-void subModePulseOn(EthernetClient* cli,uint8_t numsw)   // modes pulses  ; le num de detecteur et ses 3 checkbox
+void subModePulseTime(EthernetClient* cli,uint8_t sw,uint32_t* pulse,uint32_t* dur,char* fonc1,char* fonc2,char onetwo)
 {
-  subMPn(cli,numsw,PMDINLS_PB);  // num de det pour ON
-  subMPc(cli,numsw,PMDIE_PB);  // checkbox enable det ON
-  subMPc(cli,numsw,PMDIU_PB);  // checkbox UP/DOWN pour det ON
-  subMPc(cli,numsw,PMDIH_PB);  // checkbox H/L pour det ON
-}
-void subModePulseOff(EthernetClient* cli,uint8_t numsw)   // modes pulses  ; le num de detecteur et ses 3 checkbox
-{
-  subMPn(cli,numsw,PMDONLS_PB);  // num de det pour OFF
-  subMPc(cli,numsw,PMDOE_PB);  // checkbox enable det OFF
-  subMPc(cli,numsw,PMDOU_PB);  // checkbox UP/DOWN pour det OFF
-  subMPc(cli,numsw,PMDOH_PB);  // checkbox H/L pour det OFF
+  uint64_t pipm;memcpy(&pipm,((char*)(periSwPulseCtl+sw*PMSWLEN)),PMSWLEN);
+  uint8_t val,pbit=PMTTE_PB;if(onetwo=='O'){pbit=PMTOE_PB;}
+  val=((pipm>>pbit)&0x01)+PMFNCVAL;                                        
+  cli->print("<font size=\"2\">");
+  fonc1[LENNOM-1]=onetwo;
+  checkboxTableHtml(cli,&val,fonc1,-1,0);                       // bit enable pulse
+  numTableHtml(cli,'l',(pulse+sw*PMSWLEN),fonc2,8,0,2);                 // durée pulse   
+  char a[8];sprintf(a,"%06d",*(dur+sw*PMSWLEN));a[6]='\0';              // valeur courante
+  cli->print("<br>(");cli->print(a);cli->println(")</font>");
 }
 
-void subModePulseTime(EthernetClient* cli,uint8_t numsw,uint32_t* pulse,uint32_t* dur,char* fonc1,char* fonc2,char onetwo,char onoff)
-{
-      uint16_t pipm=*(periIntPulseMode+numsw);
-      uint8_t val,pbit=PMTTE_PB;if(onetwo=='O'){pbit=PMTOE_PB;}
-      val=(pipm>>pbit)&0x01;                                        // checkbox mask toujours 1
-      cli->print("<font size=\"2\">");
-      fonc1[LENNOM-1]=onetwo;
-      checkboxTableHtml(cli,&val,fonc1,-1,0);                       // bit enable pulse
-      numTableHtml(cli,'l',(pulse+numsw),fonc2,8,0,2);              // affichage-saisie pulse   
-      if(onoff=='I'){subModePulseOn(cli,numsw);}                    // detecteur+checkbox pour on ou off
-      else{subModePulseOff(cli,numsw);}
-      char a[8];sprintf(a,"%06d",*(dur+numsw));a[6]='\0';
-      cli->print("<br>(");cli->print(a);cli->println(")</font>");
-}
-
-void intModeTableHtml(EthernetClient* cli,byte* valeur,int nbli,int nbtypes)   // bits OTSFPppqqcbafed
-                                                                 // pp N° detect ON  num bit 8 ; f,e,d checkbox enable, up/down, H/L ; num 5 à 3
-                                                                 // qq N° detect OFF num bit 6 ; c,b,a checkbox enable, up/down, H/L ; num 2 à 0
-                                                                 // tOne enable ; tTwo enable ; Server ; Free run ; Phase
+void SwCtlTableHtml(EthernetClient* cli,int nbsw,int nbtypes)
 {
   char nfonc[]="peri_imn__\0";            // transporte le numéro de detecteur des sources
   char cfonc[]="peri_imc__\0";            // transporte la valeur des bits des sources
   char pfonc[]="peri_pto__\0";            // transporte la valeur pulse time One
   char qfonc[]="peri_ptt__\0";            // transporte la valeur pulse time Two
-  char rfonc[]="peri_sfp__\0";            // transporte les bits SFP et enable pulse de periPulseMode (LENNOM-1= 'S','F','P','O','I')
+  char rfonc[]="peri_sfp__\0";            // transporte les bits freerun et enable pulse de periPulseMode (LENNOM-1= ,'F','O','T')
 
-  char nac[]="ADOI";                      // nom du type d'acttion (activ/désactiv/ON/OFF)
+  char nac[]="ADIO";                      // nom du type d'acttion (activ/désactiv/ON/OFF)
    
-    for(int i=0;i<nbli;i++){                                           // i n° de switch
+    for(int i=0;i<nbsw;i++){                                           // i n° de switch
+
       nfonc[LENNOM-2]=(char)(i+48);
       cfonc[LENNOM-2]=(char)(i+48);
-      rfonc[LENNOM-2]=(char)(i+48);
-      pfonc[LENNOM-2]=(char)(i+PMFNCVAL);
-      qfonc[LENNOM-2]=(char)(i+PMFNCVAL);
-      //pfonc[LENNOM-1]=(char)(64);
-      //qfonc[LENNOM-1]=(char)(64);
+      rfonc[LENNOM-2]=(char)(i+PMFNCHAR);
+      pfonc[LENNOM-2]=(char)(i+PMFNCHAR);
+      qfonc[LENNOM-2]=(char)(i+PMFNCHAR);
       
+// colonne des durées de pulses
 
       cli->print("<td>");
-      subModePulseTime(cli,i,periIntPulseOn,periIntPulseCurrOn,rfonc,pfonc,'O','I');
-      cli->print("  <font size=\"1\">__E U/D H/L</font><br>");
-      subModePulseTime(cli,i,periIntPulseOff,periIntPulseCurrOff,rfonc,qfonc,'T','O');  
+      subModePulseTime(cli,i,periSwPulseOne,periSwPulseCurrOne,rfonc,pfonc,'O');          // bit et valeur pulse one
+      cli->print("<br>");
+      subModePulseTime(cli,i,periSwPulseTwo,periSwPulseCurrTwo,rfonc,qfonc,'T');          // bit et valeur pulse two
 
-                                                                 // bits xOTSFPppqqcbafed
-                                                                 // pp N° detect ON  num bit 8 ; f,e,d checkbox enable, up/down, H/L ; num 5 à 3
-                                                                 // qq N° detect OFF num bit 6 ; c,b,a checkbox enable, up/down, H/L ; num 2 à 0
-                                                                 // tOne enable ; tTwo enable ; Server ; Free run ; Phase ; x dispo
-      uint8_t val;
-      
-      cli->print("<font size=\"1\">SFP</font>");
-      
-      val=((*(periIntPulseMode+i)>>PMSRE_PB)&0x01+PMFNCVAL);rfonc[LENNOM-1]='S';      
-      checkboxTableHtml(cli,&val,rfonc,-1,0);                    // bit S
-      val=((*(periIntPulseMode+i)>>PMFRE_PB)&0x01)+PMFNCVAL;rfonc[LENNOM-1]='F';
-      checkboxTableHtml(cli,&val,rfonc,-1,0);                    // bit F
-      val=((*(periIntPulseMode+i)>>PMPHE_PB)&0x01)+PMFNCVAL;rfonc[LENNOM-1]='P';
-      checkboxTableHtml(cli,&val,rfonc,-1,0);                    // bit P
-      
+// colonne freerun
+
+      cli->print("</td><td>");
+      uint64_t pipm;memcpy(&pipm,(char*)(periSwPulseCtl+i*PMSWLEN),PMSWLEN);
+      uint8_t val=((pipm>>PMFRO_PB)&0x01)+PMFNCVAL;rfonc[LENNOM-1]='F';                    // bit freerun
+      //Serial.print(val);Serial.print(" - ");dumpstr((periSwPulseCtl+i*PMSWLEN),6);
+      checkboxTableHtml(cli,&val,rfonc,-1,0);                    
       cli->print("</td>");
+                                                                 
+// colonne des détecteurs
+
+      cli->print("<td><font size=\"1\">");
+      for(int nd=0;nd<PMNBDET;nd++){
+        subMPc(cli,i,nd*PMDLEN+PMDEN_PB);         // enable
+        subMPc(cli,i,nd*PMDLEN+PMDLE_PB);         // local/externe
+        subMPn(cli,i,nd*PMDLEN+PMDNLS_PB,PMDLNU); // numéro det
+        subMPc(cli,i,nd*PMDLEN+PMDMO_PB);         // flanc/trans
+        subMPc(cli,i,nd*PMDLEN+PMDHL_PB);         // H/L
+        subMPn(cli,i,nd*PMDLEN+PMDALS_PB,PMDLAC); // numéro action
+        if(nd<PMNBDET-1){cli->print("<br>");}                           
+      }
+      cli->print("</font></td>");
       
+// colonne des actionneurs des switchs
+
       cli->print("<td>");                                               // colonne des types d'action  
       for(int k=0;k<nbtypes;k++){                                       // k n° de type d'action (act/des/ON/OFF) (1 ligne par type)
         nfonc[LENNOM-1]=(char)(k*16+64);
-        uint8_t val=(*(valeur+i*MAXTAC+k)>>6);                          // 4 bytes par sw ; 2 bits gauche n° détecteur + 3*2 bits enable - H/L
-        //Serial.print(" *num* ");Serial.print(nfonc);Serial.print(" ");Serial.println(val,HEX);
+        uint8_t val=(*(periSwMode+i*MAXTAC+k)>>6);                     // 4 bytes par sw ; 2 bits gauche n° détecteur + 3*2 bits (enable - H/L)
         cli->print("<font size=\"2\">");cli->print(nac[k]);cli->print("</font>");
         numTableHtml(cli,'b',(uint32_t*)&val,nfonc,1,0,2);              // affichage-saisie n°détec
         
         for(int j=5;j>=0;j--){                                          // 3*2 checkbox enable+on/off pour les 3 sources d'un des 4 types de déclenchement du switch 
           cfonc[LENNOM-1]=(char)(k*16+j+64);                            // codage nom de fonction aaaaaaasb ; s n° de switch (0-3) ; b=01tt0bbb tt type ; bbb n° bit (0x40+0x30+0x07)
-          uint8_t valb=((*(valeur+i*MAXTAC+k)>>j) & 0x01);                        
+          uint8_t valb=((*(periSwMode+i*MAXTAC+k)>>j) & 0x01);                        
           //Serial.print("     *chk* ");Serial.print(cfonc);Serial.print(" ");Serial.println(valb,HEX);
           checkboxTableHtml(cli,&valb,cfonc,-1,0);
         }
-        if(k<nbtypes-1){cli->print("<br>");}                             // fin ligne typez
+        if(k<nbtypes-1){cli->print("<br>");}                            // fin ligne typez
       }
-      cli->print("<br></td>");                                           // fin colonne types
-    }
+      cli->print("<br></td>");                                          // fin colonne types
+
+    } // switch suivant
 }
 
 void periTableHtml(EthernetClient* cli)
@@ -375,17 +368,17 @@ Serial.print("début péritable ; remote_IP ");serialPrintIp(remote_IP_cur);Seri
           cli->println("<table>");
               cli->println("<tr>");
                 cli->println(" ON=VRAI=1=HAUT=CLOSE=GPIO2=ROUGE");
-                cli->println("<th></th><th><br>nom_periph</th><th><br>TH</th><th><br>  V </th><th><br>per</th><th><br>pth</th><th>nb<br>sd</th><th><br>pg</th><th>nb<br>sw</th><th><br>_O_I___</th><th>nb<br>dt</th><th></th><th>mac_addr<br>ip_addr</th><th>version<br>last out<br>last in</th><th></th><th>time One<br>time Two</th><th><font size=\"2\">_nu det serv timer<br>__en/HL en/HL en/HL</font></th>");
+                cli->println("<th></th><th><br>nom_periph</th><th><br>TH</th><th><br>  V </th><th>per<br>pth<br>ofs</th><th>nb<br>sd<br>pg</th><th>nb<br>sw</th><th><br>_O_I___</th><th>nb<br>dt</th><th></th><th>mac_addr<br>ip_addr</th><th>version<br>last out<br>last in</th><th></th><th>time One<br>time Two</th><th>f<br>r</th><th>e.l _f_H.a<br>n.x _t_L.c</th><th>___det___srv_pul<br></th>");
               cli->println("</tr>");
 
               for(i=1;i<=NBPERIF;i++){
                 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! pericur doit étre le premier de la liste !!!!!!!!!!!!!!!!!!!!!!!!!
                 // car l'enregistrement de la table va étre rechargé avant mise à jour
-                periInit();periCur=i;periLoad(i);if(*periIntNb>4){*periIntNb=4;periSave(i);}
+                periInit();periCur=i;periLoad(i);if(*periSwNb>4){*periSwNb=4;periSave(i);}
 
 /*                Serial.print(i);Serial.print(" ");Serial.print(periNamer);Serial.print(" ");Serial.print(*periPerRefr);Serial.print(" ");
                 Serial.print(*periPitch);Serial.print(" ");Serial.print(*periLastVal);Serial.print(" ");Serial.print(*periLastDate);Serial.print(" ");
-                Serial.print(*periIntNb);Serial.print(" ");Serial.print(*periDetNb);
+                Serial.print(*periSwNb);Serial.print(" ");Serial.print(*periDetNb);
                 Serial.print(" ");serialPrintIp(periIpAddr);Serial.print(" ");serialPrintMac(periMacr);
 */
                 cli->println("<tr>");
@@ -395,13 +388,14 @@ Serial.print("début péritable ; remote_IP ");serialPrintIp(remote_IP_cur);Seri
                          cli->print(periNamer);cli->print("\" size=\"12\" maxlength=\"");cli->print(PERINAMLEN-1);cli->print("\" ></td>");
                       cli->print("<td>");cli->print(*periLastVal);cli->print("</td>");
                       cli->print("<td>");cli->print(*periAlim);cli->println("</td>");
-                      numTableHtml(cli,'l',(uint32_t*)periPerRefr,"peri_refr_",5,1,0);
-                      numTableHtml(cli,'f',periPitch,"peri_pitch",5,1,0);
-                      numTableHtml(cli,'b',periSondeNb,"peri_sonde",2,1,0);
-                      checkboxTableHtml(cli,(uint8_t*)periProg,"peri_prog_",-1,1);
-                      numTableHtml(cli,'b',periIntNb,"peri_intnb",1,1,0);
+                      numTableHtml(cli,'l',(uint32_t*)periPerRefr,"peri_refr_",5,2,0);cli->print("<br>");
+                      numTableHtml(cli,'f',periPitch,"peri_pitch",5,0,0);cli->print("<br>");
+                      numTableHtml(cli,'f',periThOffset,"peri_tofs_",5,3,0);
+                      numTableHtml(cli,'b',periSondeNb,"peri_sonde",2,2,0);cli->print("<br>");
+                      checkboxTableHtml(cli,(uint8_t*)periProg,"peri_prog_",-1,3);
+                      numTableHtml(cli,'b',periSwNb,"peri_intnb",1,1,0);
                       cli->println("<td>");
-                      xradioTableHtml(cli,*periIntVal,"peri_intv\0",2,*periIntNb,3);
+                      xradioTableHtml(cli,*periSwVal,"peri_intv\0",2,*periSwNb,3);
                       numTableHtml(cli,'b',periDetNb,"peri_detnb",1,1,0);
                       cli->print("<td>");
                       for(uint8_t k=0;k<*periDetNb;k++){char oi[2]={'O','I'};byte b=*periDetVal; b=b >> k*2;b&=0x01;cli->print(oi[b]);if(k<*periDetNb-1){cli->print("<br>");}}
@@ -414,8 +408,9 @@ Serial.print("début péritable ; remote_IP ");serialPrintIp(remote_IP_cur);Seri
                       unpackDate(dateascii,periLastDateIn);for(j=0;j<12;j++){cli->print(dateascii[j]);if(j==5){cli->print(" ");}}cli->println("<br>");
                       unpackDate(dateascii,periLastDateOut);for(j=0;j<12;j++){cli->print(dateascii[j]);if(j==5){cli->print(" ");}}
                          cli->println("</font></td>");
+                      
                       cli->println("<td><input type=\"submit\" value=\"MàJ\"></td>");
-                      intModeTableHtml(cli,periIntMode,*periIntNb,4);
+                      SwCtlTableHtml(cli,*periSwNb,4);
 
                   cli->print("</form>");
                 cli->println("</tr>");
@@ -427,11 +422,13 @@ Serial.println("fin péritable");
 
 void acceuilHtml(EthernetClient* cli,bool passok)
 {
+
           if(!passok){
             Serial.println(" saisie pwd");
             init_params();chge_pwd=VRAI;
             htmlIntro(NOMSERV,cli);
 
+ 
             cli->println(VERSION);
             cli->println("<body><form method=\"get\" ><p><label for=\"password\">password</label> : <input type=\"password\"");
             cli->println(" name=\"password__\" id=\"password\" value=\"\" size=\"6\" maxlength=\"8\" ></p></form></body></html>");

@@ -4,12 +4,12 @@
 //#define WEMOS
 
 #define _MODE_DEVT    // change l'adresse Mac de la carte IP, l'adresse IP et le port
-#define VERSION "1.1g"
+#define VERSION "1.1j"
 /* 1.1 ajout voltage dans données data_read_ ; modif unpackMac
  * 1.1a ajout volts et version dans table
- * 1.1b suppression dht ; ajout periDetVal et periIntVal avec affichage/saisie dans la table ; gestion serveur dev
+ * 1.1b suppression dht ; ajout periDetVal et periSwVal avec affichage/saisie dans la table ; gestion serveur dev
  * 1.1c ajout periIpAddr avec aff dans la table        
- * 1.1d ajout periIntPulse, periIntNb, periDetSs, periDetOo avec affichage dans la table et tfr aux périphériques
+ * 1.1d ajout periSwPulse, periSwNb, periDetSs, periDetOo avec affichage dans la table et tfr aux périphériques
  *      ajout longueur message après GET / pour com avec serveur périph (les modifs de messages ne perturbent plus le crc)
  * 1.1e modif gestion des données reçues avec GET ou POST : ajout tableau d'offsets dans valeurs[] (nvalf[]) pour ne plus 
  *      perdre de l'espace avec une longueur de données fixe. Les données sont séparées par '\0';
@@ -21,7 +21,8 @@
  * 1.1f restructuration communications (dataread/save;set;ack)      
  *      shmess reçoit assySet, inpSet (à venir assyRead/Save inpRead/Save)
  * 1.1g suppression accueil et fonctions associées, mise en place perisend(cliext)      
- *     
+ * 1.1h pulse opérationnel ; ajout variable (float) periThOffset dans periRec (offset sur température mesurée)
+ * 1.1j corespond à la version 1.c de peripherique
  *      
  * à faire :
  *     
@@ -49,21 +50,21 @@
 #endif _MODE_DEVT
 
 
-#define LENNOM 10   // nbre car nom de fonction
-#define NBVAL 64    // nbre maxi fonct/valeurs pour getnv() --- les noms de fonctions font 10 caractères + 2 séparateurs + la donnée associée = LENVAL
+//#define LENNOM 10   // nbre car nom de fonction
+//#define NBVAL 64    // nbre maxi fonct/valeurs pour getnv() --- les noms de fonctions font 10 caractères + 2 séparateurs + la donnée associée = LENVAL
                     // taille macxi pour GET (IE)=2048  ; pour POST plusieurs mega 
                     // avec un arduino Atmel la limitation vient de la taille de la ram
-#define LENVAL 52   // nbre car maxi valeur 
-#define MEANVAL 6   // pour donner un param de taille à valeurs[]
-#define LENVALEURS NBVAL*MEANVAL+1           // la taille effective de valeurs[]
-#define LENPSW 16   // nbre car maxi pswd
-#define RECHEAD 28                           // en-tete date/heure/xx/yy + <br> + crlf
-#define RECCHAR NBVAL*(MEANVAL+1)+RECHEAD+8  // longueur maxi record histo
+//#define LENVAL 64   // nbre car maxi valeur 
+//#define MEANVAL 6   // pour donner un param de taille à valeurs[]
+//#define LENVALEURS NBVAL*MEANVAL+1           // la taille effective de valeurs[]
+//#define LENPSW 16   // nbre car maxi pswd
+//#define RECHEAD 28                           // en-tete date/heure/xx/yy + <br> + crlf
+//#define RECCHAR NBVAL*(MEANVAL+1)+RECHEAD+8  // longueur maxi record histo
 
-#define PERIPREF 60                          // periode refr perif par défaut
+//#define PERIPREF 60                          // periode refr perif par défaut
 #define NBPERIF 10                           
 #define PERINAMLEN 16+1                      // longueur nom perif
-#define PERIRECLEN 162 // V1.1f              // longueur record périph
+#define PERIRECLEN 182 // V1.1j              // longueur record périph
 
 
 #define SDOK 1
@@ -88,7 +89,7 @@
 04 test2sw___ 
 05 done______
 06 per_refr__ valorisation periode rafraichissement de la page d'accueil
-07 
+07 peri_tofs_ valorisation offset thermomètre
 08 per_date__ valorisation periode de l'enregistrement date dans SD
 09 reset_____ reset serveur
 10 password__ affichage page saisie mdp
@@ -105,15 +106,15 @@
 21 peri_prog_ valorisation flag "programmable" du périphérique courant
 22 peri_sonde valorisation flag "sonde" du périphérique courant
 23 peri_pitch valorisation valeur "pitch" (écart significatif de mesure) du périphérique courant
-24 peri_pmo__ valorisation num de détecteur pour on/off et des bits associés de periIntPulseMode
+24 peri_pmo__ valorisation num de détecteur pour on/off et des bits associés de periSwPulseCtl
 25 peri_detec valorisation nombre de détecteurs sur le périphérique
 26 peri_intnb valorisation nombre d'interrupteurs sur le périphérique
-27 peri_intv0 valorisation de l'état de l'interrupteur 0 dans *periIntVal (4 interrupteurs possibles, 2 bits par inter)
-28 peri_intv1 valorisation de l'état de l'interrupteur 1 dans *periIntVal (4 interrupteurs possibles, 2 bits par inter)
-29 peri_intv2 valorisation de l'état de l'interrupteur 2 dans *periIntVal (4 interrupteurs possibles, 2 bits par inter)
-30 peri_intv3 valorisation de l'état de l'interrupteur 3 dans *periIntVal (4 interrupteurs possibles, 2 bits par inter)
+27 peri_intv0 valorisation de l'état de l'interrupteur 0 dans *periSwVal (4 interrupteurs possibles, 2 bits par inter)
+28 peri_intv1 valorisation de l'état de l'interrupteur 1 dans *periSwVal (4 interrupteurs possibles, 2 bits par inter)
+29 peri_intv2 valorisation de l'état de l'interrupteur 2 dans *periSwVal (4 interrupteurs possibles, 2 bits par inter)
+30 peri_intv3 valorisation de l'état de l'interrupteur 3 dans *periSwVal (4 interrupteurs possibles, 2 bits par inter)
 31 
-32 peri_sfp__ valorisation des bits OTSFP de periIntPulseMode 
+32 peri_sfp__ valorisation des bits OTSFP de periSwPulseCtl 
 33 peri_imn__ valorisation detecteurs sources pour switchs
 34 peri_imc__ valorisation bits sources pour switchs 
 35 peri_pto__ valorisation durée de l'impulsion tOne si 0 pas d'impulsion sinon durée en secondes
@@ -273,29 +274,49 @@
          3 sources différentes pour forçages et activation/désactivation d'un switch : le serveur, un détecteur parmi 4, son générateur d'impulsions
                 chaque source dispose d'un bit "enable" qui la démasque et d'un bit H/L (active haute ou basse)
 
-         mécanisme générateur d'impulsion :
-                2 phases de durée paramétrée ; 
-                  si la 2nde phase est enable, elle se déclenche à la fin de la première
-                  si la première a le bit freeRun set elle se déclenche a la fin de la seconde
-                la phase déclenchée peut commander l'état d'un switch via le paramétrage des sources 
+         générateur d'impulsion :
                 
-                Le déclenchement et l'arrêt provient d'un détecteur ou du serveur
+                Le générateur d'impulsion est constitué de 2 compteurs animés par une horloge à 1Hz
+                Au reset ils sont à 0. Un seul et actif à la fois. Lorsqu'un compteur atteint sa valeur maxi il repasse à 0.
+                Lorsque le compteur 1 atteint sa valeur maxi le compteur 2 se déclenche s'il est enable
+                Lorsque le compteur 2 atteint sa valeur maxi le compteur 1 se déclenche s'il est enable en mode free run
+                L'horloge et les compteurs sont commandés par 4 détecteurs locaux ou externes selon 2 modes avec 6 actions possibles :
+                (l'état des détecteurs externes est reçu du serveur via une fonction)
+                (un même détecteur peut apparaitre plusieurs fois avec une config différente)
+               
+                modes :
+                  1) statique : un détecteur en mode statique agit selon l'état programmé
+                  2) transitionnel : un détecteur en mode transitionnel agit selon le flanc programmé
+                actions :
+                  1) reset : l'action reset remet les 2 compteurs à 0 en mode idle selon mode/état/flanc programmé 
+                  2) raz : l'action raz remet à 0 le compteur courant sans effet sur l'horloge selon mode/état/flanc programmé
+                  3) stop : l'action stop suspend l'horloge selon l'état/flanc programmé
+                  4) start : l'action start déclenche l'horloge selon l'état/flanc programmé
+                  5) short : l'action short termine le compteur courant sans changer la période totale (le compteur suivant est augmenté)
+                  6) fin : l'action fin termine le compteur courant. 
+                
+               états du générateur : 
+                  1) disable valeur 0, le premier compteur est bloqué.
+                  2) idle valeur 0 ou 1, l'horloge est arrêtée.
+                  3) running1 valeur 0, le 1er compteur n'a pas atteint sa valeur maxi 
+                  4) fin 1 valeur 0, le 1er compteur a atteint sa valeur maxi et le second compteur est bloqué
+                  5) running 2 valeur 1, le 2nd compteur n'a pas atteint sa valeur maxi.
+                  6) fin 2 valeur 1, le 2nd compteur a atteint sa valeur maxi, mode free run, et le premier compteur est bloqué
+                     en mode free run lorsque le second compteur atteint sa valeur maxi, le générateur passe à l'état running 1
+                     en mode oneshoot lorsque le second compteur atteint sa valeur maxi, l'horloge s'arrête état idle valeur 0
+  
+               les détecteurs sont représentés par une variable en mémoire (memDetec) ; pas d'accès direct aux ports
+                  le changement d'état d'un port et la mise à jour de la variable sont gérés par isrDet().
+                  chaque détecteur qui change d'état est recherché dans les impulsions pour effectuer l'action programmée.
+                  le débounce est intégré dans la loop.
+                  la variable mémoire stocke la valeur courante, la valeur précédente et un bit enable 
+                      8 bits / détecteur (param LENDET) ; 1 bit  DETBITEN   enable
+                                                          3 bits DETBITNU   numéro
+                                                          1 bit  DETBITLE   local/externe
+                                                          1 bit  DETBITCU   valeur courante
+                                                          2 bits dispo  
                   
-                si impulsions arrêtées (beg==0), condition de démarrage :
-                  bit tONE enable et source de déclenchement valide
-                si impulsions en cours, arrêt si source d'arrêt valide
-                si tONE en fin (durée=curr) start tTWO si enable sinon arrêt (curr=0)
-                si tTWO en fin si mode oneshoot fin sinon start tONE si enable
-         
-         valeur d'état générateur :
-                valeur courante de l'impulsion en cours selon paramètre phase
-                si arrêt -> pulse invalide
-
-         les détecteurs sont représentés par une variable en mémoire ; pas d'accès direct aux ports
-                le changement d'état d'un port et la mise à jour de la variable sont gérés par isrDet().
-                la variable mémoire stocke la valeur courante, la valeur précédente et un bit enable 
-                      4 bits / détecteur (param LENDET) ; DETBITEN / DETBITCUR / DETBITPRE / DETBITDIS (dispo)
-                le débounce est intégré dans la loop ainsi que l'effacement du bit de valeur précédente après un tour. 
+                
 
 *  int8          numéro
 *  16 bytes      nom  
@@ -317,7 +338,7 @@
 *     4 bytes       beg  tONE
 *     4 bytes       durée TWO 
 *     4 bytes       beg  tTWO
-*     2 bytes       controle                   1 bit tONE enable
+*     4 bytes       controle                   1 bit tONE enable
 *                                              1 bit tTWO enable
 *                                              1 bit stop serveur si 1 pulse stoppé
 *                                              1 bit détecteur de déclenchement enable
@@ -334,7 +355,22 @@
 *                                                 10 one shot
 *                                                 11 one shot terminé
 *                                              1 bits dispo
-*  uint8         nbre détecteurs maximum 4 (MAXDET)
+*  
+*                                              pour le générateur
+*                                              1 bit enable tOne
+*                                              1 bit enable tTwo
+*                                              1 bit free run/oneshot
+*                                              
+*                                              pour détecteurs et serveur : (4 fois)
+*                                              1 bit enable
+*                                              3 bits numéro 
+*                                              1 bit local/externe
+*                                              1 bit mode
+*                                              1 bit H/L
+*                                              3 bits action
+*                                              
+*  
+*  uint8         nbre détecteurs (maximum 4 MAXDET) 
 *  byte          1 bits etat ; 1 bit enable
 *  uint8         nbre sondes     maximum 256 (MAXSDE)
 *  6 bytes       MacAddr
@@ -345,7 +381,7 @@
 *  1 byte        code dernière anomalie (MESSxxx)
 *  2 bytes       version         XX.XX BCD
 *  
-total 121
+total xxx
 
     fichier sondes (contient numéro de périphérique et numéro de sonde) (à implanter)
 

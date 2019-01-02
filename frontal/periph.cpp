@@ -11,7 +11,7 @@ File fperi;       // fichiers perif
 
 extern char      periRec[PERIRECLEN];          // 1er buffer de l'enregistrement de périphérique
   
-extern int       periCur;                    // Numéro du périphérique courant
+extern int       periCur;                      // Numéro du périphérique courant
 
 extern int16_t*  periNum;                      // ptr ds buffer : Numéro du périphérique courant
 extern int32_t*  periPerRefr;                  // ptr ds buffer : période datasave minimale
@@ -26,18 +26,20 @@ extern char*     periNamer;                    // ptr ds buffer : description p�
 extern char*     periVers;                     // ptr ds buffer : version logiciel du périphérique
 extern byte*     periMacr;                     // ptr ds buffer : mac address 
 extern byte*     periIpAddr;                   // ptr ds buffer : Ip address
-extern byte*     periIntNb;                    // ptr ds buffer : Nbre d'interrupteurs (0 aucun ; maxi 4(MAXSW)            
-extern byte*     periIntVal;                   // ptr ds buffer : état/cde des inter  
-extern byte*     periIntMode;                  // ptr ds buffer : Mode fonctionnement inters (1 par switch)           
-extern uint32_t* periIntPulseOn;               // ptr ds buffer : durée pulses sec ON (0 pas de pulse)
-extern uint32_t* periIntPulseOff;              // ptr ds buffer : durée pulses sec OFF(mode astable)
-extern uint32_t* periIntPulseCurrOn;           // ptr ds buffer : temps courant pulses ON
-extern uint32_t* periIntPulseCurrOff;          // ptr ds buffer : temps courant pulses OFF
-extern uint16_t* periIntPulseMode;             // ptr ds buffer : mode pulses
+extern byte*     periSwNb;                     // ptr ds buffer : Nbre d'interrupteurs (0 aucun ; maxi 4(MAXSW)            
+extern byte*     periSwVal;                    // ptr ds buffer : état/cde des inter  
+extern byte*     periSwMode;                   // ptr ds buffer : Mode fonctionnement inters (1 par switch)           
+extern uint32_t* periSwPulseOne;               // ptr ds buffer : durée pulses sec ON (0 pas de pulse)
+extern uint32_t* periSwPulseTwo;               // ptr ds buffer : durée pulses sec OFF(mode astable)
+extern uint32_t* periSwPulseCurrOne;           // ptr ds buffer : temps courant pulses ON
+extern uint32_t* periSwPulseCurrTwo;           // ptr ds buffer : temps courant pulses OFF
+extern byte*     periSwPulseCtl;               // ptr ds buffer : mode pulses
 extern uint8_t*  periSondeNb;                  // ptr ds buffer : nbre sonde
 extern boolean*  periProg;                     // ptr ds buffer : flag "programmable"
 extern byte*     periDetNb;                    // ptr ds buffer : Nbre de détecteurs maxi 4 (MAXDET)
 extern byte*     periDetVal;                   // ptr ds buffer : flag "ON/OFF" si détecteur (2 bits par détec))
+extern float*    periThOffset;                 // ptr ds buffer : offset correctif sur mesure température
+  
 
 extern byte*     periBegOfRecord;
 extern byte*     periEndOfRecord;
@@ -172,7 +174,7 @@ void alphaNow(char* buff)
 
 void periFname(int num,char* fname)
 {
-  strcpy(fname,"peri");
+  strcpy(fname,"PERI");
   fname[4]=(char)(num/10+48);
   fname[5]=(char)(num%10+48);
   fname[6]='\0';
@@ -186,6 +188,7 @@ int periLoad(int num)
   if(sdOpen(FILE_READ,&fperi,periFile)==SDKO){return SDKO;}
   for(i=0;i<PERIRECLEN;i++){periRec[i]=fperi.read();}
   fperi.close();
+  return SDOK;
 }
 
 int periRemove(int num)
@@ -198,17 +201,22 @@ int periRemove(int num)
 
 int periSave(int num)
 {
-  //Serial.print("save table peri=");Serial.println(num);
   int i=0;
+  int rtn;
   char periFile[7];periFname(num,periFile);
+  
   *periNum=periCur;
-  if(sdOpen(FILE_WRITE,&fperi,periFile)==SDKO){return SDKO;}
-  fperi.seek(0);
-  for(i=0;i<PERIRECLEN;i++){fperi.write(periRec[i]);}
-  //for(i=0;i<PERIRECLEN+1;i++){fperi.write(periRec[i]);}      // ajouter les longueurs des variables ajoutées avant de modifier PERIRECLEN
-  fperi.close();
-  for(int x=0;x<4;x++){lastIpAddr[x]=periIpAddr[x];}
-  return SDOK;
+  if(sdOpen(FILE_WRITE,&fperi,periFile)!=SDKO){
+    rtn=SDOK;
+    fperi.seek(0);
+    for(i=0;i<PERIRECLEN;i++){fperi.write(periRec[i]);}
+    //for(i=0;i<PERIRECLEN+sizeof(float);i++){fperi.write(periRec[i]);}      // ajouter les longueurs des variables ajoutées avant de modifier PERIRECLEN
+    fperi.close();
+    for(int x=0;x<4;x++){lastIpAddr[x]=periIpAddr[x];}
+  }
+  else rtn=SDKO;
+  Serial.print("periSave(");Serial.print(num);Serial.print(")status=");Serial.println(rtn);
+  return rtn;
 }
 
 void periInit()                 // pointeurs de l'enregistrement de table courant
@@ -244,22 +252,22 @@ void periInit()                 // pointeurs de l'enregistrement de table couran
   temp +=6;
   periIpAddr=(byte*)temp;
   temp +=4;
-  periIntNb=(byte*)temp;
+  periSwNb=(byte*)temp;
   temp +=sizeof(byte);
-  periIntVal=(byte*)temp;
+  periSwVal=(byte*)temp;
   temp +=sizeof(byte);
-  periIntMode=(byte*)temp;
+  periSwMode=(byte*)temp;
   temp +=MAXSW*MAXTAC*sizeof(byte);
-  periIntPulseOn=(uint32_t*)temp;
+  periSwPulseOne=(uint32_t*)temp;
   temp +=MAXSW*sizeof(uint32_t);
-  periIntPulseOff=(uint32_t*)temp;
+  periSwPulseTwo=(uint32_t*)temp;
   temp +=MAXSW*sizeof(uint32_t);  
-  periIntPulseCurrOn=(uint32_t*)temp;
+  periSwPulseCurrOne=(uint32_t*)temp;
   temp +=MAXSW*sizeof(uint32_t);
-  periIntPulseCurrOff=(uint32_t*)temp;
+  periSwPulseCurrTwo=(uint32_t*)temp;
   temp +=MAXSW*sizeof(uint32_t);  
-  periIntPulseMode=(uint16_t*)temp;
-  temp +=MAXSW*sizeof(uint16_t);  
+  periSwPulseCtl=(byte*)temp;
+  temp +=PMLEN;  
   periSondeNb=(uint8_t*)temp;
   temp +=sizeof(uint8_t);
   periProg=(boolean*)temp;
@@ -268,10 +276,12 @@ void periInit()                 // pointeurs de l'enregistrement de table couran
   temp +=sizeof(byte);
   periDetVal=(byte*)temp;
   temp +=sizeof(byte);
+  periThOffset=(float*)temp;
+  temp +=sizeof(float);
   periEndOfRecord=(byte*)temp;      // doit être le dernier !!!
   temp ++;
   
-#define PERIRECCTL sizeof(int)+sizeof(char)*(15+PERINAMLEN)+sizeof(byte)*6+sizeof(long)+sizeof(boolean)*6+sizeof(float)*2+4
+//#define PERIRECCTL sizeof(int)+sizeof(char)*(15+PERINAMLEN)+sizeof(byte)*6+sizeof(long)+sizeof(boolean)*6+sizeof(float)*2+4
 
   periInitVar();
 }
@@ -290,15 +300,17 @@ void periInitVar()
   *periErr=0;
   *periSondeNb=0;
   *periProg=FAUX;
-  *periIntVal=0;
-  *periIntNb=0;
-   memset(periIntPulseOn,0x00,4);
-   memset(periIntPulseOff,0x00,4); 
-   memset(periIntPulseCurrOn,0x00,4); 
-   memset(periIntPulseCurrOff,0x00,4);    
+  *periSwVal=0;
+  *periSwNb=0;
+   memset(periSwPulseOne,0x00,4);
+   memset(periSwPulseTwo,0x00,4); 
+   memset(periSwPulseCurrOne,0x00,4); 
+   memset(periSwPulseCurrTwo,0x00,4);
+   memset(periSwPulseCtl,0x00,PMLEN);    
   *periDetNb=0;
   *periDetVal=0;
   *periAlim=0;
+  *periThOffset=0;
   memset(periVers,' ',3);periVers[3]='\0';
   
 }
@@ -307,11 +319,14 @@ void periConvert()
 /* Pour ajouter une variable : 
  *  ajouter en fin de liste son descripteur dans frontal.ino, periInit() et periIinitVar()
  *  enlever les // devant derriere la séquence dans frontal.ino
+ *  mettre en rem la ligne d'affichage et ctle de PERIRECLEN dans frontal.ino
  *  changer la ligne de "save" dans periSave() et ajouter la longueur supplémentaire
  *  NE PAS changer PERIRECLEN
  *  compiler, charger et laisser démarrer le serveur
  *  remettre la ligne de "save" normale dans periSave() 
  *  corriger PERIRECLEN dans const.h
+ *  enlever les // devant la ligne d'affichage et ctle de PERIRECLEN dans frontal.ino
+ *  remettre les /* ... devant derriere la séquence dans frontal.ino
  *  compiler, charger
  */
 {
@@ -320,10 +335,10 @@ void periConvert()
   periInitVar();            // les champs ajoutés sont initialisés ; les autres récupèreront les valeurs précédentes
   for(i=1;i<=NBPERIF;i++){
     periFname(i,periFile);Serial.print(periFile);
-    if(periLoad(i)!=SDOK){Serial.print(" KO");}
+    if(periLoad(i)!=SDOK){Serial.print(" load KO");}
     else{
       SD.remove(periFile);
-      if(periSave(i)!=SDOK){Serial.print(" KO");} 
+      if(periSave(i)!=SDOK){Serial.print(" save KO");} 
     }
     Serial.println();
   }
@@ -365,13 +380,13 @@ void periModif()
   char*     IperiVers;                     // ptr ds buffer : version logiciel du périphérique
   byte*     IperiMacr;                     // ptr ds buffer : mac address 
   byte*     IperiIpAddr;                   // ptr ds buffer : Ip address
-  byte*     IperiIntNb;                    // ptr ds buffer : Nbre d'interrupteurs (0 aucun ; maxi 4(MAXSW)            
-  byte*     IperiIntVal;                   // ptr ds buffer : état/cde des inter  
-  byte*     IperiIntMode;                  // ptr ds buffer : Mode fonctionnement inters            
-  uint16_t* IperiIntPulse;                 // ptr ds buffer : durée pulses sec si interrupteur (0=stable, pas de pulse)
-  uint16_t* IperiIntPulseCurr;             // ptr ds buffer : temps courant pulses
-  byte*     IperiIntPulseMode;             // ptr ds buffer : mode pulses
-  byte*     IperiIntPulseTrig;             // ptr ds buffer : durée trig 
+  byte*     IperiSwNb;                    // ptr ds buffer : Nbre d'interrupteurs (0 aucun ; maxi 4(MAXSW)            
+  byte*     IperiSwVal;                   // ptr ds buffer : état/cde des inter  
+  byte*     IperiSwMode;                  // ptr ds buffer : Mode fonctionnement inters            
+  uint16_t* IperiSwPulse;                 // ptr ds buffer : durée pulses sec si interrupteur (0=stable, pas de pulse)
+  uint16_t* IperiSwPulseCurr;             // ptr ds buffer : temps courant pulses
+  byte*     IperiSwPulseCtl;             // ptr ds buffer : mode pulses
+  byte*     IperiSwPulseTrig;             // ptr ds buffer : durée trig 
   uint8_t*  IperiSondeNb;                  // ptr ds buffer : nbre sonde
   boolean*  IperiProg;                     // ptr ds buffer : flag "programmable"
   byte*     IperiDetNb;                    // ptr ds buffer : Nbre de détecteurs maxi 4 (MAXDET)
@@ -412,19 +427,19 @@ void periModif()
   temp +=6;
   IperiIpAddr=(byte*)temp;
   temp +=4;
-  IperiIntNb=(byte*)temp;
+  IperiSwNb=(byte*)temp;
   temp +=sizeof(byte);
-  IperiIntVal=(byte*)temp;
+  IperiSwVal=(byte*)temp;
   temp +=sizeof(byte);
-  IperiIntMode=(byte*)temp;
+  IperiSwMode=(byte*)temp;
   temp +=MAXSW*sizeof(byte);
-  IperiIntPulse=(uint16_t*)temp;
+  IperiSwPulse=(uint16_t*)temp;
   temp +=MAXSW*sizeof(uint16_t);
-  IperiIntPulseCurr=(uint16_t*)temp;
+  IperiSwPulseCurr=(uint16_t*)temp;
   temp +=MAXSW*sizeof(uint16_t);
-  IperiIntPulseMode=(byte*)temp;
+  IperiSwPulseCtl=(byte*)temp;
   temp +=MAXSW*sizeof(byte);
-  IperiIntPulseTrig=(byte*)temp;
+  IperiSwPulseTrig=(byte*)temp;
   temp +=MAXSW*sizeof(byte);      
   IperiSondeNb=(uint8_t*)temp;
   temp +=sizeof(uint8_t);
@@ -470,14 +485,14 @@ Serial.print(" transfert enregistrement ");
   memcpy(IperiVers,periVers,3);
   memcpy(IperiMacr,periMacr,6);
   memcpy(IperiIpAddr,periIpAddr,4);
-  *IperiIntNb=        *periIntNb;
-  *IperiIntVal=       *periIntVal;
-  memset(IperiIntMode,0x00,4);
+  *IperiSwNb=        *periSwNb;
+  *IperiSwVal=       *periSwVal;
+  memset(IperiSwMode,0x00,4);
 for(int k=0;k<MAXSW;k++){
-  IperiIntPulse[k]=  periIntPulse[k];
-  IperiIntPulseCurr[k]= 0;
-  IperiIntPulseMode[k]= 0;
-  IperiIntPulseTrig[k]= 0;
+  IperiSwPulse[k]=  periSwPulse[k];
+  IperiSwPulseCurr[k]= 0;
+  IperiSwPulseCtl[k]= 0;
+  IperiSwPulseTrig[k]= 0;
 }
   *IperiSondeNb=      1;
   *IperiProg=         0;
