@@ -61,6 +61,14 @@ void conv_htoa(char* ascii,byte* h)
         // Serial.print(c,HEX);Serial.print(" ");Serial.print(ascii[0],HEX);Serial.print(" ");Serial.println(ascii[1],HEX);
 }
 
+void dumpstr(char* data,uint8_t len)
+{
+    char a[]={0x00,0x00,0x00};
+    for(int k=len-1;k>=0;k--){conv_htoa(a,&data[k]);Serial.print(a);Serial.print(" ");}
+    Serial.println();
+}
+
+
 byte calcBitCrc (byte shiftReg, byte data_bit)
 {
   byte fb;

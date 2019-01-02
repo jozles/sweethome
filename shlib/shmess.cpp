@@ -34,14 +34,14 @@ extern char*     periNamer;                    // ptr ds buffer : description p�
 extern char*     periVers;                     // ptr ds buffer : version logiciel du périphérique
 extern byte*     periMacr;                     // ptr ds buffer : mac address
 extern byte*     periIpAddr;                   // ptr ds buffer : Ip address
-extern byte*     periIntNb;                    // ptr ds buffer : Nbre d'interrupteurs (0 aucun ; maxi 4(MAXSW)
-extern byte*     periIntVal;                   // ptr ds buffer : état/cde des inter
-extern byte*     periIntMode;                  // ptr ds buffer : Mode fonctionnement inters (MAXTAC=4 par switch)
-extern uint32_t* periIntPulseOn;               // ptr ds buffer : durée pulses sec ON (0 pas de pulse)
-extern uint32_t* periIntPulseOff;              // ptr ds buffer : durée pulses sec OFF(mode astable)
-extern uint32_t* periIntPulseCurrOn;           // ptr ds buffer : temps courant pulses ON
-extern uint32_t* periIntPulseCurrOff;          // ptr ds buffer : temps courant pulses OFF
-extern uint16_t* periIntPulseMode;             // ptr ds buffer : mode pulses
+extern byte*     periSwNb;                     // ptr ds buffer : Nbre d'interrupteurs (0 aucun ; maxi 4(MAXSW)
+extern byte*     periSwVal;                    // ptr ds buffer : état/cde des inter
+extern byte*     periSwMode;                   // ptr ds buffer : Mode fonctionnement inters (MAXTAC=4 par switch)
+extern uint32_t* periSwPulseOne;               // ptr ds buffer : durée pulses sec ON (0 pas de pulse)
+extern uint32_t* periSwPulseTwo;               // ptr ds buffer : durée pulses sec OFF(mode astable)
+extern uint32_t* periSwPulseCurrOn;            // ptr ds buffer : temps courant pulses ON
+extern uint32_t* periSwPulseCurrOff;           // ptr ds buffer : temps courant pulses OFF
+extern byte*     periSwPulseCtl;               // ptr ds buffer : mode pulses
 extern uint8_t*  periSondeNb;                  // ptr ds buffer : nbre sonde
 extern boolean*  periProg;                     // ptr ds buffer : flag "programmable"
 extern byte*     periDetNb;                    // ptr ds buffer : Nbre de détecteurs maxi 4 (MAXDET)
@@ -90,7 +90,7 @@ int buildMess(char* fonction,char* data,char* sep)   // concatène un message da
       strcat(bufServer+sb+5,data);
       setcrc(bufServer+sb,d);
       strcat(bufServer,sep);
-      Serial.print(" sb=");Serial.print(sb);Serial.print(" bs=");Serial.println(bufServer);
+      Serial.print("bS=");Serial.println(bufServer);
       return strlen(bufServer);
 }
 
@@ -279,10 +279,10 @@ void assySet(char* message,int periCur,char* diag,char* date14)
 #ifndef PERIF
                 v1=strlen(message);                                 // 4 bits commande (8,6,4,2)
                 for(int k=MAXSW;k>0;k--){
-                    byte a=*periIntVal;
+                    byte a=*periSwVal;
                     //Serial.print("*peri==");Serial.println(a,HEX);
                     message[v1+MAXSW-k]=(char)( 48+ ((a>>((k*2)-1)) &0x01) );
-                }      // periInt (cdes)
+                }      // periSw (cdes)
                 memcpy(message+v1+MAXSW,"_\0",2);
 
 #endif  ndef PERIF
@@ -291,8 +291,8 @@ void assySet(char* message,int periCur,char* diag,char* date14)
                 v1+=MAXSW+1;
                 for(int k=0;k<MAXSW;k++){            // 4 bytes contrÔle sw (hh*4)+1 sép /sw
                     for(int p=0;p<MAXTAC;p++){
-                        //Serial.println(*(periIntMode+k*4+p),HEX);
-                        conv_htoa(message+v1+k*(2*MAXTAC+1)+p*2,periIntMode+k*MAXTAC+p);
+                        //Serial.println(*(periSwMode+k*4+p),HEX);
+                        conv_htoa(message+v1+k*(2*MAXTAC+1)+p*2,periSwMode+k*MAXTAC+p);
                         }
                     memcpy(message+v1+(k+1)*2*MAXTAC+k,"_\0",2);
                 }
@@ -303,25 +303,26 @@ void assySet(char* message,int periCur,char* diag,char* date14)
 #ifndef PERIF
                 v1+=MAXSW*(2*MAXTAC+1);            // len déjà copiée
                 for(int k=0;k<MAXSW*2;k++){                  // 2 compteurs/sw
-                    sprintf(message+v1+k*(8+1),"%08u",*(periIntPulseOn+k));
+                    sprintf(message+v1+k*(8+1),"%08u",*(periSwPulseOne+k));
                     memcpy(message+v1+(k+1)*8+k,"_\0",2);
                 }
 //Serial.println(message);
                 v1+=MAXSW*2*(8+1);
-                for(int k=0;k<MAXSW;k++){           // 2 bytes pulse Mode (hh*2) /sw
-                conv_htoa(message+v1+k*(4+1),(byte*)periIntPulseMode+1+k*2);
-                conv_htoa(message+v1+k*(4+1)+2,(byte*)periIntPulseMode+k*2);
-                memcpy(message+v1+k*(4+1)+4,"_\0",2);
+                for(int k=0;k<MAXSW;k++){           //  bytes pulse Ctl (hh)*maxsw*pmdetlen
+                    for(int k0=PMSWLEN-1;k0>=0;k0--){
+                        conv_htoa(message+v1+k*((PMSWLEN*2)+1)+(PMSWLEN-k0-1)*2,(byte*)(periSwPulseCtl+k*PMSWLEN+k0));
+                    }
+                    memcpy(message+v1+k*((PMSWLEN*2)+1)+(PMSWLEN*2),"_\0",2);
                 }
 //Serial.println(message);
             }  // pericur != 0
 #endif  ndef PERIF
-#define MSETDIAG    88+4*2*9+4*5                         //  =180
+#define MSETDIAG    88+4*2*9+4*5                          //  =180
 
             strcat(message,diag);                         // periMess
 
 #define MSETLEN     MSETDIAG+LPERIMESS                    //  +5+1=169
-        //Serial.println(message);Serial.println(*periIntPulseMode,HEX);
+        //Serial.println(message);Serial.println(*periSwPulseCtl,HEX);
 
                                     #if MSETLEN >= LENMESS
                                     message trop petit

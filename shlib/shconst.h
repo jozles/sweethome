@@ -2,7 +2,7 @@
 #define _SHCONST_H_
 
 
-#define PERIF
+//#define PERIF
 
 #define PORTSERVPERI 1791
 
@@ -19,7 +19,7 @@
 
     // messages
 
-#define LENMESS     190             // longueur buffer message
+#define LENMESS     240             // longueur buffer message
 #define MPOSFONC    0               // position fonction
 #define MPOSLEN     11              // position longueur (longueur fonction excluse)
 #define MPOSNUMPER  MPOSLEN+5       // position num périphérique
@@ -27,7 +27,7 @@
 #define MPOSDH      MPOSMAC+18      // Date/Heure
 #define MPOSPERREFR MPOSDH+15       // période refr
 #define MPOSPITCH   MPOSPERREFR+6   // pitch
-#define MPOSINTCDE  MPOSPITCH+5     // 4 commandes sw 0/1 (periIntVal)
+#define MPOSINTCDE  MPOSPITCH+5     // 4 commandes sw 0/1 (periSwVal)
 #define MPOSINTPAR0 MPOSINTCDE+5    // paramétres sw (4*HH+1sep)*4
 #define MPOSPULSON0 MPOSINTPAR0+MAXSW*9 // Timers On (4bytes)*4
 #define MPOSPULSOF0 MPOSPULSON0+MAXSW*9 // Timers Off (4bytes+1sep)*4
@@ -38,19 +38,19 @@
     // fonctions
 
 #define LENNOM 10   // nbre car nom de fonction
-#define NBVAL 28    // nbre maxi fonct/valeurs pour getnv() --- les noms de fonctions font 10 caractères + 2 séparateurs + la donnée associée = LENVAL
+#define NBVAL 64    // nbre maxi fonct/valeurs pour getnv() --- les noms de fonctions font 10 caractères + 2 séparateurs + la donnée associée = LENVAL
                     // taille macxi pour GET (IE)=2048  ; pour POST plusieurs mega
                     // avec un arduino Atmel la limitation vient de la taille de la ram
 #define LENVAL 64   // nbre car maxi valeur (vérifier datasave)
 #define MEANVAL 6   // pour donner un param de taille à valeurs[]
 #define LENVALEURS NBVAL*MEANVAL+1   // la taille effective de valeurs[]
 #define LENPSW 16   // nbre car maxi pswd
-#define RECHEAD 28                          // en-tete date/heure/xx/yy + <br> + crlf
+#define RECHEAD 28                           // en-tete strSD date/heure/xx/yy + <br> + crlf
 #define RECCHAR NBVAL*(MEANVAL+3)+RECHEAD+8  // longueur maxi record histo
 
-#define PERIPREF 900                        // periode refr perif par défaut
+#define PERIPREF 900                         // periode refr perif par défaut
 
-#define LBUFSERVER RECCHAR
+#define LBUFSERVER LENMESS+16                // longueur bufserver (messages in/out periphériques)
 
 #define SRVPASS "17515A\0"
 #define LENSRVPASS 6
@@ -131,6 +131,22 @@ enum {OFF,ON};
 #define VBITD 0x2000
 #define VBITE 0x4000
 #define VBITF 0x8000
+#define VBITG 0x00010000
+#define VBITH 0x00020000
+#define VBITI 0x00040000
+#define VBITJ 0x00080000
+#define VBITK 0x00100000
+#define VBITL 0x00200000
+#define VBITM 0x00400000
+#define VBITN 0x00800000
+#define VBITO 0x01000000
+#define VBITP 0x02000000
+#define VBITQ 0x04000000
+#define VBITR 0x08000000
+#define VBITS 0x10000000
+#define VBITT 0x20000000
+#define VBITU 0x40000000
+#define VBITV 0x80000000
 
 // positions
 
@@ -161,55 +177,92 @@ enum {OFF,ON};
 // most significant = MS ; least = LS
 //
 
-#define PMTOE_PB PBITE      // time one enable pos bit
-#define PMTOE_VB VBITE      // val bit
-#define PMTTE_PB PBITD      // time two enable pos bit
-#define PMTTE_VB VBITD
-#define PMSRE_PB PBITC      // server enable pos bit
-#define PMSRE_VB VBITC
-#define PMCMS_PB PBITB      // cycle msb ; 00 selon config ; 01 free run
-#define PMCMS_VB VBITB
-#define PMCLS_PB PBITA      // cycle lsb ; 10 one shot ; 11 one shot terminé
-#define PMCLS_VB VBITA
-    #define UDCYCLE  0x00
-    #define FREERUN  0x01
-    #define ONESHOT  0x02
-    #define ONESHOTX 0x03
-#define PMDINMS_PB PBIT9    // det on number pos ms bit
-#define PMDINMS_VB VBIT9
-#define PMDINLS_PB PBIT8    // det on number pos ls bit
-#define PMDINLS_VB VBIT8
-#define PMDONMS_PB PBIT7    // det off number pos ms bit
-#define PMDONMS_VB VBIT7
-#define PMDONLS_PB PBIT6    // det off number pos ls bit
-#define PMDONLS_VB VBIT6
-#define PMDIE_PB PBIT5      // det on enable pos bit
-#define PMDIE_VB VBIT5
-#define PMDIU_PB PBIT4      // det on UP/DOWN pos bit
-#define PMDIU_VB VBIT4
-#define PMDIH_PB PBIT3      // det on H/L pos bit
-#define PMDIH_VB VBIT3
-#define PMDOE_PB PBIT2      // det off enable pos bit
-#define PMDOE_VB VBIT2
-#define PMDOU_PB PBIT1      // det off UP/DOWN pos bit
-#define PMDOU_VB VBIT1
-#define PMDOH_PB PBIT0      // det off H/L pos bit
-#define PMDOH_VB VBIT0
+/* description periSwPulseCtl (3+4*10 bits =48) */
 
-#define PMDIN_MSK (PMDINMS_VB | PMDINLS_PB)>>PMDINLS_PB // mask de la valeur du numéro de détecteur on
-#define PMDON_MSK (PMDONMS_VB | PMDONLS_VB)>>PMDONLS_PB // mask de la valeur du numéro de détecteur off
+#define PMLEN     MAXSW*PMSWLEN  // nbre de bytes total periSwPulseCtl (4*6)
+
+/* bits compteurs */
+
+#define PMTOE_PB (6*8)-1     // time one enable numéro du bit
+#define PMTOE_VB 0x800000000000 //              valeur du bit
+#define PMTTE_PB (6*8)-2     // time two enable
+#define PMTTE_VB 0x400000000000
+#define PMFRO_PB (6*8)-3     // freeRun/OneShoot
+#define PMFRO_VB 0x200000000000
+
+/* bits détecteurs */
+
+#define PMSWLEN   (PMNBDET*PMDLEN/8+1) // nbre bytes par sw
+#define MPNBSWCB   PMNBDET*PMNBDCB     // nbre checkbox par switch
+
+#define PMNBDET    4         // nbre détecteurs pulse
+
+#define PMDLEN     10        // longueur (bits) desciption détecteur
+
+#define PMNBDCB    4         // nbre checkbox/détecteur
+#define PMDLNU     3         // nbre bits numéro détecteur
+#define PMDLAC     3         // nbre bits code action
+
+#define PMDNMS_PB  PMDNLS_PB+PMDLNU-1   // msb numéro (3 bits)
+#define PMDNMS_VB  0x200
+#define PMDNLS_PB  PMDEN_PB+1       // lsb numéro
+#define PMDNLS_VB  0x080
+#define PMDEN_PB   PMDLE_PB+1       // enable (1 bit)
+#define PMDEN_VB   0x040
+#define PMDLE_PB   PMDMO_PB+1       // local/externe (1 bit)
+#define PMDLE_VB   0x020
+#define PMDMO_PB   PMDHL_PB+1       // mode flanc/état (1 bit)
+#define PMDMO_VB   0x010
+#define PMDHL_PB   PMDAMS_PB+1      // H/L (1 bit)
+#define PMDHL_VB   0x008
+#define PMDAMS_PB  PMDALS_PB+PMDLAC-1 // msb action (3 bits)
+#define PMDAMS_VB  0x004
+#define PMDALS_PB  0         // lsb action
+#define PMDALS_VB  0x001
+
+/* codes actions */
+
+#define PMDCA_RESET 0       // reset
+#define PMDCA_RAZ   1       // raz
+#define PMDCA_STOP  2       // stop  clk
+#define PMDCA_START 3       // start clk
+#define PMDCA_SHORT 4       // short pulse
+#define PMDCA_END   5       // end pulse
+
+/* codes mode */
+
+#define PMDM_STAT   0       // statique
+#define PMDM_TRANS  1       // transitionnel
+
+/* codes etats générateur (bit droite=valeur) */
+
+#define PM_DISABLE  0x10
+#define PM_IDLE0    0x20
+#define PM_IDLE1    0x21
+#define PM_RUN1     0x30
+#define PM_RUN2     0x31
+#define PM_END1     0x40
+#define PM_END2     0x41
+
+#define PM_FREERUN  0
+#define PM_ONESHOOT 1
+#define PM_ACTIF    1
+
 
 // détecteurs (memDetec)
 
-#define LENDET 4            // nbre bits / détecteur
-#define DETEN_VB VBIT0      // val  bit enable
-#define DETEN_PB PBIT0
-#define DETCUR_VB VBIT1     // val bit état courant
-#define DETCUR_PB PBIT1
-#define DETPRE_VB VBIT2     // val bit état précédent
-#define DETPRE_PB PBIT2
-#define DETDIS_VB VBIT3     // (dispo)
-#define DETDIS_PB PBIT3
+#define LENDET 8            // nbre bits / détecteur
+
+#define DETBITEN_VB VBIT0     // enable
+#define DETBITEN_PB PBIT0
+#define DETBITCU_VB VBIT1     // état courant
+#define DETBITCU_PB PBIT1
+#define DETBITLE_VB VBIT2     // local/externe
+#define DETBITLE_PB PBIT2
+#define DETBITNU_VB VBIT3     // numéro (3 bits)
+#define DETBITNU_PB PBIT3
+#define DETBITDI_VB VBIT6     // dispo
+#define DETBITDI_PB PBIT6
 
 // codage car différenciation de fonction
 
