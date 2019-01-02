@@ -9,6 +9,7 @@
 #include <shmess.h>
 #include "ds1820.h"
 #include "util.h"
+#include "dynam.h"
 
 extern "C" {                  
 #include <user_interface.h>     // pour struct rst_info, system_deep_sleep_set_option(), rtc_mem

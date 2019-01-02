@@ -1,7 +1,7 @@
 #ifndef CONST_H_INCLUDED
 #define CONST_H_INCLUDED
 
-#define VERSION "1.b_"
+#define VERSION "1.c_"
 /* 1.1 allumage/extinction modem
  * 1.2 ajout voltage (n.nn) dans message ; modif unpackMac
  * 1.3 deep sleep (PERTEMP) ; gestion EEPROM ; conversion temp pendant sleep
@@ -27,7 +27,8 @@
  *     réception commandes (ordreExt) opérationnelle (cdes testa_on__ testb_on__ testaoff__ testboff__)
  *     pilotage des switchs via on/off du serveur opérationnelle.
  * 1.b ajout des valeurs courantes de pulse et image des detecteurs dans cstRec
- *  
+ * 1.c horloge séparée, détecteurs locaux/externes, variables d'état pulses
+ * 
 Modifier : 
   
   alarme lorsque connexion impossible... 
