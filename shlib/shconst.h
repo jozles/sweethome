@@ -4,6 +4,9 @@
 
 //#define PERIF
 
+#define LENVERSION 4
+#define LENMODEL 6
+
 #define PORTSERVPERI 1791
 
 #ifdef PERIF
@@ -27,24 +30,24 @@
 #define MPOSDH      MPOSMAC+18      // Date/Heure
 #define MPOSPERREFR MPOSDH+15       // période refr
 #define MPOSPITCH   MPOSPERREFR+6   // pitch
-#define MPOSINTCDE  MPOSPITCH+5     // 4 commandes sw 0/1 (periSwVal)
-#define MPOSINTPAR0 MPOSINTCDE+5    // paramétres sw (4*HH+1sep)*4
-#define MPOSPULSON0 MPOSINTPAR0+MAXSW*9 // Timers On (4bytes)*4
-#define MPOSPULSOF0 MPOSPULSON0+MAXSW*9 // Timers Off (4bytes+1sep)*4
-#define MPOSPULSMOD MPOSPULSOF0+MAXSW*9 // paramètres timers (2*HH+1sep)*4
-#define MPOSMDIAG   MPOSPULSMOD+MAXSW*5 // texte diag
+#define MPOSSWCDE   MPOSPITCH+5     // 4 commandes sw 0/1 (periSwVal)
+#define MPOSINTPAR0 MPOSSWCDE+5     // paramétres sw (4*HH+1sep)*4
+#define MPOSPULSON0 MPOSINTPAR0+MAXSW*9 // Timers tOne (4bytes)*4
+#define MPOSPULSOF0 MPOSPULSON0+MAXSW*9 // Timers tTwo (4bytes+1sep)*4
+#define MPOSPULSCTL MPOSPULSOF0+MAXSW*9 // paramètres timers (2*HH+1sep)*4
+#define MPOSMDIAG   MPOSPULSCTL+MAXSW*(DLSWLEN+1) // texte diag
 #define MLMSET      MPOSMDIAG+5     // longueur message fonction incluse
 
     // fonctions
 
-#define LENNOM 10   // nbre car nom de fonction
-#define NBVAL 64    // nbre maxi fonct/valeurs pour getnv() --- les noms de fonctions font 10 caractères + 2 séparateurs + la donnée associée = LENVAL
-                    // taille macxi pour GET (IE)=2048  ; pour POST plusieurs mega
-                    // avec un arduino Atmel la limitation vient de la taille de la ram
-#define LENVAL 64   // nbre car maxi valeur (vérifier datasave)
-#define MEANVAL 6   // pour donner un param de taille à valeurs[]
+#define LENNOM  10    // nbre car nom de fonction
+#define NBVAL   64    // nbre maxi fonct/valeurs pour getnv() --- les noms de fonctions font 10 caractères + 2 séparateurs + la donnée associée = LENVAL
+                      // taille macxi pour GET (IE)=2048  ; pour POST plusieurs mega
+                      // avec un arduino Atmel la limitation vient de la taille de la ram
+#define LENVAL 128    // nbre car maxi valeur (vérifier datasave)
+#define MEANVAL  6    // pour donner un param de taille à valeurs[]
 #define LENVALEURS NBVAL*MEANVAL+1   // la taille effective de valeurs[]
-#define LENPSW 16   // nbre car maxi pswd
+#define LENPSW  16    // nbre car maxi pswd
 #define RECHEAD 28                           // en-tete strSD date/heure/xx/yy + <br> + crlf
 #define RECCHAR NBVAL*(MEANVAL+3)+RECHEAD+8  // longueur maxi record histo
 
@@ -179,48 +182,54 @@ enum {OFF,ON};
 
 /* description periSwPulseCtl (3+4*10 bits =48) */
 
-#define PMLEN     MAXSW*PMSWLEN  // nbre de bytes total periSwPulseCtl (4*6)
+#define DLTABLEN     MAXSW*DLSWLEN  // nbre de bytes total periSwPulseCtl (4*6)
 
 /* bits compteurs */
 
-#define PMTOE_PB (6*8)-1     // time one enable numéro du bit
+#define PMTOE_PB (DLSWLEN*8)-1     // time one enable numéro du bit
 #define PMTOE_VB 0x800000000000 //              valeur du bit
-#define PMTTE_PB (6*8)-2     // time two enable
+#define PMTTE_PB (DLSWLEN*8)-2     // time two enable
 #define PMTTE_VB 0x400000000000
-#define PMFRO_PB (6*8)-3     // freeRun/OneShoot
+#define PMFRO_PB (DLSWLEN*8)-3     // freeRun/OneShoot
 #define PMFRO_VB 0x200000000000
 
-/* bits détecteurs */
 
-#define PMSWLEN   (PMNBDET*PMDLEN/8+1) // nbre bytes par sw
-#define MPNBSWCB   PMNBDET*PMNBDCB     // nbre checkbox par switch
+/* bits détecteurs logiques */
 
-#define PMNBDET    4         // nbre détecteurs pulse
+#define DLSWLEN   (DLNB*DLBITLEN/8+1) // nbre bytes par sw
+#define DLNBSWCB   DLNB*DLNBCB     // nbre checkbox par switch
 
-#define PMDLEN     10        // longueur (bits) desciption détecteur
+#define DLNB        4         // nbre détecteurs logiques
 
-#define PMNBDCB    4         // nbre checkbox/détecteur
-#define PMDLNU     3         // nbre bits numéro détecteur
-#define PMDLAC     3         // nbre bits code action
+#define DLBITLEN      10         // longueur (bits) desciption détecteur
 
-#define PMDNMS_PB  PMDNLS_PB+PMDLNU-1   // msb numéro (3 bits)
-#define PMDNMS_VB  0x200
-#define PMDNLS_PB  PMDEN_PB+1       // lsb numéro
-#define PMDNLS_VB  0x080
-#define PMDEN_PB   PMDLE_PB+1       // enable (1 bit)
-#define PMDEN_VB   0x040
-#define PMDLE_PB   PMDMO_PB+1       // local/externe (1 bit)
-#define PMDLE_VB   0x020
-#define PMDMO_PB   PMDHL_PB+1       // mode flanc/état (1 bit)
-#define PMDMO_VB   0x010
-#define PMDHL_PB   PMDAMS_PB+1      // H/L (1 bit)
-#define PMDHL_VB   0x008
-#define PMDAMS_PB  PMDALS_PB+PMDLAC-1 // msb action (3 bits)
-#define PMDAMS_VB  0x004
-#define PMDALS_PB  0         // lsb action
-#define PMDALS_VB  0x001
+#define DLNBCB      4         // nbre checkbox/détecteur
+#define DLNULEN     3         // nbre bits numéro détecteur
+#define DLACLEN     3         // nbre bits code action
 
-/* codes actions */
+/* codes mode */
+
+#define PMDM_STAT   0       // statique
+#define PMDM_TRANS  1       // transitionnel
+
+#define DLNMS_PB   DLNLS_PB+DLNULEN-1   // msb numéro (3 bits)
+#define DLNMS_VB   0x200
+#define DLNLS_PB   DLENA_PB+1       // lsb numéro
+#define DLNLS_VB   0x080
+#define DLENA_PB   DLEL_PB+1       // enable (1 bit)
+#define DLENA_VB   0x040
+#define DLEL_PB    DLMFE_PB+1       // local/externe (1 bit)
+#define DLEL_VB    0x020
+#define DLMFE_PB   DLMHL_PB+1       // mode flanc/état (1 bit)
+#define DLMFE_VB   0x010
+#define DLMHL_PB   DLACMS_PB+1      // H/L (1 bit)
+#define DLMHL_VB   0x008
+#define DLACMS_PB  DLACLS_PB+DLACLEN-1 // msb action sur pulse (3 bits)
+#define DLACMS_VB  0x004
+#define DLACLS_PB  0         // lsb action
+#define DLACLS_VB  0x001
+
+/* codes actions detecteurs logiques sur pulse */
 
 #define PMDCA_RESET 0       // reset
 #define PMDCA_RAZ   1       // raz
@@ -228,11 +237,6 @@ enum {OFF,ON};
 #define PMDCA_START 3       // start clk
 #define PMDCA_SHORT 4       // short pulse
 #define PMDCA_END   5       // end pulse
-
-/* codes mode */
-
-#define PMDM_STAT   0       // statique
-#define PMDM_TRANS  1       // transitionnel
 
 /* codes etats générateur (bit droite=valeur) */
 
@@ -248,27 +252,35 @@ enum {OFF,ON};
 #define PM_ONESHOOT 1
 #define PM_ACTIF    1
 
+/* SWITCH MODE ON/OFF */
 
-// détecteurs (memDetec)
-
-#define LENDET 8            // nbre bits / détecteur
-
-#define DETBITEN_VB VBIT0     // enable
-#define DETBITEN_PB PBIT0
-#define DETBITCU_VB VBIT1     // état courant
-#define DETBITCU_PB PBIT1
-#define DETBITLE_VB VBIT2     // local/externe
-#define DETBITLE_PB PBIT2
-#define DETBITNU_VB VBIT3     // numéro (3 bits)
-#define DETBITNU_PB PBIT3
-#define DETBITDI_VB VBIT6     // dispo
-#define DETBITDI_PB PBIT6
+#define SWMDLNUMS_PB 0x07  // position ms bit num détecteur
+#define SWMDLNUMS_VB 0x80  // valeur
+#define SWMDLNULS_PB 0x06  // position ms bit num détecteur
+#define SWMDLNULS_VB 0x40
+#define SWMDLEN_PB   0x05  // detecteur enable
+#define SWMDLEN_VB   0x20
+#define SWMDLHL_PB   0x04  // detecteur H/L
+#define SWMDLHL_VB   0x10
+#define SWMSEN_PB    0x03  // serveur enable
+#define SWMSEN_VB    0x08
+#define SWMSHL_PB    0x02  // serveur H/L
+#define SWMSHL_VB    0x04
+#define SWMPEN_PB    0x01  // pulse enable
+#define SWMPEN_VB    0x02
+#define SWMPHL_PB    0x00  // pulse H/L
+#define SWMPHL_VB    0x01
 
 // codage car différenciation de fonction
 
 #define PMFNCVAL    0X30    // car d'offset ('0') de la valeur de fonction (*valf)
 
 #define PMFNCHAR    0x40    // car d'offset ('@') dans nom de fonction
-#define PMFNSWLS_PB PBIT4   // position ls bit du numéro de sw
+
+
+
+
+
+
 
 #endif // _SHCONST_H_

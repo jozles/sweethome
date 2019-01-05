@@ -5,6 +5,8 @@
 #include "shutil.h"
 #include "dynam.h"
 
+#ifdef NEWPULS
+
 enum {CKSTOP,CKRUN}
 bool pulseClk=CKRUN;
 
@@ -21,23 +23,23 @@ bool pulseClk=CKRUN;
 
 /* bits détecteurs */
 
-#define PMDLEN      10      // longueur (bits) desciption détecteur
-#define PMDNMS_PB           // msb numéro (3 bits)
-#define PMDNMS_VB
-#define PMDNLS_PB           // lsb numéro
-#define PMDNLS_VB
-#define PMDEN_PB            // enable (1 bit)
-#define PMDEN_VB
-#define PMDLE_PB            // local/externe (1 bit)
-#define PMDLE_VB
-#define PMDMO_PB            // mode flanc/état (1 bit)
-#define PMDMO_VB
-#define PMDHL_PB            // H/L (1 bit)
-#define PMDHL_VB
-#define PMDAMS_PB           // msb action (3 bits)
-#define PMDAMS_VB
-#define PMDALS_PB           // lsb action
-#define PMDALS_VB
+#define DLBITLEN      10      // longueur (bits) desciption détecteur
+#define DLNMS_PB           // msb numéro (3 bits)
+#define DLNMS_VB
+#define DLNLS_PB           // lsb numéro
+#define DLNLS_VB
+#define DLENA_PB            // enable (1 bit)
+#define DLENA_VB
+#define DLEL_PB            // local/externe (1 bit)
+#define DLEL_VB
+#define DLMFE_PB            // mode flanc/état (1 bit)
+#define DLMFE_VB
+#define DLMHL_PB            // H/L (1 bit)
+#define DLMHL_VB
+#define DLACMS_PB           // msb action (3 bits)
+#define DLACMS_VB
+#define DLACLS_PB           // lsb action
+#define DLACLS_VB
 
 /* codes actions */
 
@@ -67,7 +69,7 @@ bool pulseClk=CKRUN;
 #define PM_ONESHOOT 1
 #define PM_ACTIF    1
 
-
+#endif NEWPULSE
 
 
 
@@ -83,7 +85,7 @@ uint8_t runPulse(uint8_t sw)                               // get état pulse sw
 
 
   // disable ?
-  if((cstRec.pulseMode[sw] & PMTOE_VB) == 0){return PM_DISABLE;}
+  if((cstRec.pulseCtl[sw] & PMTOE_VB) == 0){return PM_DISABLE;}
   
   // idle ?
   if(pulseClk==CKSTOP){
@@ -96,7 +98,7 @@ uint8_t runPulse(uint8_t sw)                               // get état pulse sw
     //si compteur1 
       if((cstRec.begPulseOne[sw] + cstRec.durPulseOne[sw]) > millis()){return PM_RUN1;}                       // running 1
       //si pas fini run1
-      else if((cstRec.pulseMode[sw] & PMTTE_VB) == 0){return PM_END1;}                                        // end 1
+      else if((cstRec.pulseCtl[sw] & PMTTE_VB) == 0){return PM_END1;}                                        // end 1
       //sinon (fini) si compteur2 disable fin1
       else {cstRec.begPulseOne[sw]=0;cstRec.begPulseTwo[sw]=millis();return PM_RUN2;}                         // running 2
       //sinon raz compteur1 ; start compteur2
@@ -105,10 +107,10 @@ uint8_t runPulse(uint8_t sw)                               // get état pulse sw
     //si compteur 2  
       if((cstRec.begPulseTwo[sw] + cstRec.durPulseTwo[sw]) > millis()){return PM_RUN2;}                       // running 2
       //si pas fini run2
-      else if(cstRec.pulseMode[sw] & PMFRO_VB) == PM_ONESHOOT){
+      else if(cstRec.pulseCtl[sw] & PMFRO_VB) == PM_ONESHOOT){
         cstRec.begPulseTwo[sw]=0;pulseClk=CKSTOP;return PM_IDLE0;}                                            // oneshoot = idle0
       //sinon (fini) si oneshoot raz compteur 2 stop clock : idle0 
-      else if(((cstRec.pulseMode[sw] & PMTOE_VB)!=0) && ((cstRec.pulseMode[sw] & PMFRO_VB) == PM_FREERUN)){
+      else if(((cstRec.pulseCtl[sw] & PMTOE_VB)!=0) && ((cstRec.pulseCtl[sw] & PMFRO_VB) == PM_FREERUN)){
         cstRec.begPulseOne[sw]=millis();return PM_RUN1;}                                                      // running 1
       //sinon (fini) et compteur1 enable et freerun ; init compteur 1 ; run1
       else return PM_END2;                                                                                    // fin 2
@@ -151,12 +153,12 @@ uint8_t runPulse(uint8_t sw)                               // get état pulse sw
 {
   if(sw<NBSW){
 
-    uint8_t numDetOn=(cstRec.pulseMode[sw]>>PMDINLS_PB)&0x0003;
-    uint8_t numDetOff=(cstRec.pulseMode[sw]>>PMDONLS_PB)&0x0003;
+    uint8_t numDetOn=(cstRec.pulseCtl[sw]>>PMDINLS_PB)&0x0003;
+    uint8_t numDetOff=(cstRec.pulseCtl[sw]>>PMDONLS_PB)&0x0003;
 
-    bool enOne=(cstRec.pulseMode[sw] & PMTOE_VB) != 0;
-    bool enTwo=(cstRec.pulseMode[sw] & PMTTE_VB) != 0;
-    uint8_t cycle=((cstRec.pulseMode[sw] & (PMCLS_VB | PMCMS_VB))>>PMCLS_PB);
+    bool enOne=(cstRec.pulseCtl[sw] & PMTOE_VB) != 0;
+    bool enTwo=(cstRec.pulseCtl[sw] & PMTTE_VB) != 0;
+    uint8_t cycle=((cstRec.pulseCtl[sw] & (PMCLS_VB | PMCMS_VB))>>PMCLS_PB);
     bool udcycle = cycle == UDCYCLE;
     bool freeRun = cycle == FREERUN ;
     bool oneshot = cycle == ONESHOT ;
@@ -166,15 +168,15 @@ uint8_t runPulse(uint8_t sw)                               // get état pulse sw
     bool endOne=(millis()/1000-cstRec.begPulseOne[sw]) >= cstRec.durPulseOne[sw];
     bool endTwo=(millis()/1000-cstRec.begPulseTwo[sw]) >= cstRec.durPulseTwo[sw];
     
-    bool edgeStop=((cstRec.pulseMode[sw] & PMDOU_VB) == 0) || ((cstRec.memDetec>>(DETPRE_PB+numDetOff*LENDET))&0x0001 != (cstRec.memDetec>>(DETCUR_PB+numDetOff*LENDET))&0x0001);
-    bool stopD=((cstRec.memDetec>>(DETEN_PB+numDetOff*LENDET))&0x001 !=0) && ((cstRec.memDetec>>(DETCUR_PB+numDetOff*LENDET))&0x0001 == ((cstRec.pulseMode[sw]>>PMDOH_PB)&0x0001));
-    bool enStp=(cstRec.pulseMode[sw] & PMDOE_VB) != 0;
-    bool stopS=(cstRec.pulseMode[sw] & PMSRE_VB) != 0;
+    bool edgeStop=((cstRec.pulseCtl[sw] & PMDOU_VB) == 0) || ((cstRec.memDetec>>(DETPRE_PB+numDetOff*LENDET))&0x0001 != (cstRec.memDetec>>(DETCUR_PB+numDetOff*LENDET))&0x0001);
+    bool stopD=((cstRec.memDetec>>(DETEN_PB+numDetOff*LENDET))&0x001 !=0) && ((cstRec.memDetec>>(DETCUR_PB+numDetOff*LENDET))&0x0001 == ((cstRec.pulseCtl[sw]>>PMDOH_PB)&0x0001));
+    bool enStp=(cstRec.pulseCtl[sw] & PMDOE_VB) != 0;
+    bool stopS=(cstRec.pulseCtl[sw] & PMSRE_VB) != 0;
     bool stopPulse=(enStp && stopD && edgeStop) || stopS;
 
-    bool edgeStart=((cstRec.pulseMode[sw] & PMDIU_VB) == 0) || ((cstRec.memDetec>>(DETPRE_PB+numDetOn*LENDET))&0x0001 != (cstRec.memDetec>>(DETCUR_PB+numDetOn*LENDET))&0x0001);
-    bool startD=((cstRec.memDetec>>(DETEN_PB+numDetOn*LENDET))&0x001 !=0) && ((cstRec.memDetec>>(DETCUR_PB+numDetOn*LENDET))&0x0001 == ((cstRec.pulseMode[sw]>>PMDIH_PB)&0x0001));
-    bool enStart=((cstRec.pulseMode[sw] & PMDIE_VB ) != 0 ) && !oneshotx ;
+    bool edgeStart=((cstRec.pulseCtl[sw] & PMDIU_VB) == 0) || ((cstRec.memDetec>>(DETPRE_PB+numDetOn*LENDET))&0x0001 != (cstRec.memDetec>>(DETCUR_PB+numDetOn*LENDET))&0x0001);
+    bool startD=((cstRec.memDetec>>(DETEN_PB+numDetOn*LENDET))&0x001 !=0) && ((cstRec.memDetec>>(DETCUR_PB+numDetOn*LENDET))&0x0001 == ((cstRec.pulseCtl[sw]>>PMDIH_PB)&0x0001));
+    bool enStart=((cstRec.pulseCtl[sw] & PMDIE_VB ) != 0 ) && !oneshotx ;
     bool startPulse= enStart && startD && edgeStart;
   
     if(enOne && !runing1 && (!enTwo || !runing2) && startPulse){
@@ -189,8 +191,8 @@ uint8_t runPulse(uint8_t sw)                               // get état pulse sw
     if(runing2 && endTwo && enOne && freeRun && !stopPulse){cstRec.begPulseOne[sw]=millis()/1000;cstRec.begPulseTwo[sw]=0;return PUSTGF;} // start 1 free run
     if(runing2 && endTwo && oneshot){
       cstRec.begPulseOne[sw]=0;cstRec.begPulseTwo[sw]=0;
-      cstRec.pulseMode[sw] &= ~(PMCLS_VB | PMCMS_VB); // effacement
-      cstRec.pulseMode[sw] |= (ONESHOTX<<PMCLS_PB);  // remplacement
+      cstRec.pulseCtl[sw] &= ~(PMCLS_VB | PMCMS_VB); // effacement
+      cstRec.pulseCtl[sw] |= (ONESHOTX<<PMCLS_PB);  // remplacement
       return PUSTOS;} // fin oneshot
     
     return PUSTSE;   // system error

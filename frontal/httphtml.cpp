@@ -39,16 +39,18 @@ extern char*     periLastDateErr;              // ptr ds buffer : date/heure de 
 extern int8_t*   periErr;                      // ptr ds buffer : code diag anomalie com (voir MESSxxx shconst.h)
 extern char*     periNamer;                    // ptr ds buffer : description périphérique
 extern char*     periVers;                     // ptr ds buffer : version logiciel du périphérique
+extern char*     periModel;                    // ptr ds buffer : model du périphérique
 extern byte*     periMacr;                     // ptr ds buffer : mac address 
 extern byte*     periIpAddr;                   // ptr ds buffer : Ip address
-extern byte*     periSwNb;                    // ptr ds buffer : Nbre d'interrupteurs (0 aucun ; maxi 4(MAXSW)            
-extern byte*     periSwVal;                   // ptr ds buffer : état/cde des inter  
-extern byte*     periSwMode;                  // ptr ds buffer : Mode fonctionnement inters (4 bytes par switch)           
+extern byte*     periSwNb;                     // ptr ds buffer : Nbre d'interrupteurs (0 aucun ; maxi 4(MAXSW)            
+extern byte*     periSwVal;                    // ptr ds buffer : état/cde des inter  
+extern byte*     periSwMode;                   // ptr ds buffer : Mode fonctionnement inters (4 bytes par switch)           
 extern uint32_t* periSwPulseOne;               // ptr ds buffer : durée pulses sec ON (0 pas de pulse)
-extern uint32_t* periSwPulseTwo;              // ptr ds buffer : durée pulses sec OFF(mode astable)
+extern uint32_t* periSwPulseTwo;               // ptr ds buffer : durée pulses sec OFF(mode astable)
 extern uint32_t* periSwPulseCurrOne;           // ptr ds buffer : temps courant pulses ON
-extern uint32_t* periSwPulseCurrTwo;          // ptr ds buffer : temps courant pulses OFF
-extern byte*     periSwPulseCtl;             // ptr ds buffer : mode pulses 
+extern uint32_t* periSwPulseCurrTwo;           // ptr ds buffer : temps courant pulses OFF
+extern byte*     periSwPulseCtl;               // ptr ds buffer : mode pulses 
+extern byte*     periSwPulseSta;               // ptr ds buffer : état clock pulses
 extern uint8_t*  periSondeNb;                  // ptr ds buffer : nbre sonde
 extern boolean*  periProg;                     // ptr ds buffer : flag "programmable"
 extern byte*     periDetNb;                    // ptr ds buffer : Nbre de détecteurs maxi 4 (MAXDET)
@@ -226,7 +228,7 @@ void subMPn(EthernetClient* cli,uint8_t sw,uint8_t num,uint8_t nb)   // numbox t
                                                                 // le caractère LENNOM-1 est le numéro du lsb(+PMFNCHAR) dans periSwPulseCtl 
 {
   char fonc[]="peri_pmo__\0";
-  uint64_t pipm;memcpy(&pipm,((char*)(periSwPulseCtl+sw*PMSWLEN)),PMSWLEN);
+  uint64_t pipm;memcpy(&pipm,((char*)(periSwPulseCtl+sw*DLSWLEN)),DLSWLEN);
   uint8_t val=(pipm>>num)&mask[nb];                          
   fonc[LENNOM-2]=(char)(PMFNCHAR+sw);      
   fonc[LENNOM-1]=(char)(PMFNCHAR+num);
@@ -240,7 +242,7 @@ void subMPc(EthernetClient* cli,uint8_t sw,uint8_t num)         // checkbox tran
                                                                 // le caractère LENNOM-1 est le numéro du bit(+PMFNCHAR) dans periSwPulseCtl 
 {
   char fonc[]="peri_pmo__\0";
-  uint64_t pipm;memcpy(&pipm,((char*)(periSwPulseCtl+sw*PMSWLEN)),PMSWLEN);
+  uint64_t pipm;memcpy(&pipm,((char*)(periSwPulseCtl+sw*DLSWLEN)),DLSWLEN);
   uint8_t val=(pipm>>num)&0x01;
   fonc[LENNOM-2]=(char)(PMFNCHAR+sw);
   fonc[LENNOM-1]=(char)(PMFNCHAR+num);                     
@@ -250,14 +252,14 @@ void subMPc(EthernetClient* cli,uint8_t sw,uint8_t num)         // checkbox tran
 
 void subModePulseTime(EthernetClient* cli,uint8_t sw,uint32_t* pulse,uint32_t* dur,char* fonc1,char* fonc2,char onetwo)
 {
-  uint64_t pipm;memcpy(&pipm,((char*)(periSwPulseCtl+sw*PMSWLEN)),PMSWLEN);
+  uint64_t pipm;memcpy(&pipm,((char*)(periSwPulseCtl+sw*DLSWLEN)),DLSWLEN);
   uint8_t val,pbit=PMTTE_PB;if(onetwo=='O'){pbit=PMTOE_PB;}
   val=((pipm>>pbit)&0x01)+PMFNCVAL;                                        
   cli->print("<font size=\"2\">");
   fonc1[LENNOM-1]=onetwo;
   checkboxTableHtml(cli,&val,fonc1,-1,0);                       // bit enable pulse
-  numTableHtml(cli,'l',(pulse+sw*PMSWLEN),fonc2,8,0,2);                 // durée pulse   
-  char a[8];sprintf(a,"%06d",*(dur+sw*PMSWLEN));a[6]='\0';              // valeur courante
+  numTableHtml(cli,'l',(pulse+sw),fonc2,8,0,2);                 // durée pulse   
+  char a[8];sprintf(a,"%06d",*(dur+sw));a[6]='\0';              // valeur courante
   cli->print("<br>(");cli->print(a);cli->println(")</font>");
 }
 
@@ -289,23 +291,23 @@ void SwCtlTableHtml(EthernetClient* cli,int nbsw,int nbtypes)
 // colonne freerun
 
       cli->print("</td><td>");
-      uint64_t pipm;memcpy(&pipm,(char*)(periSwPulseCtl+i*PMSWLEN),PMSWLEN);
+      uint64_t pipm;memcpy(&pipm,(char*)(periSwPulseCtl+i*DLSWLEN),DLSWLEN);
       uint8_t val=((pipm>>PMFRO_PB)&0x01)+PMFNCVAL;rfonc[LENNOM-1]='F';                    // bit freerun
-      //Serial.print(val);Serial.print(" - ");dumpstr((periSwPulseCtl+i*PMSWLEN),6);
+      //Serial.print(val);Serial.print(" - ");dumpstr((periSwPulseCtl+i*DLSWLEN),6);
       checkboxTableHtml(cli,&val,rfonc,-1,0);                    
-      cli->print("</td>");
+      cli->print("<br>");cli->print(chexa[periSwPulseSta[i]]);cli->print("</td>");
                                                                  
 // colonne des détecteurs
 
       cli->print("<td><font size=\"1\">");
-      for(int nd=0;nd<PMNBDET;nd++){
-        subMPc(cli,i,nd*PMDLEN+PMDEN_PB);         // enable
-        subMPc(cli,i,nd*PMDLEN+PMDLE_PB);         // local/externe
-        subMPn(cli,i,nd*PMDLEN+PMDNLS_PB,PMDLNU); // numéro det
-        subMPc(cli,i,nd*PMDLEN+PMDMO_PB);         // flanc/trans
-        subMPc(cli,i,nd*PMDLEN+PMDHL_PB);         // H/L
-        subMPn(cli,i,nd*PMDLEN+PMDALS_PB,PMDLAC); // numéro action
-        if(nd<PMNBDET-1){cli->print("<br>");}                           
+      for(int nd=0;nd<DLNB;nd++){
+        subMPc(cli,i,nd*DLBITLEN+DLENA_PB);         // enable
+        subMPc(cli,i,nd*DLBITLEN+DLEL_PB);         // local/externe
+        subMPn(cli,i,nd*DLBITLEN+DLNLS_PB,DLNULEN); // numéro det
+        subMPc(cli,i,nd*DLBITLEN+DLMFE_PB);         // flanc/trans
+        subMPc(cli,i,nd*DLBITLEN+DLMHL_PB);         // H/L
+        subMPn(cli,i,nd*DLBITLEN+DLACLS_PB,DLACLEN); // numéro action
+        if(nd<DLNB-1){cli->print("<br>");}                           
       }
       cli->print("</font></td>");
       
@@ -314,7 +316,7 @@ void SwCtlTableHtml(EthernetClient* cli,int nbsw,int nbtypes)
       cli->print("<td>");                                               // colonne des types d'action  
       for(int k=0;k<nbtypes;k++){                                       // k n° de type d'action (act/des/ON/OFF) (1 ligne par type)
         nfonc[LENNOM-1]=(char)(k*16+64);
-        uint8_t val=(*(periSwMode+i*MAXTAC+k)>>6);                     // 4 bytes par sw ; 2 bits gauche n° détecteur + 3*2 bits (enable - H/L)
+        uint8_t val=(*(periSwMode+i*MAXTAC+k)>>SWMDLNULS_PB);           // 4 bytes par sw ; 2 bits gauche n° détecteur + 3*2 bits (enable - H/L)
         cli->print("<font size=\"2\">");cli->print(nac[k]);cli->print("</font>");
         numTableHtml(cli,'b',(uint32_t*)&val,nfonc,1,0,2);              // affichage-saisie n°détec
         
@@ -368,7 +370,7 @@ Serial.print("début péritable ; remote_IP ");serialPrintIp(remote_IP_cur);Seri
           cli->println("<table>");
               cli->println("<tr>");
                 cli->println(" ON=VRAI=1=HAUT=CLOSE=GPIO2=ROUGE");
-                cli->println("<th></th><th><br>nom_periph</th><th><br>TH</th><th><br>  V </th><th>per<br>pth<br>ofs</th><th>nb<br>sd<br>pg</th><th>nb<br>sw</th><th><br>_O_I___</th><th>nb<br>dt</th><th></th><th>mac_addr<br>ip_addr</th><th>version<br>last out<br>last in</th><th></th><th>time One<br>time Two</th><th>f<br>r</th><th>e.l _f_H.a<br>n.x _t_L.c</th><th>___det___srv_pul<br></th>");
+                cli->println("<th></th><th><br>nom_periph</th><th><br>TH</th><th><br>  V </th><th>per<br>pth<br>ofs</th><th>nb<br>sd<br>pg</th><th>nb<br>sw</th><th><br>_O_I___</th><th>nb<br>dt</th><th></th><th>mac_addr<br>ip_addr</th><th>version<br>last out<br>last in</th><th></th><th>time One<br>time Two</th><th>f<br>r</th><th>e.l _f_H.a<br>n.x _t_L.c</th><th>___det__srv._pul<br></th>");
               cli->println("</tr>");
 
               for(i=1;i<=NBPERIF;i++){

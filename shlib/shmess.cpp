@@ -32,22 +32,27 @@ extern char*     periLastDateErr;              // ptr ds buffer : date/heure de 
 extern int8_t*   periErr;                      // ptr ds buffer : code diag anomalie com (voir MESSxxx shconst.h)
 extern char*     periNamer;                    // ptr ds buffer : description périphérique
 extern char*     periVers;                     // ptr ds buffer : version logiciel du périphérique
+extern char*     periModel;                    // ptr ds buffer : model du périphérique
 extern byte*     periMacr;                     // ptr ds buffer : mac address
 extern byte*     periIpAddr;                   // ptr ds buffer : Ip address
 extern byte*     periSwNb;                     // ptr ds buffer : Nbre d'interrupteurs (0 aucun ; maxi 4(MAXSW)
 extern byte*     periSwVal;                    // ptr ds buffer : état/cde des inter
-extern byte*     periSwMode;                   // ptr ds buffer : Mode fonctionnement inters (MAXTAC=4 par switch)
+extern byte*     periSwMode;                    // ptr ds buffer : Mode fonctionnement inters (MAXTAC=4 par switch)
 extern uint32_t* periSwPulseOne;               // ptr ds buffer : durée pulses sec ON (0 pas de pulse)
 extern uint32_t* periSwPulseTwo;               // ptr ds buffer : durée pulses sec OFF(mode astable)
-extern uint32_t* periSwPulseCurrOn;            // ptr ds buffer : temps courant pulses ON
-extern uint32_t* periSwPulseCurrOff;           // ptr ds buffer : temps courant pulses OFF
+extern uint32_t* periSwPulseCurrOne;           // ptr ds buffer : temps courant pulses ON
+extern uint32_t* periSwPulseCurrTwo;           // ptr ds buffer : temps courant pulses OFF
 extern byte*     periSwPulseCtl;               // ptr ds buffer : mode pulses
+extern byte*     periSwPulseSta;               // ptr ds buffer : état clock pulses
 extern uint8_t*  periSondeNb;                  // ptr ds buffer : nbre sonde
 extern boolean*  periProg;                     // ptr ds buffer : flag "programmable"
 extern byte*     periDetNb;                    // ptr ds buffer : Nbre de détecteurs maxi 4 (MAXDET)
 extern byte*     periDetVal;                   // ptr ds buffer : flag "ON/OFF" si détecteur (2 bits par détec))
-extern int8_t    periMess;                     // code diag réception message (voir MESSxxx shconst.h)
+extern byte*     periDetVal;                   // ptr ds buffer : flag "ON/OFF" si détecteur (2 bits par détec))
+extern float*    periThOffset;                 // ptr ds buffer : offset correctif sur mesure températureextern int8_t    periMess;                     // code diag réception message (voir MESSxxx shconst.h)
+
 extern byte      periMacBuf[6];
+extern int8_t    periMess;                     // code diag réception message (voir MESSxxx shconst.h)
 
 #endif // PERIF
 
@@ -302,17 +307,18 @@ void assySet(char* message,int periCur,char* diag,char* date14)
 #define MSETINTPULS 52+36=88
 #ifndef PERIF
                 v1+=MAXSW*(2*MAXTAC+1);            // len déjà copiée
-                for(int k=0;k<MAXSW*2;k++){                  // 2 compteurs/sw
+                for(int k=0;k<MAXSW*2;k++){                  // 2 compteurs/sw (8*9bytes)
                     sprintf(message+v1+k*(8+1),"%08u",*(periSwPulseOne+k));
                     memcpy(message+v1+(k+1)*8+k,"_\0",2);
                 }
 //Serial.println(message);
                 v1+=MAXSW*2*(8+1);
                 for(int k=0;k<MAXSW;k++){           //  bytes pulse Ctl (hh)*maxsw*pmdetlen
-                    for(int k0=PMSWLEN-1;k0>=0;k0--){
-                        conv_htoa(message+v1+k*((PMSWLEN*2)+1)+(PMSWLEN-k0-1)*2,(byte*)(periSwPulseCtl+k*PMSWLEN+k0));
+                    for(int k0=DLSWLEN-1;k0>=0;k0--){
+                        conv_htoa(message+v1+k*((DLSWLEN*2)+1)+(DLSWLEN-k0-1)*2,
+                                  (byte*)(periSwPulseCtl+k*DLSWLEN+k0));
                     }
-                    memcpy(message+v1+k*((PMSWLEN*2)+1)+(PMSWLEN*2),"_\0",2);
+                    memcpy(message+v1+k*((DLSWLEN*2)+1)+(DLSWLEN*2),"_\0",2);
                 }
 //Serial.println(message);
             }  // pericur != 0

@@ -24,6 +24,7 @@ extern char*     periLastDateErr;              // ptr ds buffer : date/heure de 
 extern int8_t*   periErr;                      // ptr ds buffer : code diag anomalie com (voir MESSxxx shconst.h)
 extern char*     periNamer;                    // ptr ds buffer : description périphérique
 extern char*     periVers;                     // ptr ds buffer : version logiciel du périphérique
+extern char*     periModel;                    // ptr ds buffer : model du périphérique
 extern byte*     periMacr;                     // ptr ds buffer : mac address 
 extern byte*     periIpAddr;                   // ptr ds buffer : Ip address
 extern byte*     periSwNb;                     // ptr ds buffer : Nbre d'interrupteurs (0 aucun ; maxi 4(MAXSW)            
@@ -34,6 +35,7 @@ extern uint32_t* periSwPulseTwo;               // ptr ds buffer : durée pulses 
 extern uint32_t* periSwPulseCurrOne;           // ptr ds buffer : temps courant pulses ON
 extern uint32_t* periSwPulseCurrTwo;           // ptr ds buffer : temps courant pulses OFF
 extern byte*     periSwPulseCtl;               // ptr ds buffer : mode pulses
+extern byte*     periSwPulseSta;               // ptr ds buffer : état clock pulses
 extern uint8_t*  periSondeNb;                  // ptr ds buffer : nbre sonde
 extern boolean*  periProg;                     // ptr ds buffer : flag "programmable"
 extern byte*     periDetNb;                    // ptr ds buffer : Nbre de détecteurs maxi 4 (MAXDET)
@@ -247,7 +249,9 @@ void periInit()                 // pointeurs de l'enregistrement de table couran
   periNamer=(char*)temp;
   temp +=PERINAMLEN;
   periVers=(char*)temp;
-  temp +=3;                  
+  temp +=LENVERSION;  
+  periModel=(char*)temp;
+  temp +=LENMODEL;                
   periMacr=(byte*)temp;
   temp +=6;
   periIpAddr=(byte*)temp;
@@ -267,7 +271,9 @@ void periInit()                 // pointeurs de l'enregistrement de table couran
   periSwPulseCurrTwo=(uint32_t*)temp;
   temp +=MAXSW*sizeof(uint32_t);  
   periSwPulseCtl=(byte*)temp;
-  temp +=PMLEN;  
+  temp +=DLTABLEN*sizeof(byte);  
+  periSwPulseSta=(byte*)temp;
+  temp +=MAXSW*sizeof(byte);
   periSondeNb=(uint8_t*)temp;
   temp +=sizeof(uint8_t);
   periProg=(boolean*)temp;
@@ -291,7 +297,7 @@ void periInitVar()
   *periPerRefr=PERIPREF;
   *periPitch=0;
   *periLastVal=0;
-  memset(periNamer,' ',PERINAMLEN);periNamer[PERINAMLEN]='\0';
+  memset(periNamer,' ',PERINAMLEN);periNamer[PERINAMLEN-1]='\0';
   memset(periMacr,0x00,6);
   memset(periIpAddr,0x00,4);
   memset(periLastDateIn,'0',6);
@@ -302,17 +308,19 @@ void periInitVar()
   *periProg=FAUX;
   *periSwVal=0;
   *periSwNb=0;
-   memset(periSwPulseOne,0x00,4);
-   memset(periSwPulseTwo,0x00,4); 
-   memset(periSwPulseCurrOne,0x00,4); 
-   memset(periSwPulseCurrTwo,0x00,4);
-   memset(periSwPulseCtl,0x00,PMLEN);    
+   memset(periSwMode,0x00,MAXSW*MAXTAC);
+   memset(periSwPulseOne,0x00,MAXSW);
+   memset(periSwPulseTwo,0x00,MAXSW); 
+   memset(periSwPulseCurrOne,0x00,MAXSW); 
+   memset(periSwPulseCurrTwo,0x00,MAXSW);
+   memset(periSwPulseCtl,0x00,DLTABLEN);
+   memset(periSwPulseSta,0x00,MAXSW);       
   *periDetNb=0;
   *periDetVal=0;
   *periAlim=0;
   *periThOffset=0;
-  memset(periVers,' ',3);periVers[3]='\0';
-  
+  memset(periVers,' ',LENVERSION);periVers[LENVERSION-1]='\0';
+  memset(periModel,' ',LENMODEL);
 }
 
 void periConvert()        

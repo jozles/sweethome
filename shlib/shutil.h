@@ -17,7 +17,7 @@ void packDate(char* dateout,char* datein);
 void unpackDate(char* dateout,char* datein);
 void serialPrintDate(char* datein);
 void ledblink(uint8_t nbBlk);
-void dumpstr(char* data,uint8_t len);
+void dumpstr(char* data,uint16_t len);
 
 
 #endif UTIL_H_

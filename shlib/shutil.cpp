@@ -61,11 +61,25 @@ void conv_htoa(char* ascii,byte* h)
         // Serial.print(c,HEX);Serial.print(" ");Serial.print(ascii[0],HEX);Serial.print(" ");Serial.println(ascii[1],HEX);
 }
 
-void dumpstr(char* data,uint8_t len)
+void dumpstr0(char* data,uint8_t len)
 {
     char a[]={0x00,0x00,0x00};
-    for(int k=len-1;k>=0;k--){conv_htoa(a,&data[k]);Serial.print(a);Serial.print(" ");}
+    uint8_t c;
+    Serial.print((long)data,HEX);Serial.print("   ");
+    for(int k=0;k<len;k++){conv_htoa(a,(byte*)&data[k]);Serial.print(a);Serial.print(" ");}
+    Serial.print("    ");
+    for(int k=0;k<len;k++){
+            c=data[k];
+            if(c<32 || c>127){c='.';}
+            Serial.print((char)c);
+    }
     Serial.println();
+}
+
+void dumpstr(char* data,uint16_t len)
+{
+    while(len>=16){len-=16;dumpstr0(data,16);data+=16;}
+    if(len!=0){dumpstr0(data,len);}
 }
 
 

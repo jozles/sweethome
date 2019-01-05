@@ -1,7 +1,7 @@
 #ifndef CONST_H_INCLUDED
 #define CONST_H_INCLUDED
 
-#define VERSION "1.c_"
+#define VERSION "1.d_"
 /* 1.1 allumage/extinction modem
  * 1.2 ajout voltage (n.nn) dans message ; modif unpackMac
  * 1.3 deep sleep (PERTEMP) ; gestion EEPROM ; conversion temp pendant sleep
@@ -27,7 +27,7 @@
  *     réception commandes (ordreExt) opérationnelle (cdes testa_on__ testb_on__ testaoff__ testboff__)
  *     pilotage des switchs via on/off du serveur opérationnelle.
  * 1.b ajout des valeurs courantes de pulse et image des detecteurs dans cstRec
- * 1.c horloge séparée, détecteurs locaux/externes, variables d'état pulses
+ * 1.d horloge séparée, détecteurs locaux/externes, variables d'état pulses, model, cstRec et read/write/initConstant revus
  * 
 Modifier : 
   
@@ -69,18 +69,41 @@ Modifier :
         dans les autres modes mémoire RTC 
         
         Dans tous les cas :
-            la première variable est la longueur totale de la structure (maxi 256)
-            la dernière variable le crc de ce qui le précède
-            l'avant dernière variable la version du soft qui a alimenté la structure
+            la première variable est la longueur totale de la structure (1 byte len maxi 256)
+            les 3 caractères suivants inutilisés
+            les 4 caractères suivants la version qui a alimenté la structure
+            la dernière variable (1 caractère) le crc de ce qui le précède
+           
             Les accés se font via 4 fonctions : 
                 readConstant() (ctle du crc), writeConstant() (géné crc), initConstant() et printConstant
 
      Pulse :
 
-            Le démarrage, l'arrêt et l'avancement des timers est opéré 
+            
 
-     Detecteurs :
-     
+     Detecteurs physiques :
+
+            MAXDET nombre maxi dans shconst.h
+            NBDET  nombre de la carte courante dans les params de la carte dans const.h
+            cstRec.memDetec[MAXDET] 1 byte par détecteur setup ds isr et initIntPin
+               DETBITLH 1 bit état HIGH LOW
+               DETBITST 2 bits état (dclenché(TRIG)/attente(WAIT)/int masquée(IDLE)/disable(DIS)) si DIS le bit d'état est invalide
+                                                                  passage du mode WAIT   à TRIG après déclenchement dans isr
+                                                                  passage de DIS ou IDLE à WAIT à l'armement dans initIntPin 
+                                                                  passage du mode TRIG   à IDLE lorsque les traitements de flanc sont effectués
+                                                                  en mode IDLE le bit d'état est mis à jour par la loop
+                                                                  à la mise sous tension mode DIS
+
+
+      Détecteurs logiques : tableau 
+
+
+      Actions :
+
+            2 actions possibles sur les switchs : ON/OFF 
+            chaque action peut être déclenchées par 3 sources : un des détecteurs du tableau 
+
+
 */
 /* >>> MODES d'ALIM <<< */
 
@@ -119,6 +142,16 @@ Modifier :
 
 
 // matériel
+
+/* bits de memDetec */ 
+#define  DETBITLH_VB  0x01 // 1 bit état HIGH LOW
+#define  DETBITLH_PB  0
+#define  DETBITST_VB  0x0C // 2 bits état (déclenché(TRIG)/attente(WAIT)/disable(DIS)) si DIS le bit d'état est invalide
+#define  DETBITST_PB  2
+#define  DETTRIG      0x03 // valeur DETBIST si déclenché (LH=L falling =H rising)
+#define  DETWAIT      0x02 // valeur         si armé      (LH=H falling =L rising)
+#define  DETIDLE      0x01 // valeur         si pas d'interruption (LH valide)
+#define  DETDIS       0x00 // valeur         si disable (LH invalide)
 
 #if CARTE==VR
 #define WPIN   4    // 1 wire ds1820
@@ -213,32 +246,37 @@ Modifier :
 #define PERCTL 100                // millis période scrutation controles (switchs, pulses, detecteurs) 
 
 
-
 typedef struct {
-  uint8_t   cstlen;
-  char      numPeriph[2];
-  uint16_t  serverTime;           // temps écoulé depuis la dernière cx au serveur
-  uint16_t  serverPer;            // période (sec) de cx au serveur
-  uint16_t  tempPer;              // période (sec) de mesure thermomètre (PERTEMP ou PERTEMPKO)
-  uint8_t   tempPitch;            // seuil de variation de la temp pour cx au serveur
-  int16_t   oldtemp;
-  uint8_t   talkStep;             // pointeur pour l'automate talkServer()
-  byte      intCde;               // 2 bits par sw cde/état = *periIntVal = bits 8(sw4), 6(sw3), 4(sw2), 2(sw1) commande
-  byte      actCde[MAXSW];        // cdes d'activation (MAXSW=4 1 mot)
-  byte      desCde[MAXSW];        // cdes désactivation
-  byte      onCde[MAXSW];         // cdes forçage ON
-  byte      offCde[MAXSW];        // cdes forçage OFF
-  uint16_t  pulseMode[MAXSW];     // mode pulse
-  uint32_t  durPulseOne[MAXSW];   // durée pulse 1
-  uint32_t  durPulseTwo[MAXSW];   // durée pulse 2
-  uint32_t  begPulseOne[MAXSW];   // temps debut pulse 1
-  uint32_t  begPulseTwo[MAXSW];   // temps debut pulse 2
-  uint16_t  memDetec;             // image mem des détecteurs (4 bits par détecteur)
-  IPAddress IpLocal;              // 1 mot
-  char      cstVers[4];       
-  uint8_t   cstcrc;               // doit toujours être le dernier : utilisé pour calculer sa position
-             // total 112 = 28 mots
+  uint8_t   cstlen;               //  1
+  byte      swCde;                //  1   2 bits par sw cde/état = *periIntVal = bits 8(sw4), 6(sw3), 4(sw2), 2(sw1) commande
+  char      cstVers[LENVERSION];  //  4  
+  char      cstModel[LENMODEL];   //  6
+  char      numPeriph[2];         //  2
+  uint16_t  serverTime;           //  2   temps écoulé depuis la dernière cx au serveur
+  uint16_t  serverPer;            //  2   période (sec) de cx au serveur
+  uint16_t  tempPer;              //  2   période (sec) de mesure thermomètre (PERTEMP ou PERTEMPKO)
+  uint8_t   tempPitch;            //  1   seuil de variation de la temp pour cx au serveur
+  int16_t   oldtemp;              //  2
+  uint8_t   talkStep;             //  1   pointeur pour l'automate talkServer()
+  byte      actCde[MAXSW];        //  4   cdes d'activation (MAXSW=4 1 mot)
+  byte      desCde[MAXSW];        //  4   cdes désactivation
+  byte      onCde[MAXSW];         //  4   cdes forçage ON
+  byte      offCde[MAXSW];        //  4   cdes forçage OFF
+  uint32_t  durPulseOne[MAXSW];   // 16   durée pulse 1
+  uint32_t  durPulseTwo[MAXSW];   // 16   durée pulse 2
+  uint32_t  begPulseOne[MAXSW];   // 16   temps debut pulse 1
+  uint32_t  begPulseTwo[MAXSW];   // 16   temps debut pulse 2
+  byte      pulseCtl[DLTABLEN];   // 24   ctle pulse   
+  byte      memDetec[MAXDET];     //  4   image mem des détecteurs (4 bits par détecteur)
+  IPAddress IpLocal;              //  4
+  byte      filler[103];          //  136
+  uint8_t   cstcrc;               //  1   doit toujours être le dernier : utilisé pour calculer sa position
+             // total 240 = 60 mots ; reste 256 dispo (sizeof(constantValues)=size(membres)+4)
 } constantValues;
+
+
+
+#define LENRTC 240
 
 /*enum rst_reason {
  REASON_DEFAULT_RST      = 0,   // normal startup by power on 

@@ -64,7 +64,7 @@
 //#define PERIPREF 60                          // periode refr perif par défaut
 #define NBPERIF 10                           
 #define PERINAMLEN 16+1                      // longueur nom perif
-#define PERIRECLEN 182 // V1.1j              // longueur record périph
+#define PERIRECLEN 193 // V1.1j              // longueur record périph
 
 
 #define SDOK 1
@@ -249,44 +249,29 @@
   STRUCTURE TABLE DES PERIPHERIQUES
 
       Un fichier dans la carte SD par ligne avec numéro de ligne dans le nom du fichier
-        
-      Elements de table : N°,nom,temp,freq,pitch,nbre switchs*(etat,cde,mode,timer(mode,durées,état),nbre det*(mode,état)
-                           mac addr,ip addr,last in time,last out time,last com error(time,code)
 
       Principe des opérations :
 
-        vocabulaire : 
-                activation/désactivation
-                      un switch activé peut être manipulé (ON ou OFF) par la source qui l'active
-                      desactivé il est inerte et ne peut changer d'état tant qu'il existe au moins une source désactivante (sauf forçage).
-                      la désactivation est prioritaire sur l'activation.
-                forçage
-                      le switch prend la valeur imposée 
-                      le forçage ON est prioritaire sur l'activation/désactivation
-                      le forçage OFF est prioritaire sur tout
-         
-         mécanisme :
-                scrutation des forçages OFF ; si l'un est valide (enable et source dans l'état spécifié), le switch est positionné OFF, fin
-                sinon scrutation des forçages ON ; si l'un est valide, le switch est positionné ON, fin
-                sinon scrutation des désactivations d'impulsion ; si l'une est valide, fin
-                sinon scrutation des activations ; si l'une est "enable" prendre sa position selon la table : HH=H, HL=L, LH=L, LL=H
-                      
-         3 sources différentes pour forçages et activation/désactivation d'un switch : le serveur, un détecteur parmi 4, son générateur d'impulsions
-                chaque source dispose d'un bit "enable" qui la démasque et d'un bit H/L (active haute ou basse)
+        periSwMode indique qui actionne un switch :
 
-         générateur d'impulsion :
-                
-                Le générateur d'impulsion est constitué de 2 compteurs animés par une horloge à 1Hz
-                Au reset ils sont à 0. Un seul et actif à la fois. Lorsqu'un compteur atteint sa valeur maxi il repasse à 0.
-                Lorsque le compteur 1 atteint sa valeur maxi le compteur 2 se déclenche s'il est enable
-                Lorsque le compteur 2 atteint sa valeur maxi le compteur 1 se déclenche s'il est enable en mode free run
-                L'horloge et les compteurs sont commandés par 4 détecteurs locaux ou externes selon 2 modes avec 6 actions possibles :
-                (l'état des détecteurs externes est reçu du serveur via une fonction)
-                (un même détecteur peut apparaitre plusieurs fois avec une config différente)
+                3 sources pour ON et/ou OFF :
+                le serveur, un détecteur "logique" parmi les 4, son générateur d'impulsions
+                chaque source dispose d'un bit "enable" qui la démasque et d'un bit H/L (active haute ou basse)
+                OFF est prioritaire sur ON
+         
+        periSwPulseCtl (mal nommé) indique le fonctionnement de :
+
+                a) le générateur de pulses (enable des 2 compteurs et bit free run/oneshot)
+                b) les détecteurs "logiques".
+                   ils représentent soit des détecteurs physiques du périphérique (bit LX=LOCAL)
+                   soit des détecteurs "externes" dont les données proviennent du serveur afin d'agir sur
+                   les périphériques depuis un programme extérieur. 
+                   Chacun des 4 détecteurs "logique" donne accès à 1 parmi 8 détecteurs locaux ou externes
                
                 modes :
                   1) statique : un détecteur en mode statique agit selon l'état programmé
                   2) transitionnel : un détecteur en mode transitionnel agit selon le flanc programmé
+                
                 actions :
                   1) reset : l'action reset remet les 2 compteurs à 0 en mode idle selon mode/état/flanc programmé 
                   2) raz : l'action raz remet à 0 le compteur courant sans effet sur l'horloge selon mode/état/flanc programmé
@@ -294,6 +279,24 @@
                   4) start : l'action start déclenche l'horloge selon l'état/flanc programmé
                   5) short : l'action short termine le compteur courant sans changer la période totale (le compteur suivant est augmenté)
                   6) fin : l'action fin termine le compteur courant. 
+                  7) pas d'action 
+
+               les détecteurs sont représentés par une variable en mémoire (memDetec 1byte/detecteur) ; pas d'accès direct aux ports
+                  le changement d'état d'un port et la mise à jour de la variable sont gérés par isrDet().
+                  chaque détecteur qui change d'état est recherché dans les impulsions pour effectuer l'action programmée.
+                  le débounce est intégré dans la loop.
+                  la variable mémoire stocke la valeur courante et l'état (DETTRIG/DETWAIT/DETIDLE/DETDIS)  
+                      (voir const.h de peripherique pour les détails)
+                
+         générateur d'impulsion :
+                
+                Le générateur d'impulsion est constitué de 2 compteurs animés par une horloge à 1Hz
+                Au reset ils sont à 0. Un seul et actif à la fois. Lorsqu'un compteur atteint sa valeur maxi il repasse à 0.
+                Lorsque le compteur 1 atteint sa valeur maxi le compteur 2 se déclenche s'il est enable
+                Lorsque le compteur 2 atteint sa valeur maxi le compteur 1 se déclenche s'il est enable en mode free run
+                L'horloge et les compteurs sont commandés par les détecteurs logiques.
+                (l'état des détecteurs externes est reçu du serveur via une fonction)
+                (un même détecteur peut apparaitre plusieurs fois avec une config différente)
                 
                états du générateur : 
                   1) disable valeur 0, le premier compteur est bloqué.
@@ -304,18 +307,6 @@
                   6) fin 2 valeur 1, le 2nd compteur a atteint sa valeur maxi, mode free run, et le premier compteur est bloqué
                      en mode free run lorsque le second compteur atteint sa valeur maxi, le générateur passe à l'état running 1
                      en mode oneshoot lorsque le second compteur atteint sa valeur maxi, l'horloge s'arrête état idle valeur 0
-  
-               les détecteurs sont représentés par une variable en mémoire (memDetec) ; pas d'accès direct aux ports
-                  le changement d'état d'un port et la mise à jour de la variable sont gérés par isrDet().
-                  chaque détecteur qui change d'état est recherché dans les impulsions pour effectuer l'action programmée.
-                  le débounce est intégré dans la loop.
-                  la variable mémoire stocke la valeur courante, la valeur précédente et un bit enable 
-                      8 bits / détecteur (param LENDET) ; 1 bit  DETBITEN   enable
-                                                          3 bits DETBITNU   numéro
-                                                          1 bit  DETBITLE   local/externe
-                                                          1 bit  DETBITCU   valeur courante
-                                                          2 bits dispo  
-                  
                 
 
 *  int8          numéro
