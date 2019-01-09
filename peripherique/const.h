@@ -118,7 +118,7 @@ Modifier :
 #define THESP12 '2'
 
 #define CARTE VR                      // <------------- modèle carte
-#define POWER_MODE NO_MODE            // <------------- mode compil 
+#define POWER_MODE NO_MODE            // <------------- type d'alimentation 
 
 #if POWER_MODE==NO_MODE
   #define _SERVER_MODE
@@ -240,7 +240,7 @@ Modifier :
 #define PERSERV 3600              // secondes période max entre 2 accès server
 #define TOINCHCLI 4000            // msec max attente car server
 #define WIFI_TO_CONNEXION 5000    // msec
-#define NBRETRY 3                 // wifiConnexion
+#define WIFINBRETRY 2             // wifiConnexion
 #define TSERIALBEGIN 100
 #define TDEBOUNCE 50              // msec
 #define PERCTL 100                // millis période scrutation controles (switchs, pulses, detecteurs) 
@@ -264,8 +264,8 @@ typedef struct {
   byte      offCde[MAXSW];        //  4   cdes forçage OFF
   uint32_t  durPulseOne[MAXSW];   // 16   durée pulse 1
   uint32_t  durPulseTwo[MAXSW];   // 16   durée pulse 2
-  uint32_t  begPulseOne[MAXSW];   // 16   temps debut pulse 1
-  uint32_t  begPulseTwo[MAXSW];   // 16   temps debut pulse 2
+  uint32_t  cntPulseOne[MAXSW];   // 16   temps debut pulse 1
+  uint32_t  cntPulseTwo[MAXSW];   // 16   temps debut pulse 2
   byte      pulseCtl[DLTABLEN];   // 24   ctle pulse   
   byte      memDetec[MAXDET];     //  4   image mem des détecteurs (4 bits par détecteur)
   IPAddress IpLocal;              //  4

@@ -11,6 +11,7 @@
 #include "util.h"
 #include "dynam.h"
 
+
 extern "C" {                  
 #include <user_interface.h>     // pour struct rst_info, system_deep_sleep_set_option(), rtc_mem
 }
@@ -86,6 +87,7 @@ WiFiClient cliext;              // client externe du serveur local
   byte    pinDir[MAXDET]={LOW,LOW,LOW,LOW};              // flanc pour interruption des détecteurs (0 falling ; 1 rising
   
   void (*isrD[4])(void);                                 // tableau de pointeurs de fonctions
+  long isrTime=0;                                        // durée isr
 
   int   i=0,j=0,k=0;
   uint8_t oldswa[]={0,0,0,0};         // 1 par switch
@@ -98,8 +100,6 @@ char* cstRecA=(char*)&cstRec;
   char  buf[3]; //={0,0,0};
 
   int   cntreq=0;
-  int   cntdebug[]={0,0,0,0};
-
 
   ADC_MODE(ADC_VCC);
 
@@ -113,13 +113,6 @@ void talkClient(char* etat);
 int act2sw(int sw1,int sw2);
 uint8_t runPulse(uint8_t sw);
 
-void isrDet(uint8_t det);
-void isrD0();
-void isrD1();
-void isrD2();
-void isrD3();
-void initIntPin(uint8_t det);
-
 bool  wifiConnexion(const char* ssid,const char* password);
 int   dataSave();
 int   dataRead();
@@ -127,15 +120,6 @@ void  dataTransfer(char* data);
 void  readTemp();
 void  ordreExt();
 void  swAction();
-
-void debug(int cas){
-  if(cntdebug[cas]==0 || cas==1){
-    Serial.print("debug");Serial.print(cas);Serial.print(" ");
-    Serial.print("cstRec.talkStep=");Serial.println(cstRec.talkStep);
-  }
-   cntdebug[cas]++;
-}
-
 
 void setup() 
 { 
@@ -194,6 +178,8 @@ void setup()
   Serial.begin(115200);
   delay(100);
   
+initdebug();  
+
 #ifdef _MODE_DEVT
   Serial.print("\nSlave 8266 _MODE_DEVT");
 #endif _MODE_DEVT
@@ -230,7 +216,6 @@ cstRec.cstlen=sizeof(cstRec);
     ds1820.convertDs(WPIN);
     delay(TCONVERSION);
     initConstant();
-    writeConstant();
     }
 #endif PM==DS_MODE
 
@@ -240,15 +225,12 @@ cstRec.cstlen=sizeof(cstRec);
   if(!readConstant()){
     Serial.println("initialisation constantes");
     initConstant();
-    dumpstr(cstRecA,256);
-    writeConstant();
   }
-  //cstRec.memDetec!=MEMDINIT;
 #endif PM!=DS_MOD
 
 Serial.print("CONSTANT=");Serial.print(CONSTANT);Serial.print(" time=");Serial.print(millis()-debTime);Serial.println(" ready !");
   yield();
-//  for(int g=0;g<MAXSW;g++){cstRec.begPulseOne[g]=0;cstRec.begPulseTwo[g]=0;}
+
   printConstant();
 delay(2000);
 #if POWER_MODE==NO_MODE
@@ -277,55 +259,47 @@ void loop(){        //=============================================
   // le délai d'appel au serveur est doublé à concurence de 7200sec entre les appels.
   //  
 #ifdef  _SERVER_MODE
+                        if(isrTime!=0){if(isrTime>1000 || isrTime<0){Serial.print("!!!!!!!!!!!!!!!!!!!!");}
+                        Serial.print("isrTime=");Serial.println(isrTime);isrTime=0;}
+
   ordreExt(); // réception ordre ext ?
 #endif def_SERVER_MODE  
-  //debug(0);
    
   if(cstRec.talkStep!=0){
-    //debug(1);
     talkServer();
-    writeConstant();
     }
   else {
+
 #ifdef  _SERVER_MODE
-    //debug(2);  
+  
       if(millis()>(ctlTime+PERCTL)){
         switch(ctlStep++){
-          case 1:break;
+          case 1:
+                //if(isrTime!=0){if(isrTime>1000 || isrTime<0){Serial.print("!!!!!!!!!!!!!!!!!!!!");}
+                //Serial.print("isrTime=");Serial.println(isrTime);isrTime=0;}
+                break;
           case 2:swAction();break;
-          case 4:
-          /*
-            Serial.print(0);Serial.print(" ");
-            Serial.print(cstRec.pulseCtl[0],HEX);Serial.print(" ");
-            Serial.print(staPulse[0],HEX);Serial.print(" ");
-            Serial.print(cstRec.begPulseOne[0]);Serial.print("-");Serial.print(cstRec.begPulseTwo[0]);
-            Serial.print("| detect=");Serial.print(cstRec.memDetec,HEX);
-            Serial.print("/h=");Serial.print((cstRec.pulseCtl[0]>>PMDIH_PB)&0x0001);
-            Serial.print("/e=");Serial.print(cstRec.pulseCtl[0]&PMDIE_VB,HEX);
-            Serial.print(" num=");Serial.print(pinDet[(cstRec.pulseCtl[0]>>PMDINLS_PB)&0x0003]);
-            Serial.print(" ");Serial.println(millis()/1000);
-            */
-            break;
+          case 4:pulseClkisr();
+          
+          for(int w=0;w<MAXSW;w++){
+ /*           Serial.print("  sw=");Serial.print(w);
+            Serial.print(" sta=");Serial.print(staPulse[w],HEX);
+            Serial.print(" 3bits=");Serial.print(*(cstRec.pulseCtl+w*6)>>5,HEX);
+            Serial.print(" cnt1=");Serial.print(cstRec.durPulseOne[w]);
+            Serial.print(" cnt2=");Serial.println(cstRec.durPulseTwo[w]); */
+          }
+          //Serial.println();
+          break;
             
           case 5:break;
           case 6:break;
           case 7:break;
-          case 9:ctlStep=0;
-          /*
-            for(int det=0;det<MAXDET;det++){                          // effacement flancs détecteurs après (au moins) un tour complet 
-              if(millis()>detFlTime[det]+PERCTL*10){
-                cstRec.memDetec &= ~(DETPRE_VB<<(LENDET*det));        // effacement précédent
-                cstRec.memDetec |= (((DETCUR_VB>>(DETCUR_PB+LENDET*det))&0x0001)<<(DETPRE_PB+LENDET*det));  // remplacement
-              }
-            }
-            */
-            break;
+          case 9:ctlStep=0;break;
           default:break;
         }
         ctlTime=millis();
       }
 #endif def_SERVER_MODE  
-    //debug(3);
 
     ledblink(0);
 
@@ -383,12 +357,21 @@ void loop() {
 
 // ===============================================================================
 
+void infos(char* mess,char* data,uint8_t val)
+{
+        char ff[LENNOM+1];memcpy(ff,data,LENNOM);ff[LENNOM]='\0';
+        char np[3];strncpy(np,data+MPOSNUMPER,2);np[2]='\0';               
+        Serial.print(mess);Serial.print("(");Serial.print(ff);Serial.print(") numper=");Serial.print(np);
+        Serial.print(";");Serial.print(val);
+        Serial.print(" periMess=");Serial.println(periMess);  
+}
+
 void fServer(uint8_t fwaited)          // réception du message réponse du serveur pour DataRead/Save;
                                        // contrôles et transfert 
                                        // retour periMess  
 {      
         periMess=getHttpResponse(&cli,bufServer,LBUFSERVER,&fonction);
-        Serial.print("gHResp() periMess=");Serial.println(periMess);
+        infos("gHResp",bufServer,0);
         if(periMess==MESSOK){
           if(fonction==fwaited){dataTransfer(bufServer);}
           else {periMess=MESSFON;}
@@ -425,9 +408,12 @@ void dataTransfer(char* data)           // data sur fonction
               conv_atoh((data+MPOSINTPAR0+i*9+4),&cstRec.onCde[i]);
               conv_atoh((data+MPOSINTPAR0+i*9+6),&cstRec.offCde[i]);
 
-              for(int ctl=0;ctl<DLSWLEN;ctl++){
-                conv_atoh((data+MPOSPULSCTL+i*(DLSWLEN*2+1)+ctl*2),&cstRec.pulseCtl[i*DLSWLEN+ctl]);}
-              
+              for(int ctl=DLSWLEN-1;ctl>=0;ctl--){
+                conv_atoh((data+MPOSPULSCTL+i*(DLSWLEN*2+1)+ctl*2),&cstRec.pulseCtl[i*DLSWLEN+(DLSWLEN-ctl-1)]);
+               // Serial.print((char)*(data+MPOSPULSCTL+i*(DLSWLEN*2+1)+ctl*2),HEX);Serial.print("+");
+               // Serial.print((char)*(data+MPOSPULSCTL+i*(DLSWLEN*2+1)+ctl*2+1),HEX);Serial.print("=");Serial.print((char)*(&cstRec.pulseCtl[i*DLSWLEN+ctl]),HEX);Serial.println("  ");
+                }
+             
               cstRec.durPulseOne[i]=(long)convStrToNum(data+MPOSPULSON0+i*(MAXSW*2+1),&sizeRead);
               cstRec.durPulseTwo[i]=(long)convStrToNum(data+MPOSPULSOF0+i*(MAXSW*2+1),&sizeRead);
             }
@@ -436,35 +422,40 @@ void dataTransfer(char* data)           // data sur fonction
         if(periMess!=MESSOK){
           memcpy(cstRec.numPeriph,"00",2);cstRec.IpLocal=IPAddress(0,0,0,0);
         }
-        Serial.print("dataTransfer() periMess=");Serial.println(periMess);
+        infos("dataTransfer",data,0);
 }
 
+void talkServerWifiConnect()
+{
+  int retry=0;
+      while((retry<=WIFINBRETRY)&&!wifiConnexion(ssid,password)){delay(1000);retry++;}
+      if(retry>=WIFINBRETRY && cstRec.talkStep==1){cstRec.talkStep=2;}
+      else if(retry>=WIFINBRETRY && cstRec.talkStep==2){cstRec.talkStep=98;}
+      else {
+        cstRec.talkStep=4;
+        WiFi.macAddress(mac);
+        serialPrintMac(mac);} 
+}
 
 int talkServer()    // si numPeriph est à 0, dataRead pour se faire reconnaitre ; 
                     // si ça fonctionne réponse numPeriph!=0 ; dataSave 
                     // renvoie 0 et periMess valorisé si la com ne s'est pas bien passée.
 {
-int v=0,retry=0;
-//Serial.print(" talkServer talkStep=");Serial.println(cstRec.talkStep);
+int v=0;
+infos(" talkServer","",cstRec.talkStep);
 switch(cstRec.talkStep){
   case 1:
       ssid=ssid1;password=password1;
-      cstRec.talkStep=3;
+      talkServerWifiConnect();
       break;
       
   case 2:
       ssid=ssid2;password=password2; // tentative sur ssid bis
-      cstRec.talkStep=3;
+      talkServerWifiConnect();
       break;
 
   case 3:    
-      while((retry<NBRETRY)&&!wifiConnexion(ssid,password)){delay(1000);retry++;}
-      if(retry>=NBRETRY && cstRec.talkStep==1){cstRec.talkStep=2;}
-      else if(retry>=NBRETRY && cstRec.talkStep==2){cstRec.talkStep=98;}
-      else {
-        cstRec.talkStep=4;
-        WiFi.macAddress(mac);
-        serialPrintMac(mac);}
+
       break;
       
 
@@ -472,7 +463,7 @@ switch(cstRec.talkStep){
                   // si le numéro de périphérique est 00 ---> récup (dataread), ctle réponse et maj params
       
       if(memcmp(cstRec.numPeriph,"00",2)==0){
-        v=dataRead();Serial.print("dread v=");Serial.println(v);
+        v=dataRead();infos("  dataRead","",v);
         if(v==MESSOK){cstRec.talkStep=5;}
         else {cstRec.talkStep=9;}            // pb com -> recommencer au prochain timing
       }  
@@ -492,7 +483,7 @@ switch(cstRec.talkStep){
       
       if(memcmp(cstRec.numPeriph,"00",2)==0){cstRec.talkStep=9;}
       else {  
-        v=dataSave();Serial.print("dsave v=");Serial.println(v);
+        v=dataSave();infos("  dataSave","",v);
         if(v==MESSOK){cstRec.talkStep=7;}
         else {cstRec.talkStep=99;}
       }
@@ -510,7 +501,6 @@ switch(cstRec.talkStep){
                    // sinon numpériph est à 00 et l'adresse IP aussi
 
   case 9:
-       Serial.print(cstRec.numPeriph);purgeServer(&cli);
        cstRec.talkStep=0;
        break;
 
@@ -521,7 +511,6 @@ switch(cstRec.talkStep){
   case 99:      // mauvaise réponse du serveur ou wifi ko ; raz numPeriph
         memcpy(cstRec.numPeriph,"00",2);
         cstRec.talkStep=0;
-        writeConstant();
         break;
         
   default: break;
@@ -658,7 +647,7 @@ int buildReadSave(char* nomfonction,char* data)          //   connecte et transf
 if(strlen(message)>LENVAL-4){Serial.print("******* LENVAL ***** MESSAGE ******");ledblink(BCODELENVAL);}      
   
   buildMess(nomfonction,message,"");
-
+  infos("buildReadSave",bufServer,port);
   return messToServer(&cli,host,port,bufServer); 
 }
 
@@ -692,27 +681,26 @@ bool wifiConnexion(const char* ssid,const char* password)
     //WiFi.forceSleepWake(); //WiFi.forceSleepEnd();       // réveil modem
     //delay(100);
   
-    WiFi.begin(ssid,password);
+    if(WiFi.status()!=WL_CONNECTED){WiFi.begin(ssid,password);}
     
-    if(cstRec.IpLocal!=IPAddress(0,0,0,0)){
+    //if(cstRec.IpLocal!=IPAddress(0,0,0,0)){
       IPAddress dns(192,168,0,254);
       IPAddress gateway(192,168,0,254);
       IPAddress subnet(255,255,255,0);
       WiFi.config(cstRec.IpLocal, dns, gateway, subnet);
-    }
+    //}
   
     Serial.print(" WIFI connecting to ");Serial.print(ssid);Serial.print("...");
   
     while(WiFi.status()!=WL_CONNECTED){
-      delay(100);Serial.print(i++);
+      delay(200);Serial.print(i++);
       if((millis()-beg)>WIFI_TO_CONNEXION){cxok=FAUX;break;}
       }
   
     if(cxok){
       if(nbreBlink==BCODEWAITWIFI){ledblink(BCODEWAITWIFI+100);}
       Serial.print(" connected ; local IP : ");Serial.println(WiFi.localIP());
-      if(cstRec.IpLocal!=WiFi.localIP()){cstRec.IpLocal=WiFi.localIP();writeConstant();}
-      
+      cstRec.IpLocal=WiFi.localIP();
       }
     else {Serial.println("\nfailed");if(nbreBlink==0){ledblink(BCODEWAITWIFI);}}
     //}
@@ -728,41 +716,6 @@ void modemsleep()
 
 #if POWER_MODE==NO_MODE 
 
-/* interruptions détecteurs */
-
-void initIntPin(uint8_t det)              // enable interrupt du détecteur det ; flanc selon pinDir ; isr selon isrD
-{                                         // setup memDetec
-  Serial.print(det);Serial.println(" ********************* initIntPin");
-  cstRec.memDetec[det] &= ~DETBITLH_VB;            // raz bit LH
-  cstRec.memDetec[det] &= ~DETBITST_VB;            // raz bits ST
-  cstRec.memDetec[det] |= DETWAIT<<DETBITST_PB;    // set bits ST (armé)
-  if(pinDir[det]==LOW){attachInterrupt(digitalPinToInterrupt(pinDet[det]),isrD[det], FALLING);cstRec.memDetec[det] |= HIGH<<DETBITLH_PB;}
-  else {attachInterrupt(digitalPinToInterrupt(pinDet[det]),isrD[det], RISING);cstRec.memDetec[det] |= LOW<<DETBITLH_PB;}
-}
-
-void isrD0(){detachInterrupt(pinDet[0]);isrDet(0);}
-void isrD1(){detachInterrupt(pinDet[1]);isrDet(1);}
-void isrD2(){detachInterrupt(pinDet[2]);isrDet(2);}
-void isrD3(){detachInterrupt(pinDet[3]);isrDet(3);}
-
-void isrDet(uint8_t det)      // setup memDetec après interruption sur det
-{
-  cstRec.memDetec[det] &= ~DETBITLH_VB;             // raz bit LH
-  cstRec.memDetec[det] &= ~DETBITST_VB;             // raz bits ST
-  cstRec.memDetec[det] |= DETTRIG<<DETBITST_PB;     // set bits ST (déclenché)
-  if(pinDir[det]==(byte)HIGH){cstRec.memDetec[det] |= HIGH<<DETBITLH_PB;}
-  else {cstRec.memDetec[det] |= LOW<<DETBITLH_PB;}
-  pinDir[det]^=HIGH;                                // inversion pinDir pour prochain armement
-}
-
-
-/* pulses ---------------------------- */
-
-uint8_t runPulse(uint8_t sw)                               // get état pulse sw
-{
-}
-
-
 /* switchs action -------------------- */
 
 uint8_t rdy(byte modesw,int sw) // pour les 3 sources, check bit enable puis etat source ; retour numsource valorisé si valide sinon 0
@@ -774,7 +727,7 @@ uint8_t rdy(byte modesw,int sw) // pour les 3 sources, check bit enable puis eta
     uint16_t dlctl=(uint16_t)(swctl>>(det*DLBITLEN));
     if(dlctl&DLENA_VB != 0){                          // dl enable
       if(dlctl&DLEL_VB != 0){                         // dl local
-        uint8_t locdet=dlctl>>(DLNLS_PB&0x07);        // num dl local 
+        uint8_t locdet=(dlctl>>DLNLS_PB)&0x07;        // num dl local 
         if(((modesw>>SWMDLHL_PB)&0x01)==(cstRec.memDetec[locdet]>>DETBITLH_PB)){return 1;}      // ok détecteur local
       }
       else {}                                         // dl externe à traiter
@@ -783,8 +736,6 @@ uint8_t rdy(byte modesw,int sw) // pour les 3 sources, check bit enable puis eta
 
   /* --------- serveur ---------- */
   if((modesw & SWMSEN_VB) != 0){
-//    Serial.print("modesw & SWMSEN_VB != 0   ");Serial.print(((modesw>>SWMSHL_PB)&0x01),HEX);
-//    Serial.print("   ");Serial.print(((cstRec.swCde>>((2*sw)+1))&0x01),HEX);Serial.print("    "); Serial.print(modesw,HEX);Serial.print(" ");Serial.println(SWMSEN_VB);
     if (((modesw>>SWMSHL_PB)&0x01)==((cstRec.swCde>>((2*sw)+1))&0x01)){return 2;}    // ok serveur
   }
 

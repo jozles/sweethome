@@ -1,7 +1,10 @@
 
-#define DS_MODELE 'B'      // décodage selon modèle
-
 /*   
+    New release 2019 : add setds/readrom function ; return ds18x20 model ('S'/'B') 
+    necessary to execute the following to setup the model.
+      byte setds[]={0,0x7f,0x80,0x3f},readds[8];    // converting time 187mS 10 bits accu 0,25°
+      int v=ds1820.setDs(WPIN,setds,readds);        // readds[0] = model
+      
     Interrupt-free, small memory wasting ds1820 interface (about 1200 bytes)
     this is working with any pin accepting digitalRead and digitalWrite.
     Interrupt suspend should not be longer than 85 uSec for each written bit and
@@ -34,6 +37,7 @@
 #define FAUX 0
 #define VRAI 1
 bool bitmessage=FAUX; // VRAI Serial.print les bits du meesage
+byte dsmodel=0x00;
 
 Ds1820::Ds1820()  // constructeur de la classe 
 {
@@ -63,7 +67,6 @@ void writeDs(uint8_t pin,uint8_t nbbyteout,uint8_t* frameout)
     }
   }
   pinMode(pin,INPUT);
-  //Serial.println();
 }
 
 int Ds1820::romDs(uint8_t pin,uint8_t* framein)   // read rom command
@@ -76,6 +79,7 @@ int Ds1820::romDs(uint8_t pin,uint8_t* framein)   // read rom command
   v=getDs(pin,cmd,1,framein,8);
 
   if(v<=TOPRES){return v;}   // error 
+  dsmodel=framein[0];
   return framein[0]+256;
 }
 
@@ -115,14 +119,14 @@ float Ds1820::readDs(uint8_t pin)
   else{
 
 //   complément à 2 : 
-//     DS1820  : si rep[1] != 0 c'est négatif : th = -(complt rep[0] + 1)
-//     DS18S20 : rep[1] toujours !0 donc valeurs positives seules 
-//     pour 20 et S20, le bit 0 vaut 0,5° le traiter à part
+//     DS1820 & S20 : si rep[1] != 0 c'est négatif : th = -(complt rep[0] + 1)
+//                    le bit 0 vaut 0,5° le traiter à part
 //     DS18B20 : si bit 0x80 de rep[1]!=0 c'est négatif : th = -(complt rep + 1)
 //               valeur : rep>>4+0,0625*rep[0]&0x0F
 
       r0=rep[1] & 0x80;
-#if DS_MODELE=='B'
+        
+    if(dsmodel==0x28){                                // DS18B20
       rp=rep[1];
       rp=(rp<<8) | rep[0];
       if(r0 != 0){rp=(rp^0xFFFF)+1;}
@@ -130,29 +134,22 @@ float Ds1820::readDs(uint8_t pin)
       rp2=rp&0x000F;
       th0=((float)rp2)*((float)0.0625);
       th=(float)rp1 + th0;
-/*      Serial.print("rp=");Serial.print(rp,HEX);Serial.print(" r0=");Serial.println(r0);      
-      Serial.print("rp1=");Serial.print(rp1,HEX);Serial.print(" th0=");Serial.println(th0);
-      Serial.print("rp2=");Serial.print(rp2,HEX);Serial.print(" th=");Serial.println(th);*/
-
-#endif
-#if DS_MODELE=='S'
-      th0=(rep[0]&0x7F)>>1;rep[1]=0;
-      th=(float)(th0)+0.5*((uint8_t)(rep[0]&0x01));       // th précision 0.5
-      th=(float)(th0)-0.25+(float)(rep[7]-rep[6])/rep[7]; // th précision améliorée
-#endif
-#if DS_MODEL==' '
+    }                                                 // DS1820 - DS18S20
+    else{
       if(rep[1]!=0){
         th0=-((rep[0]^0xFF)+1);
         th0=(uint8_t)rep[0]>>1;
       }
+      else {th0=(rep[0]&0x7f)>>1;}
       th=(float)(th0)+0.5*((uint8_t)(rep[0]&0x01));       // th précision 0.5
       th=(float)(th0)-0.25+(float)(rep[7]-rep[6])/rep[7]; // th précision améliorée
-#endif
+    }
+
     if(r0 != 0){th=-th;}
     Serial.print("th=");Serial.print(th);Serial.print(" rep[1,0]=");Serial.print(rep[1],HEX);
     Serial.print(" ");Serial.println(rep[0],HEX);
   return th;
-  } // v>=TOPRES
+  }
 }
 
 int Ds1820::getDs(uint8_t pin,uint8_t* frameout,uint8_t nbbyteout,uint8_t* framein,uint8_t nbbytein)
@@ -200,9 +197,9 @@ int Ds1820::getDs(uint8_t pin,uint8_t* frameout,uint8_t nbbyteout,uint8_t* frame
         pinMode(pin,INPUT);delayMicroseconds(0);buff[v]=digitalRead(pin);
         interrupts();
         if(buff[v]!=0){framein[i]+= maskbit[j];}
-        delayMicroseconds(50);//Serial.print(buff[v]);
-      }//Serial.print(" ");
-    }//Serial.println();
+        delayMicroseconds(50);
+      }
+    }
   }
   // check CRC
   byte shift_reg=0;
@@ -222,7 +219,7 @@ byte Ds1820::calcBitCrc (byte shiftReg, byte data_bit)
   
   fb = (shiftReg & 0x01) ^ data_bit;
    /* exclusive or least sig bit of current shift reg with the data bit */
-   shiftReg = shiftReg >> 1;                  /* shift one place to the right */
+   shiftReg = shiftReg >> 1; 
    if (fb==1){shiftReg = shiftReg ^ 0x8C;}    /* CRC ^ binary 1000 1100 */
    return(shiftReg); 
 }
