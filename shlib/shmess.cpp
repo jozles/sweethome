@@ -110,15 +110,17 @@ int messToServer(WiFiClient* cli,const char* host,const int port,char* data)    
   int w=0,v=MESSOK,x;
   long beg=millis();
 
-    Serial.print("connexion serveur ");
-    Serial.print(host);Serial.print(":");Serial.print(port);
-    Serial.print("...");
 #ifndef PERIF
     purgeServer(cli);
 #endif // PERIF
+
     x=cli->connect(host,port);
-    while(!x==1){
-        switch(x){
+    Serial.print("connexion serveur (");Serial.print(x);Serial.print(") ");
+    Serial.print(host);Serial.print(":");Serial.print(port);
+    Serial.print("...");
+    delay(1000);
+    if(!cli->connected()){
+/*        switch(x){
             case -1:Serial.print("time out");break;
             case -2:Serial.print("invalid server");break;
             case -3:Serial.print("truncated");break;
@@ -126,16 +128,14 @@ int messToServer(WiFiClient* cli,const char* host,const int port,char* data)    
             default:Serial.print("unknown reason");break;
         }
         delay(1000);Serial.print(":");Serial.print(w++);Serial.print(" ");
-        if((millis()-beg)>TO_HTTPCX){
+        if((millis()-beg)>TO_HTTPCX){*/
             Serial.println(" échouée");
             v=MESSCX;
-            break;
-        }
     }
     if(v==MESSOK){
-      Serial.println(" ok");
-      cli->print(data);
-      cli->print("\r\n HTTP/1.1\r\n Connection:close\r\n\r\n");
+        Serial.println(" ok");
+        cli->print(data);
+        cli->print("\r\n HTTP/1.1\r\n Connection:close\r\n\r\n");
     }
     return v;
 }
@@ -262,6 +262,7 @@ void assySet(char* message,int periCur,char* diag,char* date14)
 #define MSETDATEHEURE 21
 #ifndef PERIF
             memcpy(message+strlen(message),date14,14);
+            Serial.println(date14);
             strcat(message,"_");
 
 #endif  ndef PERIF

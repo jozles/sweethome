@@ -4,8 +4,10 @@
 
 //#define PERIF
 
-#define LENVERSION 4
-#define LENMODEL 6
+#define LENVERSION  4
+#define LENMODEL    6
+#define SIZEPULSE   4  // uint32_t
+#define LENPERIDATE 6
 
 #define PORTSERVPERI 1791
 
@@ -51,12 +53,13 @@
 #define RECHEAD 28                           // en-tete strSD date/heure/xx/yy + <br> + crlf
 #define RECCHAR NBVAL*(MEANVAL+3)+RECHEAD+8  // longueur maxi record histo
 
-#define PERIPREF 900                         // periode refr perif par défaut
+#define PERIPREF 120                         // periode refr perif par défaut
 
 #define LBUFSERVER LENMESS+16                // longueur bufserver (messages in/out periphériques)
 
-#define SRVPASS "17515A\0"
-#define LENSRVPASS 6
+#define SRVPASS     "17515A\0"
+#define SVRPASS_B   "17515B\0"
+#define LENSRVPASS  6
 
 #define TOINCHCLI 4000        // msec max attente car server
 #define TO_HTTPCX 4000        // nbre maxi retry connexion serveur
@@ -187,7 +190,7 @@ enum {OFF,ON};
 /* bits compteurs */
 
 #define PMTOE_PB (DLSWLEN*8)-1     // time one enable numéro du bit
-#define PMTOE_VB 0x800000000000 //              valeur du bit
+#define PMTOE_VB 0x800000000000    //                 valeur du bit
 #define PMTTE_PB (DLSWLEN*8)-2     // time two enable
 #define PMTTE_VB 0x400000000000
 #define PMFRO_PB (DLSWLEN*8)-3     // freeRun/OneShoot
@@ -197,36 +200,36 @@ enum {OFF,ON};
 /* bits détecteurs logiques */
 
 #define DLSWLEN   (DLNB*DLBITLEN/8+1) // nbre bytes par sw
-#define DLNBSWCB   DLNB*DLNBCB     // nbre checkbox par switch
+#define DLNBSWCB   DLNB*DLNBCB        // nbre checkbox par switch
 
-#define DLNB        4         // nbre détecteurs logiques
+#define DLNB        4                 // nbre détecteurs logiques par switch
 
-#define DLBITLEN      10         // longueur (bits) desciption détecteur
+#define DLBITLEN   10                 // longueur (bits) desciption détecteur
 
-#define DLNBCB      4         // nbre checkbox/détecteur
-#define DLNULEN     3         // nbre bits numéro détecteur
-#define DLACLEN     3         // nbre bits code action
+#define DLNBCB      4                 // nbre checkbox/détecteur
+#define DLNULEN     3                 // nbre bits numéro détecteur
+#define DLACLEN     3                 // nbre bits code action
 
 /* codes mode */
 
-#define PMDM_STAT   0       // statique
-#define PMDM_TRANS  1       // transitionnel
+#define PMDM_STAT   0                  // statique
+#define PMDM_TRANS  1                  // transitionnel
 
-#define DLNMS_PB   DLNLS_PB+DLNULEN-1   // msb numéro (3 bits)
+#define DLNMS_PB   DLNLS_PB+DLNULEN-1  // msb numéro (3 bits)
 #define DLNMS_VB   0x200
-#define DLNLS_PB   DLENA_PB+1       // lsb numéro
+#define DLNLS_PB   DLENA_PB+1          // lsb numéro
 #define DLNLS_VB   0x080
-#define DLENA_PB   DLEL_PB+1       // enable (1 bit)
+#define DLENA_PB   DLEL_PB+1           // enable (1 bit)
 #define DLENA_VB   0x040
-#define DLEL_PB    DLMFE_PB+1       // local/externe (1 bit)
+#define DLEL_PB    DLMFE_PB+1          // local/externe (1 bit)
 #define DLEL_VB    0x020
-#define DLMFE_PB   DLMHL_PB+1       // mode flanc/état (1 bit)
+#define DLMFE_PB   DLMHL_PB+1          // mode flanc/état (1 bit)
 #define DLMFE_VB   0x010
-#define DLMHL_PB   DLACMS_PB+1      // H/L (1 bit)
+#define DLMHL_PB   DLACMS_PB+1         // H/L (1 bit)
 #define DLMHL_VB   0x008
 #define DLACMS_PB  DLACLS_PB+DLACLEN-1 // msb action sur pulse (3 bits)
 #define DLACMS_VB  0x004
-#define DLACLS_PB  0         // lsb action
+#define DLACLS_PB  0                   // lsb action
 #define DLACLS_VB  0x001
 
 /* codes actions detecteurs logiques sur pulse */
@@ -240,13 +243,17 @@ enum {OFF,ON};
 
 /* codes etats générateur (bit droite=valeur) */
 
-#define PM_DISABLE  0x10
-#define PM_IDLE0    0x20
-#define PM_IDLE1    0x21
-#define PM_RUN1     0x30
-#define PM_RUN2     0x31
-#define PM_END1     0x40
-#define PM_END2     0x41
+// bit 1 0=stop      1=run
+// bit 2 0=cpt1      1=cpt2
+// bit 3 1=compteur  0=clk
+// bit 4 1=disable   0=enable
+
+#define PM_DISABLE  0x0C
+#define PM_IDLE     0x00
+#define PM_RUN1     0x05
+#define PM_RUN2     0x07
+#define PM_END1     0x04
+#define PM_END2     0x06
 
 #define PM_FREERUN  0
 #define PM_ONESHOOT 1
@@ -278,9 +285,10 @@ enum {OFF,ON};
 #define PMFNCHAR    0x40    // car d'offset ('@') dans nom de fonction
 
 
+// debug
+#define NBDBPTS 4
+#define NBDBOC  5
 
 
 
-
-
-#endif // _SHCONST_H_
+#endif  _SHCONST_H_

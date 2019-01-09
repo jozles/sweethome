@@ -20,5 +20,10 @@ void ledblink(uint8_t nbBlk);
 void dumpstr(char* data,uint16_t len);
 
 
+void initdebug();
+void showdebug();
+void debug(int cas);
+void setdebug(int cas,int* v0,int* v1,char* v2, char* v3);
+
 #endif UTIL_H_
 

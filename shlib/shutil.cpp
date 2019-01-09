@@ -9,6 +9,17 @@ static unsigned long blinktime=0;
 uint8_t nbreBlink=0;          // si nbreBlink impair   -> blocage
 uint8_t cntBlink=0;
 
+  /* debug */
+int   cntdebug[NBDBPTS];
+long  timedebug[NBDBPTS*NBDBOC];
+int*  v0debug[NBDBPTS*NBDBOC];
+int*  v1debug[NBDBPTS*NBDBOC];
+char* v2debug[NBDBPTS*NBDBOC];
+char* v3debug[NBDBPTS*NBDBOC];
+int   int00=0;
+int*  int0=&int00;
+
+
 int convNumToString(char* str,float num)  // retour string terminée par '\0' ; return longueur totale '\0' inclus
 {
   long num0=(long)num;
@@ -212,4 +223,48 @@ void ledblink(uint8_t nbBlk)    // nbre blinks rapides tous les PERBLINK
          if(nbBlk==100+nbreBlink){nbreBlink=0;}
          while(nbreBlink%2!=0){lb0();}                        // si nbreBlink impair blocage
          lb0();                                               // sinon blink 1 ou nbreBlink
+}
+
+/* debug */
+
+
+void debug(int cas){
+  if(cntdebug[cas]==0 || cas==1){
+    Serial.print("debug");Serial.println(cas);
+  }
+   cntdebug[cas]++;
+}
+
+void setdebug(int cas,int* v0,int* v1,char* v2, char* v3)
+{
+    cntdebug[cas]++;if(cntdebug[cas]<NBDBOC){
+    timedebug[cas*NBDBOC+cntdebug[cas]]=micros();
+    v0debug[cas*NBDBOC+cntdebug[cas]]=v0;
+    v1debug[cas*NBDBOC+cntdebug[cas]]=v1;
+    v2debug[cas*NBDBOC+cntdebug[cas]]=v2;
+    v3debug[cas*NBDBOC+cntdebug[cas]]=v3;
+  }
+}
+
+void showdebug()
+{
+  for(int deb=0;deb<NBDBPTS;deb++){
+    Serial.print("point=");Serial.println(deb);
+    for(int occ=0;occ<cntdebug[deb];occ++){
+      Serial.print("     occ=");Serial.print(occ);
+      Serial.print(" ");Serial.print(timedebug[deb*NBDBOC+occ]);
+      Serial.print(" ");Serial.print((int)v0debug[deb*NBDBOC+occ]);
+      Serial.print(" ");Serial.print((int)v1debug[deb*NBDBOC+occ]);
+      Serial.print(" ");Serial.print((char*)v2debug[deb*NBDBOC+occ]);
+      Serial.print(" ");Serial.println((char*)v3debug[deb*NBDBOC+occ]);
+    }
+  }
+}
+
+void initdebug()
+{
+  Serial.print("   *** init debug ***");
+  for(int dg=0;dg<NBDBPTS;dg++){
+    cntdebug[dg]=0;for(int dp=0;dp<NBDBOC;dp++){timedebug[dg*NBDBOC+dp]=0;}
+  }
 }
