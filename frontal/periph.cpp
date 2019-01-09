@@ -204,21 +204,21 @@ int periRemove(int num)
 int periSave(int num)
 {
   int i=0;
-  int rtn;
+  int sta;
   char periFile[7];periFname(num,periFile);
   
   *periNum=periCur;
   if(sdOpen(FILE_WRITE,&fperi,periFile)!=SDKO){
-    rtn=SDOK;
+    sta=SDOK;
     fperi.seek(0);
     for(i=0;i<PERIRECLEN;i++){fperi.write(periRec[i]);}
     //for(i=0;i<PERIRECLEN+sizeof(float);i++){fperi.write(periRec[i]);}      // ajouter les longueurs des variables ajoutées avant de modifier PERIRECLEN
     fperi.close();
     for(int x=0;x<4;x++){lastIpAddr[x]=periIpAddr[x];}
   }
-  else rtn=SDKO;
-  Serial.print("periSave(");Serial.print(num);Serial.print(")status=");Serial.println(rtn);
-  return rtn;
+  else sta=SDKO;
+  Serial.print("periSave(");Serial.print(num);Serial.print(")status=");Serial.println(sta);
+  return sta;
 }
 
 void periInit()                 // pointeurs de l'enregistrement de table courant
@@ -239,11 +239,11 @@ void periInit()                 // pointeurs de l'enregistrement de table couran
   periAlim=(float*)temp;
   temp +=sizeof(float);
   periLastDateIn=(char*)temp;
-  temp +=6;
+  temp +=LENPERIDATE;
   periLastDateOut=(char*)temp;
-  temp +=6;
+  temp +=LENPERIDATE;
   periLastDateErr=(char*)temp;
-  temp +=6;
+  temp +=LENPERIDATE;
   periErr=(int8_t*)temp;
   temp +=sizeof(int8_t);   
   periNamer=(char*)temp;
@@ -294,33 +294,34 @@ void periInit()                 // pointeurs de l'enregistrement de table couran
 
 void periInitVar()
 {
+  *periNum=0;
   *periPerRefr=PERIPREF;
   *periPitch=0;
   *periLastVal=0;
-  memset(periNamer,' ',PERINAMLEN);periNamer[PERINAMLEN-1]='\0';
-  memset(periMacr,0x00,6);
-  memset(periIpAddr,0x00,4);
-  memset(periLastDateIn,'0',6);
-  memset(periLastDateOut,'0',6);
-  memset(periLastDateErr,'0',6);
-  *periErr=0;
-  *periSondeNb=0;
-  *periProg=FAUX;
-  *periSwVal=0;
-  *periSwNb=0;
-   memset(periSwMode,0x00,MAXSW*MAXTAC);
-   memset(periSwPulseOne,0x00,MAXSW);
-   memset(periSwPulseTwo,0x00,MAXSW); 
-   memset(periSwPulseCurrOne,0x00,MAXSW); 
-   memset(periSwPulseCurrTwo,0x00,MAXSW);
-   memset(periSwPulseCtl,0x00,DLTABLEN);
-   memset(periSwPulseSta,0x00,MAXSW);       
-  *periDetNb=0;
-  *periDetVal=0;
   *periAlim=0;
-  *periThOffset=0;
+  memset(periLastDateIn,'0',LENPERIDATE);
+  memset(periLastDateOut,'0',LENPERIDATE);
+  memset(periLastDateErr,'0',LENPERIDATE);
+  *periErr=0;
+  memset(periNamer,' ',PERINAMLEN);periNamer[PERINAMLEN-1]='\0';
   memset(periVers,' ',LENVERSION);periVers[LENVERSION-1]='\0';
   memset(periModel,' ',LENMODEL);
+  memset(periMacr,0x00,6);
+  memset(periIpAddr,0x00,4);
+  *periSwNb=0;
+  *periSwVal=0;
+   memset(periSwMode,0x00,MAXSW*MAXTAC);
+   memset(periSwPulseOne,0x00,MAXSW*SIZEPULSE);
+   memset(periSwPulseTwo,0x00,MAXSW*SIZEPULSE); 
+   memset(periSwPulseCurrOne,0x00,MAXSW*SIZEPULSE); 
+   memset(periSwPulseCurrTwo,0x00,MAXSW*SIZEPULSE);       
+   memset(periSwPulseCtl,0x00,MAXSW*DLSWLEN);
+   memset(periSwPulseSta,0x00,MAXSW);   
+  *periSondeNb=0;
+  *periProg=FAUX;
+  *periDetNb=0;
+  *periDetVal=0;
+  *periThOffset=0;
 }
 
 void periConvert()        

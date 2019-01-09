@@ -50,18 +50,6 @@
 #endif _MODE_DEVT
 
 
-//#define LENNOM 10   // nbre car nom de fonction
-//#define NBVAL 64    // nbre maxi fonct/valeurs pour getnv() --- les noms de fonctions font 10 caractères + 2 séparateurs + la donnée associée = LENVAL
-                    // taille macxi pour GET (IE)=2048  ; pour POST plusieurs mega 
-                    // avec un arduino Atmel la limitation vient de la taille de la ram
-//#define LENVAL 64   // nbre car maxi valeur 
-//#define MEANVAL 6   // pour donner un param de taille à valeurs[]
-//#define LENVALEURS NBVAL*MEANVAL+1           // la taille effective de valeurs[]
-//#define LENPSW 16   // nbre car maxi pswd
-//#define RECHEAD 28                           // en-tete date/heure/xx/yy + <br> + crlf
-//#define RECCHAR NBVAL*(MEANVAL+1)+RECHEAD+8  // longueur maxi record histo
-
-//#define PERIPREF 60                          // periode refr perif par défaut
 #define NBPERIF 10                           
 #define PERINAMLEN 16+1                      // longueur nom perif
 #define PERIRECLEN 193 // V1.1j              // longueur record périph
@@ -101,7 +89,7 @@
 16 peri_refr_ valorisation periode de mesure/action du périphérique courant
 17 peri_nom__ valorisation nom du périphérique courant
 18 peri_mac__ valorisation adresse Mac du périphérique courant
-19 acceuil___ affichage page d'accueil du serveur
+19 accueil___ affichage page d'accueil du serveur
 20 peri_table affichage page table des périphériques
 21 peri_prog_ valorisation flag "programmable" du périphérique courant
 22 peri_sonde valorisation flag "sonde" du périphérique courant
@@ -252,14 +240,14 @@
 
       Principe des opérations :
 
-        periSwMode indique qui actionne un switch :
+        periSwMode (cstRec.xxCde[switch] dans périphérique) indique qui actionne un switch :
 
                 3 sources pour ON et/ou OFF :
                 le serveur, un détecteur "logique" parmi les 4, son générateur d'impulsions
                 chaque source dispose d'un bit "enable" qui la démasque et d'un bit H/L (active haute ou basse)
                 OFF est prioritaire sur ON
          
-        periSwPulseCtl (mal nommé) indique le fonctionnement de :
+        periSwPulseCtl (mal nommé) (cstRec.pulseCtl dans périphérique) indique le fonctionnement de :
 
                 a) le générateur de pulses (enable des 2 compteurs et bit free run/oneshot)
                 b) les détecteurs "logiques".
@@ -289,8 +277,9 @@
                       (voir const.h de peripherique pour les détails)
                 
          générateur d'impulsion :
-                
-                Le générateur d'impulsion est constitué de 2 compteurs animés par une horloge à 1Hz
+
+                (Un par switch)
+                Le générateur d'impulsion est constitué de 2 compteurs animés par une horloge à 1Hz (10Hz pour les traitements pour assurer la précision)
                 Au reset ils sont à 0. Un seul et actif à la fois. Lorsqu'un compteur atteint sa valeur maxi il repasse à 0.
                 Lorsque le compteur 1 atteint sa valeur maxi le compteur 2 se déclenche s'il est enable
                 Lorsque le compteur 2 atteint sa valeur maxi le compteur 1 se déclenche s'il est enable en mode free run
@@ -298,13 +287,14 @@
                 (l'état des détecteurs externes est reçu du serveur via une fonction)
                 (un même détecteur peut apparaitre plusieurs fois avec une config différente)
                 
-               états du générateur : 
-                  1) disable valeur 0, le premier compteur est bloqué.
-                  2) idle valeur 0 ou 1, l'horloge est arrêtée.
-                  3) running1 valeur 0, le 1er compteur n'a pas atteint sa valeur maxi 
-                  4) fin 1 valeur 0, le 1er compteur a atteint sa valeur maxi et le second compteur est bloqué
-                  5) running 2 valeur 1, le 2nd compteur n'a pas atteint sa valeur maxi.
-                  6) fin 2 valeur 1, le 2nd compteur a atteint sa valeur maxi, mode free run, et le premier compteur est bloqué
+               états du générateur stockés dans staPulse: 
+
+                  1) disable le premier compteur est bloqué.
+                  2) idle l'horloge est arrêtée.
+                  3) running1, le 1er compteur n'a pas atteint sa valeur maxi 
+                  4) fin 1, le 1er compteur a atteint sa valeur maxi et le second compteur est bloqué
+                  5) running 2, le 2nd compteur n'a pas atteint sa valeur maxi.
+                  6) fin 2, le 2nd compteur a atteint sa valeur maxi, mode free run, et le premier compteur est bloqué
                      en mode free run lorsque le second compteur atteint sa valeur maxi, le générateur passe à l'état running 1
                      en mode oneshoot lorsque le second compteur atteint sa valeur maxi, l'horloge s'arrête état idle valeur 0
                 
