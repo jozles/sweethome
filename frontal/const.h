@@ -26,8 +26,10 @@
  *      
  * à faire :
  *     
- *      créer une table mac/ip/date-heure des password valides (qui ont donné un mot de passe ok) et effacer après un délai d'inutilisation
- *      bug sur les enregitrements de peritable : les valeurs de l'enregitrement précédent se propagent... (créer 3 peri, mettre l'addr mac du 2nd à 0, redémarrer)
+ *     ajouter alarmes dans peritable : alim+/- temp+/- detecteurs temps non communication
+ *     créer une table mac/ip/date-heure des password valides (qui ont donné un mot de passe ok) et effacer après un délai d'inutilisation
+ *     mettre en sub tout le traitement des fonctions (depuis cli.connected jusqu'après what) et ajouter connexion/server spécial browser
+ *     
  */
 
 #define DS3231_I2C_ADDRESS 0x68         // adresse 3231 sur bus I2C

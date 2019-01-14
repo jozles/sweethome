@@ -36,8 +36,8 @@ extern "C" {
  #include "utility/w5100.h"
 }
 
-  EthernetClient cli;               // client du serveur periph  local
-  EthernetClient cli_b;             // client du serveur browser local  
+  EthernetClient cli_a;             // client du serveur periph  local
+//  EthernetClient cli_b;             // client du serveur browser local  
 #define TO_SERV  600                // sec
   EthernetClient cliext;            // client de serveur externe  
 
@@ -55,18 +55,21 @@ extern "C" {
 #endif _MODE_DEVT
 
   uint8_t remote_IP[4]={0,0,0,0},remote_IP_cur[4]={0,0,0,0};
+  byte    remote_MAC[6]={0,0,0,0,0,0};
   long    to_serv=0;                      // to du serveur pour reset password
   char    pass[]=SRVPASS;           
   bool    passok=FAUX;
 
-  EthernetServer monserveur(1792);        // port pour browser
+/*  EthernetServer monserveur(1792);        // port pour browser
   uint8_t remote_IP_b[4]={0,0,0,0},remote_IP_b_cur[4]={0,0,0,0};
   long    to_serv_b=0;                    // to du serveur pour reset password
   char    pass_b[]=SRVPASS;           
   bool    passok_b=FAUX;
+*/
+  byte    macMaster[6]={0,0,0,0,0,0};
 
   int8_t  numfonct[NBVAL];             // les fonctions trouvées 
-  char*   fonctions="per_temp__start_wr__peri_pass_dump_sd___test2sw___done______per_refr__peri_tofs_per_date__reset_____password__sd_pos____data_save_data_read_peri_dispo_peri_cur__peri_refr_peri_nom__peri_mac__accueil___peri_tableperi_prog_peri_sondeperi_pitchperi_pmo__peri_detnbperi_intnbperi_intv0peri_intv1peri_intv2peri_intv3peri_dispoperi_otf__peri_imn__peri_imc__peri_pto__peri_ptt__last_fonc_";  //};
+  char*   fonctions="per_temp__dispomacmaster_peri_pass_dump_sd___test2sw___done______per_refr__peri_tofs_per_date__reset_____password__sd_pos____data_save_data_read_peri_dispoperi_cur__peri_refr_peri_nom__peri_mac__accueil___peri_tableperi_prog_peri_sondeperi_pitchperi_pmo__peri_detnbperi_intnbperi_intv0peri_intv1peri_intv2peri_intv3peri_dispoperi_otf__peri_imn__peri_imc__peri_pto__peri_ptt__last_fonc_";  //};
                                        // nombre fonctions, valeur pour accueil, data_save_ fonctions multiples etc
   int     nbfonct=0,faccueil=0,fdatasave=0,fperiSwVal=0,fperiDetSs=0,fdone=0,fpericur=0,fperipass=0,fpassword=0;
   char    valeurs[LENVALEURS];         // les valeurs associées à chaque fonction trouvée
@@ -79,6 +82,7 @@ extern "C" {
 #define LENCDEHTTP 6
   char*   cdes="GET   POST  \0";       // commandes traitées par le serveur
   char    strSD[RECCHAR]={0};          // buffer enregistrements sur SD
+  char*   strSdEnd="<br>\r\n\0";
   char    buf[6];
 
   char bufServer[LBUFSERVER];          // buffer entrée/sortie dataread/save
@@ -266,7 +270,13 @@ void setup() {                              // =================================
     ledblink(BCODESDCARDKO);}
   Serial.println("OK");
 
-  
+/*
+for(i=0;i<100;i++){
+  Serial.print(i);if(i<10){Serial.print(" ");}Serial.print(" ");
+  for(j=0;j<10;j++){Serial.print((char)fonctions[i*10+j]);}
+  Serial.println();if((strstr(fonctions+i*10,"last")-(fonctions+i*10))==0){i=100;}}
+while(1){} 
+*/
 /* 
     if(SD.exists("fdhisto.txt")){SD.remove("fdhisto.txt");}
 */
@@ -308,7 +318,7 @@ void setup() {                              // =================================
   Serial.print("serveur ");Serial.print(NOMSERV);Serial.print(" sur adresse : "); Serial.print(Ethernet.localIP());Serial.print("/");Serial.println(PORTSERVER);
   
   periserv.begin();   // serveur périphériques
-  monserveur.begin();  // serveur browser
+//  monserveur.begin();  // serveur browser
   
   delay(1000);
 
@@ -344,8 +354,11 @@ void setup() {                              // =================================
 /*=================== fin setup ============================ */
 
 
-void getremote_IP(EthernetClient *client,uint8_t* ptremote_IP)
-  {W5100.readSnDIPR(client->getSocketNumber(), ptremote_IP);}
+void getremote_IP(EthernetClient *client,uint8_t* ptremote_IP,byte* ptremote_MAC)
+{
+    W5100.readSnDHAR(client->getSocketNumber(), ptremote_MAC);
+    W5100.readSnDIPR(client->getSocketNumber(), ptremote_IP);
+}
 
 
 
@@ -360,17 +373,18 @@ void loop()                             // =====================================
 
 
   
-    if(cli = periserv.available())    // attente d'un client
+    if(cli_a = periserv.available())    // attente d'un client
       {
-
-      // dévalidation mot de passe si time out ou IP change
-      if((to_serv+TO_SERV)<(millis()/1000)){passok=FAUX;}to_serv=millis()/1000;
-      getremote_IP(&cli,remote_IP);
-      for(i=0;i<4;i++){if(remote_IP[i]!=remote_IP_cur[i]){passok=FAUX;}remote_IP_cur[i]=remote_IP[i];} 
+        // dévalidation mot de passe si time out ou IP change
+        if((to_serv+TO_SERV)<(millis()/1000)){passok=FAUX;}to_serv=millis()/1000;
+          getremote_IP(&cli_a,remote_IP,remote_MAC);
+          for(i=0;i<4;i++){if(remote_IP[i]!=remote_IP_cur[i]){passok=FAUX;}remote_IP_cur[i]=remote_IP[i];} 
+        
       Serial.print("\n**** loop ");serialPrintIp(remote_IP_cur);Serial.print(" new=");serialPrintIp(remote_IP);
+      Serial.print("  ");serialPrintMac(macMaster);
       
-      if (cli.connected()) 
-        {nbreparams=getnv(&cli);Serial.print("\nnbreparams ");Serial.println(nbreparams);
+      if (cli_a.connected()) 
+        {nbreparams=getnv(&cli_a);Serial.print("\nnbreparams ");Serial.println(nbreparams);
         
 /*  getnv() décode la chaine GET ou POST ; le reste est ignoré
     forme ?nom1:valeur1&nom2:valeur2&... etc (NBVAL max)
@@ -431,6 +445,7 @@ void loop()                             // =====================================
 
         memset(strSD,0,sizeof(strSD)); memset(buf,0,sizeof(buf));charIp(remote_IP,strSD);          // histo :
         sprintf(buf,"%d",nbreparams+1);strcat(strSD," ");strcat(strSD,buf);strcat(strSD," = ");    // une ligne par transaction
+        strcat(strSD,strSdEnd);
 
 /*
       3 modes de fonctionnement :
@@ -452,9 +467,13 @@ void loop()                             // =====================================
    
         for (i=0;i<=nbreparams;i++){
 
-          if(!(passok==VRAI || numfonct[0]==fperipass || numfonct[0]==faccueil || numfonct[0]==fpassword)){
-            what=-1;nbreparams=-1;i=0;numfonct[i]=faccueil;}
-    //      Serial.print("what=");Serial.print(what);Serial.print(" nbreparams=");Serial.print(nbreparams);
+          if(!(passok==VRAI 
+            || macMaster[0]!=0
+            || numfonct[0]==fperipass 
+            || numfonct[0]==faccueil 
+            || numfonct[0]==fpassword)){what=-1;nbreparams=-1;i=0;numfonct[i]=faccueil;}
+
+     //      Serial.print("what=");Serial.print(what);Serial.print(" nbreparams=");Serial.print(nbreparams);
     //      Serial.print(" i=");Serial.print(i);Serial.print(" numfonct[i]=");Serial.println(numfonct[i]);
           
           if(i<NBVAL && i>=0){
@@ -464,35 +483,36 @@ void loop()                             // =====================================
                                       // si c'est la dernière chaîne, strlen(valf) est sa longueur 
                                       // c'est obligatoirement le cas pour data_read_ et data_save_ qui terminent le message
 
-            if(strlen(strSD)+16<RECCHAR){
-              sprintf(buf,"%d",numfonct[i]);strcat(strSD,buf);strcat(strSD," ");strcat(strSD,valf);strcat(strSD,";");}            
+            
+//          strSD = en-tete + n fonctions + pied(strSdEnd) ; le pied est écrasé à chaque ajout de fonction
+            
+            if(strlen(strSD)+strlen(valf)+5+strlen(strSdEnd)<RECCHAR){
+              strSD[strlen(strSD)-strlen(strSdEnd)]='\0';sprintf(buf,"%d",numfonct[i]);strcat(strSD,buf);
+              strcat(strSD," ");strcat(strSD,valf);strcat(strSD,";");strcat(strSD,strSdEnd);}
+            else {strSD[strlen(strSD)-strlen(strSdEnd)]="*";}
+            //Serial.print("strSD=");Serial.print(strSD);dumpstr(valf,128);
 
             switch (numfonct[i])      
               {
               case 0: pertemp=0;conv_atobl(valf,&pertemp);break;
-              case 1: break;
+              case 1: if(ctlpass(valf,pass)){ memcpy(macMaster,remote_MAC,6);}
+                      break;                                                                                // MacMaster
               case 2: if(checkData(valf)==MESSOK){                                                          // peri_pass_
-                        passok=FAUX;
-                        for(j=0;j<LENVAL;j++){
-                          if(pass[j]==0){passok=VRAI;break;}
-                          if(valeurs[i*LENVAL+j+5]!=pass[j]){break;}}
+                        passok=ctlpass(&valeurs[i*LENVAL+5],pass);
                         if(passok==FAUX){sdstore_textdh(&fhisto,"pp","ko",strSD);}
                       }break;
-              case 3: dumpsd();break;
+              case 3: dumpsd(&cli_a);break;
               case 4: test2Switchs();break;                                                                 // test2sw
               case 5: break;                                                                                // done
               case 6: perrefr=0;conv_atob(valf,(int16_t*)&perrefr);break; 
               case 7: what=4;*periThOffset=0;*periThOffset=convStrToNum(valf,&j);break;                     // Th Offset
               case 8: perdate=0;conv_atobl(valf,&perdate);break;
               case 9: autoreset=VRAI;break;
-              case 10: Serial.print("password=");what=-1;nbreparams=0;passok=FAUX;                          // password
-                       for(j=0;j<LENVAL;j++){                                                               // si saisie fausse -> accueil
-                          if(pass[j]==0){passok=VRAI;break;}                                                // sinon periTable
-                          if(valeurs[i*LENVAL+j]!=pass[j]){break;}
-                          }
+              case 10: Serial.print("password=");what=-1;nbreparams=0;                                      // password
+                       passok=ctlpass(&valeurs[i*LENVAL],pass);                                             // si saisie fausse -> accueil                          }
                        Serial.println(passok);   
                        if(passok==FAUX){sdstore_textdh(&fhisto,"pw","ko",strSD);}
-                       else {periTableHtml(&cli);what=0;}
+                       else {periTableHtml(&cli_a);what=0;}
                        break;
               case 11: sdpos=0;conv_atobl(valf,&sdpos);break;                                               // SD pos
               case 12: what=1;periDataRead();break;                                                         // data_save
@@ -509,13 +529,13 @@ void loop()                             // =====================================
                        }break;                                                                              // periSwPulseCtl
               case 18: what=4;for(j=0;j<6;j++){conv_atoh(valf+j*2,(periMacr+j));}break;                     // Mac periph courant
               case 19: Serial.println("accueil");what=-1;break;                                                                               // accueil
-              case 20: periTableHtml(&cli);break;                                                           // peri Table
+              case 20: periTableHtml(&cli_a);break;                                                           // peri Table
               case 21: what=4;*periProg=*valf-48;break;                                                     // peri prog
               case 22: what=4;*periSondeNb=*valf-48;if(*periSondeNb>MAXSDE){*periSondeNb=MAXSDE;}break;     // peri sonde
               case 23: what=5;*periPitch=0;*periPitch=convStrToNum(valf,&j);break;                          // peri pitch
               case 24: what=5;{                                                                             // peri SwPulseCtl (pmo) bits détecteurs
-                       uint8_t sw;sw=*(libfonctions+2*i)-PMFNCHAR;                                 
-                       uint8_t sh;sh=*(libfonctions+2*i+1)-PMFNCHAR;                                        // sw switch
+                       uint8_t sw;sw=*(libfonctions+2*i)-PMFNCHAR;                                          // sw n° switch
+                       uint8_t sh;sh=libfonctions[2*i+1]-PMFNCHAR;if(sh>32){sh-=6;}                         // '-6' pour skip ponctuations (valeur maxi utilisable 2*26=52)
                        uint64_t pipm;memcpy(&pipm,(char*)(periSwPulseCtl+sw),DLSWLEN);                      // sh=[LENNOM-1]-PMFNCHAR nb de shifts dans le détecteur
                        byte msk;msk=0x01;if((sw&0xf0)!=0){msk=mask[DLNULEN];sw&=0x0f;}                      // si !=0 -> n° detecteurs ou code action sinon cb                               
                        bitvSwCtl(periSwPulseCtl,sw,DLSWLEN,sh,msk);                                         // shift référencé au début du switch
@@ -558,22 +578,21 @@ void loop()                             // =====================================
           }       // fin boucle nbre params
           
           if(nbreparams>=0){
-            strcat(strSD,"<br>\r\n\0");
             Serial.print("what=");Serial.print(what);Serial.print(" periCur=");Serial.print(periCur);Serial.print(" strSD=");Serial.print(strSD);
             sdstore_textdh(&fhisto,"ip","CX",strSD);  // utilise getdate() et place date et heure dans l'enregistrement
           }                                           // 1 ligne par commande GET
 
-        switch(what){                                         // periParamsHtml fait periSave
-          case 0:break;                                       // fonctions ponctuelles du serveur
-          case 1:periParamsHtml(&cli," ",0);break;            // data_save
-          case 2:break;                                       // dispo
-          case 3:periParamsHtml(&cli," ",0);break;            // data_read
-          case 4:periSave(periCur);periTableHtml(&cli);break; // fonctions sans mise à jour des périphériques
-          case 5:periSend();periTableHtml(&cli);break;        // fonctions avec mise à jour des périphériques (fait periParamsHtml)
-          default:accueilHtml(&cli,passok);break;
+        switch(what){                                           // periParamsHtml fait periSave
+          case 0:break;                                         // fonctions ponctuelles du serveur
+          case 1:periParamsHtml(&cli_a," ",0);break;            // data_save
+          case 2:break;                                         // dispo
+          case 3:periParamsHtml(&cli_a," ",0);break;            // data_read
+          case 4:periSave(periCur);periTableHtml(&cli_a);break; // fonctions sans mise à jour des périphériques
+          case 5:periSend();periTableHtml(&cli_a);break;        // fonctions avec mise à jour des périphériques (fait periParamsHtml)
+          default:accueilHtml(&cli_a,passok);break;
           }
           valeurs[0]='\0';
-          cli.stop();
+          cli_a.stop();
           delay(1);
           Serial.println("cli stopped"); 
       }   // cli.connected
@@ -602,7 +621,6 @@ void loop()                             // =====================================
 
 
 // ========================================= tools ====================================
-
 
 
 void periDataRead()             // traitement d'une chaine "dataSave" ou "dataRead" en provenance d'un periphérique 
@@ -650,13 +668,12 @@ void periDataRead()             // traitement d'une chaine "dataSave" ou "dataRe
     k=valf+2+1+17+1;*periLastVal=convStrToNum(k,&i);                                    // température si save
     k+=i;convStrToNum(k,&i);                                                            // age si save
     k+=i;*periAlim=convStrToNum(k,&i);                                                  // alim
-    k+=i;strncpy(periVers,k,LENVERSION-1);                                              // version
-    k+=(LENVERSION-1)+1; uint8_t qsw=(uint8_t)(*k-48);                                  // nbre sw
-    k+=1; *periSwVal&=0xAA;for(int i=qsw-1;i>=0;i--){*periSwVal |= (*(k+i)-48)<< 2*i;}  // periSwVal états sw
-    k+=MAXSW+1; *periDetNb=(uint8_t)(*k-48);                                            // nbre detec
-    k+=1; *periDetVal=0;for(int i=3;i>=0;i--){*periDetVal |= ((*(k+i)&0x01)<< 2*i);}    // détecteurs
-    k+=MAXDET+1;for(int i=0;i<MAXSW;i++){
-      periSwPulseSta[i]=strchr(chexa,(char)(*(k+i)&0x0f));}                             // pulse clk status
+    k+=i;strncpy(periVers,k,LENVERSION);                                                // version
+    k+=strchr(k,'_')-k+1; uint8_t qsw=(uint8_t)(*k-48);                                               // nbre sw
+    k+=1; *periSwVal&=0xAA;for(int i=MAXSW-1;i>=0;i--){*periSwVal |= (*(k+i)-48)<< 2*(MAXSW-1-i);}    // periSwVal états sw
+    k+=MAXSW+1; *periDetNb=(uint8_t)(*k-48);                                                          // nbre detec
+    k+=1; *periDetVal=0;for(int i=MAXDET-1;i>=0;i--){*periDetVal |= (*(k+i)-48)<< 2*(MAXDET-1-i);}    // détecteurs
+    k+=MAXDET+1;for(int i=0;i<MAXSW;i++){periSwPulseSta[i]=*(k+i);}                     // pulse clk status 
     k+=MAXSW+1;for(int i=0;i<LENMODEL;i++){periModel[i]=*(k+i);periNamer[i]=*(k+i);}    // model
     k+=LENMODEL+1;
     
@@ -688,7 +705,7 @@ int periParamsHtml(EthernetClient* cli,char* host,int port)
 {                   
   char message[LENMESS]={'\0'};
   char nomfonct[LENNOM+1]={'\0'};
-  int zz;
+  int zz=1;
   char date14[15];alphaNow(date14);
   
   if((periCur!=0) && (what==1) && (port==0)){strcpy(nomfonct,"ack_______");}    // ack pour datasave (what=1)
@@ -719,7 +736,7 @@ int periParamsHtml(EthernetClient* cli,char* host,int port)
             delay(1);
           }
           periErr=zz;packDate(periLastDateOut,date14+2);periSave(periCur);
-          Serial.print("pPHtml=");Serial.println(zz);
+          Serial.print("pHtml=");Serial.println(zz);
           return zz;
 }
 
@@ -935,4 +952,5 @@ void testSwitch(char* command,char* perihost,int periport)
             cliext.stop();
             delay(1);
 }
+
 

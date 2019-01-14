@@ -3,11 +3,16 @@
 #include "shconst.h"
 
 
+extern char  pass[];
 extern char* chexa;
 
 static unsigned long blinktime=0;
 uint8_t nbreBlink=0;          // si nbreBlink impair   -> blocage
 uint8_t cntBlink=0;
+
+#define TIMEOVFSLOTNB 10
+uint32_t timeOvfSlot[TIMEOVFSLOTNB];
+
 
   /* debug */
 int   cntdebug[NBDBPTS];
@@ -225,6 +230,20 @@ void ledblink(uint8_t nbBlk)    // nbre blinks rapides tous les PERBLINK
          lb0();                                               // sinon blink 1 ou nbreBlink
 }
 
+void timeOvfSet(uint8_t slot)
+{
+    if(slot<=TIMEOVFSLOTNB){timeOvfSlot[slot-1]=micros();}
+}
+
+void timeOvfCtl(uint8_t slot)
+{
+    if(slot<=TIMEOVFSLOTNB){
+    Serial.print("tOvf[");Serial.print(slot);
+    Serial.print("]=");Serial.println((micros()-timeOvfSlot[slot-1]));
+    if((micros()-timeOvfSlot[slot-1])>2000){Serial.print("<<<<<<<<<<<<");}
+    }
+}
+
 /* debug */
 
 
@@ -267,4 +286,20 @@ void initdebug()
   for(int dg=0;dg<NBDBPTS;dg++){
     cntdebug[dg]=0;for(int dp=0;dp<NBDBOC;dp++){timedebug[dg*NBDBOC+dp]=0;}
   }
+}
+
+bool ctlpass(char* data,char* model)
+{
+  int j=0;
+  bool passok=FAUX;
+
+  dumpstr(data,16);
+  for(j=0;j<LENVAL;j++){
+
+    if(model[j]==0){passok=VRAI;break;}
+    if(data[j]!=pass[j]){break;}
+  }
+Serial.print(passok);Serial.println(data);
+
+  return passok;
 }

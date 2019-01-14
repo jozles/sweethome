@@ -1,7 +1,7 @@
 #ifndef _HTTPHTML_H_
 #define _HTTPHTML_H_
 
-int  dumpsd();
+int  dumpsd(EthernetClient* cli);
 void periTableHtml(EthernetClient* cli);
 void accueilHtml(EthernetClient* cli,bool passok);
 void htmlIntro0(EthernetClient* cli);

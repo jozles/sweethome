@@ -18,6 +18,10 @@ void unpackDate(char* dateout,char* datein);
 void serialPrintDate(char* datein);
 void ledblink(uint8_t nbBlk);
 void dumpstr(char* data,uint16_t len);
+bool ctlpass(char* data,char* model);
+
+void timeOvfSet(uint8_t slot);
+void timeOvfCtl(uint8_t slot);
 
 
 void initdebug();

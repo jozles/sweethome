@@ -27,6 +27,8 @@ extern char bufServer[LBUFSERVER];
 extern byte mac[6];
 extern byte staPulse[MAXSW];            // état clock pulses
 extern uint8_t pinSw[MAXSW];
+extern uint8_t pinDet[MAXDET];
+extern long  detTime[MAXDET];
 
 extern constantValues cstRec;
 extern char* cstRecA;
@@ -109,10 +111,13 @@ void initConstant()  // inits mise sous tension
   memcpy(cstRec.onCde,"\0\0\0\0",4);       // mode sw
   memcpy(cstRec.offCde,"\0\0\0\0",4);      // mode sw  
   memset(cstRec.pulseCtl,0x00,DLTABLEN);   // ctle pulse
-  memset(cstRec.durPulseOne,'\0',8);       // durée pulses (MAXSW=4 2 mots)
-  memset(cstRec.durPulseTwo,'\0',8);       // durée pulses (MAXSW=4 2 mots)
+  for(int i=0;i<MAXSW;i++){cstRec.durPulseOne[i]=millis();}       // durée pulses (MAXSW=4*4)
+  for(int i=0;i<MAXSW;i++){cstRec.durPulseTwo[i]=millis();}       // durée pulses (MAXSW=4*4)
+  for(int i=0;i<MAXSW;i++){cstRec.cntPulseOne[i]=millis();}       // compt pulses (MAXSW=4*4)
+  for(int i=0;i<MAXSW;i++){cstRec.cntPulseTwo[i]=millis();}       // compt pulses (MAXSW=4*4)
   cstRec.IpLocal=IPAddress(0,0,0,0);
-  memset(cstRec.memDetec,0x00,MAXDET);
+  char detDis=DETDIS<<DETBITST_PB;
+  memset(cstRec.memDetec,detDis,MAXDET+MAXDSP+MAXDEX);
   memcpy(cstRec.cstVers,VERSION,LENVERSION);
   memcpy(cstRec.cstModel,model,LENMODEL);
   Serial.println("Init Constant done");
@@ -157,18 +162,32 @@ void subPC(int i)
 
 void printConstant()
 {
+  uint64_t swctl=0; 
   char buf[3],buff[32];memcpy(buf,cstRec.numPeriph,2);buf[2]='\0';
   Serial.print("\nnumPeriph=");Serial.print(buf);Serial.print(" IpLocal=");Serial.print(IPAddress(cstRec.IpLocal));
   Serial.print(" serverTime=");Serial.print(cstRec.serverTime);Serial.print(" serverPer=");Serial.println(cstRec.serverPer);
-  Serial.print("oldtemp=");Serial.print(cstRec.oldtemp);Serial.print(" tempPer=");Serial.print(cstRec.tempPer);Serial.print(" tempPitch=");Serial.println(cstRec.tempPitch);
-  Serial.print("swCde=");for(int sc=3;sc>=0;sc--){Serial.print((cstRec.swCde>>(sc*2+1))&01);Serial.print((cstRec.swCde>>(sc*2))&01);Serial.print(" ");}Serial.println();
-  Serial.print("staPulse=");for(int s=0;s<MAXSW;s++){Serial.print(s);Serial.print("-");Serial.print(staPulse[s],HEX);Serial.print(" ");}Serial.println();
-  Serial.print("memDetec=");for(int s=0;s<MAXDET;s++){Serial.print(s);Serial.print("-");Serial.print(cstRec.memDetec[s],HEX);Serial.print(" ");}Serial.println();
+  Serial.print("oldtemp=");Serial.print(cstRec.oldtemp);Serial.print(" tempPer=");Serial.print(cstRec.tempPer);
+  Serial.print(" tempPitch=");Serial.println(cstRec.tempPitch);
+  Serial.print("swCde=");for(int sc=3;sc>=0;sc--){Serial.print((cstRec.swCde>>(sc*2+1))&01);Serial.print((cstRec.swCde>>(sc*2))&01);
+  Serial.print(" ");}Serial.println();
+  Serial.print("staPulse=");for(int s=0;s<MAXSW;s++){Serial.print(s);Serial.print("-");Serial.print(staPulse[s],HEX);
+  Serial.print(" ");}Serial.println("  C=DIS 0=IDLE 5=RUN1 7=RUN2 4=END1 6=END2");
+  Serial.print("memDetec=");for(int s=0;s<(MAXDET+MAXDSP+MAXDEX);s++){Serial.print(s);Serial.print("-");
+  Serial.print((cstRec.memDetec[s]>>DETBITST_PB)&0x03,HEX);Serial.print(" ");
+  Serial.print((cstRec.memDetec[s]>>DETBITUD_PB)&0x01,HEX);Serial.print(" ");
+  Serial.print((cstRec.memDetec[s]>>DETBITLH_PB)&0x01,HEX);Serial.print("  ");}
+  Serial.println(" 3-TRIG 2-WAIT 1-IDLE 0-DIS");
+  Serial.print("detTime =    ");for(int s=0;s<MAXDET;s++){Serial.print(detTime[s]);Serial.print("  -  ");}Serial.println();
+  Serial.print("detect  =    ");for(int s=0;s<MAXDET;s++){Serial.print(digitalRead(pinDet[s]));Serial.print("   -   ");}Serial.println();  
 
   for(int i=0;i<NBSW;i++){
-    Serial.print("sw=");Serial.print(i+1);Serial.print("-");Serial.print(digitalRead(pinSw[i]),HEX);Serial.print(" Cde=");Serial.print((cstRec.swCde>>(i*2+1))&0x01);
-    Serial.print("  dur1=");Serial.print(cstRec.durPulseOne[i]);
-    Serial.print("  dur2=");Serial.println(cstRec.durPulseTwo[i]);
+    Serial.print("sw=");Serial.print(i+1);Serial.print("-");Serial.print(digitalRead(pinSw[i]),HEX);
+    Serial.print(" Cde=");Serial.print((cstRec.swCde>>(i*2+1))&0x01);
+    memcpy(&swctl,&cstRec.pulseCtl[i*DLSWLEN],DLSWLEN);
+    Serial.print("  dur1(");Serial.print((byte)(swctl>>PMTOE_PB)&0x01);Serial.print(")=");Serial.print(cstRec.cntPulseOne[i]);Serial.print("/");Serial.print(cstRec.durPulseOne[i]);
+    Serial.print("  dur2(");Serial.print((byte)(swctl>>PMTTE_PB)&0x01);Serial.print(")=");Serial.print(cstRec.cntPulseTwo[i]);Serial.print("/");Serial.println(cstRec.durPulseTwo[i]);
+    //dumpstr((char*)&cstRec.pulseCtl[i*DLSWLEN],DLSWLEN);
+    //dumpstr((char*)&swctl,DLSWLEN);
     subPC(i);
   }
 }

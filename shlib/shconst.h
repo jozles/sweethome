@@ -2,7 +2,7 @@
 #define _SHCONST_H_
 
 
-//#define PERIF
+#define PERIF
 
 #define LENVERSION  4
 #define LENMODEL    6
@@ -83,6 +83,8 @@ enum {OFF,ON};
 
 #define MAXSW   4       // nbre maxi switchs par périphérique
 #define MAXDET  4       // nbre maxi détecteurs par périphérique
+#define MAXDSP  4       // nbre maxi détecteurs spéciaux
+#define MAXDEX  8       // nbre maxi détecteurs externes
 #define MAXSDE  4       // nbre maxi sondes par périphérique
 #define MAXTAC  4       // 4 types actions sur pulses (start/stop/mask/force)
 
@@ -205,6 +207,7 @@ enum {OFF,ON};
 #define DLNB        4                 // nbre détecteurs logiques par switch
 
 #define DLBITLEN   10                 // longueur (bits) desciption détecteur
+#define DLBITMSK    0x03FF            // mask 10 bits
 
 #define DLNBCB      4                 // nbre checkbox/détecteur
 #define DLNULEN     3                 // nbre bits numéro détecteur
@@ -214,6 +217,7 @@ enum {OFF,ON};
 
 #define PMDM_STAT   0                  // statique
 #define PMDM_TRANS  1                  // transitionnel
+#define DLLOCAL     1                  // détecteur local
 
 #define DLNMS_PB   DLNLS_PB+DLNULEN-1  // msb numéro (3 bits)
 #define DLNMS_VB   0x200
@@ -282,7 +286,9 @@ enum {OFF,ON};
 
 #define PMFNCVAL    0X30    // car d'offset ('0') de la valeur de fonction (*valf)
 
-#define PMFNCHAR    0x40    // car d'offset ('@') dans nom de fonction
+#define PMFNCHAR    0x40    // NE PAS MODIFIER !! le codage des shifts
+// de periSwPulseCtl est critique : utilisation des lettres maj et min seules
+// car d'offset ('@') dans nom de fonction
 
 
 // debug

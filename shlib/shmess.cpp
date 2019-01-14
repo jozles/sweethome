@@ -19,7 +19,7 @@ extern int cstlen;
 #ifndef PERIF
 #include <Ethernet.h> //bibliothèque W5100 Ethernet
 
-extern EthernetClient cli;
+//extern EthernetClient cli;
 
 extern int16_t*  periNum;                      // ptr ds buffer : Numéro du périphérique courant
 extern int32_t*  periPerRefr;                  // ptr ds buffer : période datasave minimale

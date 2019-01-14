@@ -17,7 +17,7 @@ extern File fhisto;      // fichier histo sd card
 extern long sdpos;
 extern char strSD[RECCHAR];
 
-extern EthernetClient cli;
+//extern EthernetClient cli;
 
 extern int   perrefr;
 extern char* chexa;
@@ -112,7 +112,7 @@ void htmlIntro(char* titre,EthernetClient* cli)
   cli->println("</head>");
 }
 
-int dumpsd()                 // liste le fichier de la carte sd
+int dumpsd(EthernetClient* cli)                 // liste le fichier de la carte sd
 {
   char inch=0;
   
@@ -124,11 +124,9 @@ int dumpsd()                 // liste le fichier de la carte sd
   
   Serial.print("histoSD ");Serial.println(sdsiz);
 
-  htmlIntro(NOMSERV,&cli);cli.println("<body>");
+  htmlIntro(NOMSERV,cli);cli->println("<body>");
 
-  //char strds[5];strds[0]=';';sprintf(strds+1,"%d",fdatasave);strcat(strds," \0");
-  cli.print("histoSD ");cli.print(sdsiz);cli.print(" ");cli.print(pos);cli.print("/");cli.print(sdpos);cli.print("<br>\n");
-  //if(sddata){cli.print(" filtre \"");cli.print(strds);cli.print("\"");}
+  cli->print("histoSD ");cli->print(sdsiz);cli->print(" ");cli->print(pos);cli->print("/");cli->print(sdpos);cli->print("<br>\n");
   
   int cnt=0,strSDpt=0;
   int ignore=VRAI; // ignore until next line
@@ -141,20 +139,19 @@ int dumpsd()                 // liste le fichier de la carte sd
 #endif ndef WEMOS
     if(!ignore)
       {
-      //cli.print(inch);
         
       strSD[strSDpt]=inch;strSDpt++;strSD[strSDpt]='\0';
       if((strSDpt>=(RECCHAR-1)) || (strSD[strSDpt-2]=='\r' && strSD[strSDpt-1]=='\n')){
-        cli.println(strSD);                                                                                                                                                                                                        
+        cli->println(strSD);                                                                                                                                                                                                        
         memset(strSD,'\0',RECCHAR);strSDpt=0;
         Serial.print(inch);
         }
       }
       else if (inch==10){ignore=FAUX;}
     }
-  cli.println(strSD);
+  cli->println(strSD);
 
-  cli.println("</body>");
+  cli->println("</body>");
 
   return sdOpen(FILE_WRITE,&fhisto,"fdhisto.txt");
   return SDOK;
@@ -193,6 +190,7 @@ void xradioTableHtml(EthernetClient* cli,byte valeur,char* nomfonct,byte nbval,i
     for(int i=0;i<nbli;i++){
       char oi[]="OI";
       byte b,a=valeur; a=a >> i*2 ;b=a&0x01;a&=0x02;a=a>>1;          // mode periSwVal        a bit poids fort commande ; b bit poids faible état
+      //Serial.print("swVal=");Serial.println(*periSwVal,HEX);
       for(int j=0;j<nbval;j++){
         if(type&0x02!=0){
           cli->print("<input type=\"radio\" name=\"");cli->print(nomfonct);cli->print((char)(i+48));cli->print("\" value=\"");cli->print((char)(PMFNCVAL+j));cli->print("\"");
@@ -225,12 +223,14 @@ void subMPn(EthernetClient* cli,uint8_t sw,uint8_t num,uint8_t nb)   // numbox t
                                                                      // nb est le nombre de bits de la valeur
                                                                      // num le numéro du lsb dans le switch de periSwPulseCtl
                                                                      // le caractère LENNOM-2 est le numéro de sw sur 3 bits (+PMFNCHAR) et bit 0x10=1
-                                                                     // le caractère LENNOM-1 est le numéro du lsb(+PMFNCHAR) dans periSwPulseCtl 
+                                                                     // le caractère LENNOM-1 est le numéro du lsb(+PMFNCHAR) dans periSwPulseCtl
+                                                                     // seules les lettres maj et min sont utilisées (les car de ponctuation sont sautés)
 {                                                                    // LENNOM-2  0100 0000 -> 0101 0000 -> 0101 0xxx
   char fonc[]="peri_pmo__\0";
   uint64_t pipm=0;memcpy(&pipm,((char*)(periSwPulseCtl+sw*DLSWLEN)),DLSWLEN);
   uint8_t val=(pipm>>num)&mask[nb];                          
   fonc[LENNOM-2]=(char)(PMFNCHAR+sw+0x10);      
+  if(num>25){num+=6;}                                                 // '+6' pour skip ponctuations (valeur maxi utilisable 2*26=52)
   fonc[LENNOM-1]=(char)(PMFNCHAR+num);
 
   numTableHtml(cli,'b',(void*)&val,fonc,1,0,1);
@@ -245,6 +245,7 @@ void subMPc(EthernetClient* cli,uint8_t sw,uint8_t num)         // checkbox tran
   uint64_t pipm=0;memcpy(&pipm,((char*)(periSwPulseCtl+sw*DLSWLEN)),DLSWLEN);
   uint8_t val=(pipm>>num)&0x01;
   fonc[LENNOM-2]=(char)(PMFNCHAR+sw);
+  if(num>25){num+=6;}                                            // '+6' pour skip ponctuations (valeur maxi utilisable 2*26=52)
   fonc[LENNOM-1]=(char)(PMFNCHAR+num);                     
   
   checkboxTableHtml(cli,&val,fonc,-1,0);
@@ -293,9 +294,8 @@ void SwCtlTableHtml(EthernetClient* cli,int nbsw,int nbtypes)
       cli->print("</td><td>");
       uint64_t pipm;memcpy(&pipm,(char*)(periSwPulseCtl+i*DLSWLEN),DLSWLEN);
       uint8_t val=((pipm>>PMFRO_PB)&0x01)+PMFNCVAL;rfonc[LENNOM-1]='F';                    // bit freerun
-      //Serial.print(val);Serial.print(" - ");dumpstr((periSwPulseCtl+i*DLSWLEN),6);
       checkboxTableHtml(cli,&val,rfonc,-1,0);                    
-      cli->print("<br>");cli->print(chexa[periSwPulseSta[i]]);cli->print("</td>");
+      cli->print("<br>");cli->print((char)periSwPulseSta[i]);cli->print("</td>");                // staPulse 
                                                                  
 // colonne des détecteurs
 
@@ -353,7 +353,7 @@ Serial.print("début péritable ; remote_IP ");serialPrintIp(remote_IP_cur);Seri
           //cli->println("<br>");
           for(int zz=0;zz<12;zz++){cli->print(bufdate[zz]);if(zz==7){cli->print("-");}}
           cli->println(" GMT<br>");
-          cli->print("local IP ");cli->print(Ethernet.localIP());//cli->println("<br>");
+          cli->print("local IP ");cli->print(Ethernet.localIP());cli->println(" ");
           cli->print(msb);cli->print(".");cli->print(lsb);cli->println("°C<br>");
           
           lnkTableHtml(cli,"reset_____","reset");
@@ -365,7 +365,9 @@ Serial.print("début péritable ; remote_IP ");serialPrintIp(remote_IP_cur);Seri
           
           lnkTableHtml(cli,"dump_sd___","dump SDcard");
           cli->print("(");long sdsiz=fhisto.size();cli->print(sdsiz);cli->println(") ");
-          numTableHtml(cli,'i',(uint32_t*)&sdpos,"sd_pos____",9,0,0);cli->print("<input type=\"submit\" value=\"ok\">");cli->println("<br>");
+          numTableHtml(cli,'i',(uint32_t*)&sdpos,"sd_pos____",9,0,0);cli->print("<input type=\"submit\" value=\"ok\">");
+          cli->print(" <input type=\"password\" name=\"macmaster_\" id=\"macMaster\" value=\"\" size=\"6\" maxlength=\"8\" >");
+          cli->println("<br>");
 
           cli->println("<table>");
               cli->println("<tr>");
@@ -404,7 +406,7 @@ Serial.print("début péritable ; remote_IP ");serialPrintIp(remote_IP_cur);Seri
                       cli->print("<td><input type=\"text\" name=\"peri_mac__\" value=\"");for(int k=0;k<6;k++){cli->print(chexa[periMacr[k]/16]);cli->print(chexa[periMacr[k]%16]);}
                          ;cli->println("\" size=\"11\" maxlength=\"12\" ><br><br>");
                       cli->print("<font size=\"2\">");for(j=0;j<4;j++){cli->print(periIpAddr[j]);if(j<3){cli->print(".");}}cli->println("</font></td>");
-                      cli->print("<td><font size=\"2\">");for(j=0;j<3;j++){cli->print(periVers[j]);}cli->println("<br>");
+                      cli->print("<td><font size=\"2\">");for(j=0;j<LENVERSION;j++){cli->print(periVers[j]);}cli->println("<br>");
                       char dateascii[12];
                       unpackDate(dateascii,periLastDateIn);for(j=0;j<12;j++){cli->print(dateascii[j]);if(j==5){cli->print(" ");}}cli->println("<br>");
                       unpackDate(dateascii,periLastDateOut);for(j=0;j<12;j++){cli->print(dateascii[j]);if(j==5){cli->print(" ");}}

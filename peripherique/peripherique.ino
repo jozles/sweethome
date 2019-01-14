@@ -21,6 +21,7 @@ extern "C" {
 #endif
 
 Ds1820 ds1820;
+extern byte dsmodel;
 
   char model[LENMODEL];
 
@@ -67,24 +68,26 @@ WiFiClient cliext;              // client externe du serveur local
   long  tempAge=1;         // secondes
   bool  tempchg=FAUX;
 
-  long ctlTime=millis();    // timer stepper switchs, pulses, détecteurs
-  uint8_t ctlStep=0;        // stepper 
 
+  long  clkTime=millis();   // timer automate rapide
+  uint8_t clkFastStep=0;    // stepper automate rapide
+  uint8_t clkSlowStep=0;    // stepper automate /10
   extern uint8_t nbreBlink;
   long  blkTime=millis();
   int   blkPer=2000;
   long  debTime=millis();   // pour mesurer la durée power on
   long  debConv=millis();   // pour attendre la fin du délai de conversion
-  int   debPer=TDEBOUNCE;
   int   cntIntA=0;
   int   cntIntB=0;
   long  detTime[MAXDET]={millis(),millis(),millis(),millis()};    // temps pour debounce
   long  detFlTime[MAXDET]={millis(),millis(),millis(),millis()};  // temps pour effacement flancs
 
+
   uint8_t pinSw[MAXSW]={PINSWA,PINSWB,PINSWC,PINSWD};    // les switchs
   byte    staPulse[MAXSW];                               // état clock pulses
   uint8_t pinDet[MAXDET]={PINDTA,PINDTB,PINDTC,PINDTD};  // les détecteurs
-  byte    pinDir[MAXDET]={LOW,LOW,LOW,LOW};              // flanc pour interruption des détecteurs (0 falling ; 1 rising
+  byte    pinDir[MAXDET]={LOW,LOW,LOW,LOW};              // flanc pour interruption des détecteurs (0 falling ; 1 rising)
+  bool    pinLev[MAXDET];                                // curr level
   
   void (*isrD[4])(void);                                 // tableau de pointeurs de fonctions
   long isrTime=0;                                        // durée isr
@@ -104,6 +107,9 @@ char* cstRecA=(char*)&cstRec;
   ADC_MODE(ADC_VCC);
 
   char* chexa="0123456789ABCDEFabcdef\0";
+  byte  mask[]={0x00,0x01,0x03,0x07,0x0F};
+
+  bool talkServerMode=FAUX;
 
    /* prototypes */
 
@@ -119,7 +125,7 @@ int   dataRead();
 void  dataTransfer(char* data);  
 void  readTemp();
 void  ordreExt();
-void  swAction();
+
 
 void setup() 
 { 
@@ -145,10 +151,10 @@ void setup()
 
  /* init tableau des fonctions d'interruption */
  
- isrD[0]=isrD0;
- isrD[1]=isrD1;
- isrD[2]=isrD2;
- isrD[3]=isrD3;
+// isrD[0]=isrD0;
+// isrD[1]=isrD1;
+// isrD[2]=isrD2;
+// isrD[3]=isrD3;
           
 #endif PM==NO_MODE
 
@@ -178,7 +184,7 @@ void setup()
   Serial.begin(115200);
   delay(100);
   
-initdebug();  
+//initdebug();  
 
 #ifdef _MODE_DEVT
   Serial.print("\nSlave 8266 _MODE_DEVT");
@@ -226,18 +232,19 @@ cstRec.cstlen=sizeof(cstRec);
     Serial.println("initialisation constantes");
     initConstant();
   }
-#endif PM!=DS_MOD
+#endif PM!=DS_MODE
 
 Serial.print("CONSTANT=");Serial.print(CONSTANT);Serial.print(" time=");Serial.print(millis()-debTime);Serial.println(" ready !");
   yield();
 
   printConstant();
+
 delay(2000);
 #if POWER_MODE==NO_MODE
     wifiConnexion(ssid1,password1); 
 
 #ifdef  _SERVER_MODE
-    server.begin();
+    server.begin(PORTSERVPERI);
     Serial.println("server-begin");
 #endif  def_SERVER_MODE
     
@@ -247,6 +254,10 @@ void loop(){        //=============================================
 
   // la réception de commande est prioritaire sur tout et (si une commande valide est reçue) toute communication
   // en cours est avortée pour traiter la commande reçue.
+  //
+  // automate de séquencement : horloge à 50mS et à 500mS ;
+  //    10 slots dans chaque ; un traitement peut exister sur plusieurs slots
+  //
   // si une communication avec le serveur est en cours (cstRec.talkStep != 0), l'automate talkServer est actif
   // sinon la boucle d'attente tourne : 
   //                                      - contrôle d'état des switchs 
@@ -258,65 +269,51 @@ void loop(){        //=============================================
   // Si l'appel n'aboutit pas (pas de cx wifi, erreurs de com, rejet par le serveur-plus de place)
   // le délai d'appel au serveur est doublé à concurence de 7200sec entre les appels.
   //  
-#ifdef  _SERVER_MODE
-                        if(isrTime!=0){if(isrTime>1000 || isrTime<0){Serial.print("!!!!!!!!!!!!!!!!!!!!");}
-                        Serial.print("isrTime=");Serial.println(isrTime);isrTime=0;}
-
-  ordreExt(); // réception ordre ext ?
-#endif def_SERVER_MODE  
    
-  if(cstRec.talkStep!=0){
-    talkServer();
-    }
-  else {
 
 #ifdef  _SERVER_MODE
   
-      if(millis()>(ctlTime+PERCTL)){
-        switch(ctlStep++){
-          case 1:
-                //if(isrTime!=0){if(isrTime>1000 || isrTime<0){Serial.print("!!!!!!!!!!!!!!!!!!!!");}
-                //Serial.print("isrTime=");Serial.println(isrTime);isrTime=0;}
-                break;
-          case 2:swAction();break;
-          case 4:pulseClkisr();
-          
-          for(int w=0;w<MAXSW;w++){
- /*           Serial.print("  sw=");Serial.print(w);
-            Serial.print(" sta=");Serial.print(staPulse[w],HEX);
-            Serial.print(" 3bits=");Serial.print(*(cstRec.pulseCtl+w*6)>>5,HEX);
-            Serial.print(" cnt1=");Serial.print(cstRec.durPulseOne[w]);
-            Serial.print(" cnt2=");Serial.println(cstRec.durPulseTwo[w]); */
-          }
-          //Serial.println();
-          break;
-            
-          case 5:break;
-          case 6:break;
-          case 7:break;
-          case 9:ctlStep=0;break;
-          default:break;
+      if(millis()>(clkTime+PERFASTCLK)){        // période 5mS/step
+        switch(clkFastStep++){
+          case 1:   timeOvfSet(1);ordreExt();timeOvfCtl(1);break;
+          case 2:   break;
+          case 3:   timeOvfSet(3);swAction();timeOvfCtl(3);break;
+          case 4:   break;
+          case 5:   timeOvfSet(5);if(cstRec.talkStep!=0){talkServer();}timeOvfCtl(5);break;
+          case 6:   break;
+          case 7:   break;
+          case 8:   swDebounce();break;                                 // doit être avant polDx
+          case 9:   timeOvfSet(9);polAllDet();timeOvfCtl(9);break;      // polDx doit être après swDebounce                            
+          case 10:  timeOvfSet(10);
+                    clkFastStep=0;              // période 50mS/step
+                    switch(clkSlowStep++){
+                      case 1:   ledblink(0);break;
+                      case 2:   pulseClkisr();break;
+                      case 3:   ledblink(0);break;
+                      case 4:   pulseClkisr();break;
+                      case 5:   ledblink(0);break;
+                      case 6:   pulseClkisr();break;
+                      case 7:   ledblink(0);break;
+                      case 8:   pulseClkisr();break;
+                      case 9:   ledblink(0);readTemp();break;
+                      case 10:  pulseClkisr();
+                                clkSlowStep=0;
+                                break;
+                    }
+                    timeOvfCtl(10);
+                    break;
+          default:  break;
         }
-        ctlTime=millis();
+        clkTime=millis();
       }
 #endif def_SERVER_MODE  
 
-    ledblink(0);
-
-/* debounce switchs sur interrupt */
-  for(int det=0;det<NBDET;det++){
-    if(detTime[det]!=0 && (millis()>(detTime[det]+TDEBOUNCE))){
-      detTime[det]=0; 
-      initIntPin(det);
-    }
-  }
 #endif PM==NO_MODE
 
-/* tous modes */
 
-    readTemp();
-    
-#if  POWER_MODE!=NO_MODE
+#if POWER_MODE!=NO_MODE
+
+  readTemp();
   
   while(cstRec.talkStep!=0){
     Serial.print("   talkStep=");Serial.println(cstRec.talkStep);
@@ -349,15 +346,33 @@ while(1){};
 void loop() {
 #endif PM!=NO_MODE
 
-#if POWER_MODE==NO_MODE
-  }       // fin de l'automate talkServer
-#endif PM==NO_MODE
-
 }  // fin loop pour toutes les options
 
-// ===============================================================================
+/* =================== communications ========================
 
-void infos(char* mess,char* data,uint8_t val)
+fServer() réception et chargement de la réponse à dataRead/Save
+
+dataTransfer() contrôle et chargement de set/ack
+
+talkServer() automate de fragmentation temporelle d'envoi de dataRead/Save et gestion réponses
+
+buildReadSave() construction et envoi message read/save
+
+dataRead()
+
+dataSave()
+
+ordreExt() test présence/réception et chargement message reçu en mode serveur
+
+talkClient() réponse à un message reçu en mode serveur
+
+wifiConnexion()
+
+readTemp() gestion communications cycliques (déclenche talkServer)
+
+*/
+
+void infos(char* mess,char* data,uint8_t val)           // Serial.print de fonctionnement du périphérique
 {
         char ff[LENNOM+1];memcpy(ff,data,LENNOM);ff[LENNOM]='\0';
         char np[3];strncpy(np,data+MPOSNUMPER,2);np[2]='\0';               
@@ -378,8 +393,8 @@ void fServer(uint8_t fwaited)          // réception du message réponse du serv
         }
 }
 
-void dataTransfer(char* data)           // data sur fonction
-                                        // transfert params (ou pas) selon contrôles
+void dataTransfer(char* data)           // transfert contenu de set ou ack dans variables locales selon contrôles
+                                        // data sur fonction
                                         //    contrôle mac addr et numPeriph ;
                                         //    si pb -> numPeriph="00" et ipAddr=0
                                         //    si ok -> tfr params
@@ -427,41 +442,52 @@ void dataTransfer(char* data)           // data sur fonction
 
 void talkServerWifiConnect()
 {
-  int retry=0;
+      int retry=0;
       while((retry<=WIFINBRETRY)&&!wifiConnexion(ssid,password)){delay(1000);retry++;}
       if(retry>=WIFINBRETRY && cstRec.talkStep==1){cstRec.talkStep=2;}
       else if(retry>=WIFINBRETRY && cstRec.talkStep==2){cstRec.talkStep=98;}
       else {
         cstRec.talkStep=4;
-        WiFi.macAddress(mac);
-        serialPrintMac(mac);} 
+   }
 }
 
 int talkServer()    // si numPeriph est à 0, dataRead pour se faire reconnaitre ; 
                     // si ça fonctionne réponse numPeriph!=0 ; dataSave 
                     // renvoie 0 et periMess valorisé si la com ne s'est pas bien passée.
 {
+
 int v=0;
+
 infos(" talkServer","",cstRec.talkStep);
+
 switch(cstRec.talkStep){
   case 1:
+#if POWER_MODE!=NO_MODE
       ssid=ssid1;password=password1;
       talkServerWifiConnect();
+#endif PM!=NO_MODE
+#if POWER_MODE==NO_MODE
+      cstRec.talkStep=4;
+#endif PM==NO_MODE
       break;
       
   case 2:
+#if POWER_MODE!=NO_MODE      
       ssid=ssid2;password=password2; // tentative sur ssid bis
       talkServerWifiConnect();
+#endif PM!=NO_MODE
+#if POWER_MODE==NO_MODE
+      cstRec.talkStep=4;
+#endif PM==NO_MODE
       break;
 
   case 3:    
-
       break;
       
-
   case 4:         // connecté au wifi
                   // si le numéro de périphérique est 00 ---> récup (dataread), ctle réponse et maj params
-      
+
+      talkServerMode=VRAI;
       if(memcmp(cstRec.numPeriph,"00",2)==0){
         v=dataRead();infos("  dataRead","",v);
         if(v==MESSOK){cstRec.talkStep=5;}
@@ -470,17 +496,18 @@ switch(cstRec.talkStep){
       else {cstRec.talkStep=6;}              // numPeriph !=0 -> data_save
       break;
         
-  case 5:         // gestion réponse au dataRead
+  case 5:          // gestion réponse au dataRead
   
-        fServer(fset_______);  // récupération adr mac, numPériph, tempPer et tempPitch dans bufServer (ctle CRC & adr mac)
-                               // le num de périph est mis à 0 si la com ne s'est pas bien passée
-        cstRec.talkStep=6;     // si le numéro de périphérique n'est pas 00 ---> ok (datasave), ctle réponse et maj params
-        writeConstant();
-        break;
+      fServer(fset_______);  // récupération adr mac, numPériph, tempPer et tempPitch dans bufServer (ctle CRC & adr mac)
+                             // le num de périph est mis à 0 si la com ne s'est pas bien passée
+     cstRec.talkStep=6;      // si le numéro de périphérique n'est pas 00 ---> ok (datasave), ctle réponse et maj params
+     writeConstant();
+     break;
       
   case 6:         // si numPeriph !=0 ou réponse au dataread ok -> datasave
                   // sinon recommencer au prochain timing
-      
+
+      talkServerMode=VRAI;
       if(memcmp(cstRec.numPeriph,"00",2)==0){cstRec.talkStep=9;}
       else {  
         v=dataSave();infos("  dataSave","",v);
@@ -492,7 +519,8 @@ switch(cstRec.talkStep){
   case 7:         // gestion réponse au dataSave
                   // si la réponse est ok -> terminer
                   // sinon recommencer au prochain timing
-                  
+
+       talkServerMode=VRAI;           
        fServer(fack_______);
        // le num de périph a été mis à 0 si la com ne s'est pas bien passée
        cstRec.talkStep=9;
@@ -514,15 +542,23 @@ switch(cstRec.talkStep){
         break;
         
   default: break;
-  }
-  
-  
+  }  
 }
 
 #ifdef _SERVER_MODE
 
+// **************** mode serveur
+
 void ordreExt()
 {
+
+/*  
+  if(talkServerMode){
+    talkServerMode=FAUX;
+    server.begin(PORTSERVPERI)
+  }
+*/
+  
   cliext = server.available();
 
   if (cliext) {
@@ -561,7 +597,7 @@ void ordreExt()
         switch(fonction){
             case 0:dataTransfer(&headerHttp[v0+5]);break;  // set
             case 1:break;                             // ack ne devrait pas se produire (page html seulement)
-            case 2: cstRec.talkStep=1;break;          // etat -> dataread/save   http://192.168.0.6:80/etat______=0006AB8B
+            case 2:cstRec.talkStep=1;break;           // etat -> dataread/save   http://192.168.0.6:80/etat______=0006AB8B
             case 3:break;                             // sleep (future use)
             case 4:break;                             // reset (future use)
             case 5:digitalWrite(PINSWA,CLOSA);break;  // test off A        http://192.168.0.6:80/testaoff__=0006AB8B
@@ -599,9 +635,11 @@ void talkClient(char* etat) // réponse à une requête
 }
 #endif def_SERVER_MODE
 
-//***************** utilitaires
 
-int buildReadSave(char* nomfonction,char* data)          //   connecte et transfère (sortie MESSCX connexion échouée)
+
+//***************** dataRead/dataSave
+
+int buildReadSave(char* nomfonction,char* data)   //   assemble et envoie read/save (sortie MESSCX connexion échouée)
                                                   //   password__=nnnnpppppp..cc?
                                                   //   data_rs.._=nnnnppmm.mm.mm.mm.mm.mm_[-xx.xx_aaaaaaa_v.vv]_r.r_siiii_diiii_cc
 {
@@ -617,18 +655,22 @@ int buildReadSave(char* nomfonction,char* data)          //   connecte et transf
       memcpy(message+2,"_\0",2);
       sb=3;
       unpackMac((char*)(message+sb),mac);                             // macaddr                    - 18
-      strncpy((char*)(message+sb+17),"_\0",2);
+      strncpy(message+sb+17,"_\0",2);
       strcat(message,data);strcat(message,"_");                       // temp, âge (dans data_save seul) - 15
 
       sb=strlen(message);
       sprintf(message+sb,"%1.2f",(float)ESP.getVcc()/1024.00f);       // alim                        - 5
-      strncpy((char*)(message+sb+4),"_\0",2);
-      strncpy(message+sb+5,VERSION,LENVERSION);                       // VERSION contient le "_"...  - 4
+      strncpy(message+sb+4,"_\0",2);
+      strncpy(message+sb+5,VERSION,LENVERSION);                       // VERSION contient le "_"     - 3
+      char ds='B';if(dsmodel==MODEL_S){ds='S';}
+      strncpy(message+sb+5+LENVERSION-1,&ds,1);                       // modele DS18x20              - 2
+      strncpy(message+sb+5+LENVERSION,"_\0",2);
       
-      sb+=5+LENVERSION;
-      message[sb]=(char)(NBSW+48);                                    // nombre switchs    
-      for(i=(NBSW-1);i>=0;i--){message[sb+1+(NBSW-1)-i]=(char)(48+digitalRead(pinSw[i]));}    // état -6
-      if(NBSW<MAXSW){for(i=NBSW;i<MAXSW;i++){message[sb+1+i]='x';}}message[sb+5]='_';
+      sb+=5+LENVERSION+1;
+      message[sb]=(char)(NBSW+48);                                    // nombre switchs              - 1   
+//      for(i=(NBSW-1);i>=0;i--){message[sb+1+(NBSW-1)-i]=(char)(48+digitalRead(pinSw[i]));}   
+      for(i=0;i<NBSW;i++){message[sb+1+(MAXSW-1)-i]=(char)(48+digitalRead(pinSw[i]));}   // état - 5
+      if(NBSW<MAXSW){for(i=NBSW;i<MAXSW;i++){message[sb+1+(MAXSW-1)-i]='x';}}message[sb+5]='_';//état- 5
 
       sb+=MAXSW+2;
       message[sb]=(char)(NBDET+48);                                   // nombre détecteurs
@@ -668,6 +710,7 @@ int dataRead()
       buildReadSave("data_read_","_");
 }
 
+
 bool wifiConnexion(const char* ssid,const char* password)
 {
   int i=0;
@@ -675,36 +718,47 @@ bool wifiConnexion(const char* ssid,const char* password)
   bool cxok=VRAI;
 
     ledblink(BCODEONBLINK);
-    
-  //if(WiFi.status()!=WL_CONNECTED){ 
 
     //WiFi.forceSleepWake(); //WiFi.forceSleepEnd();       // réveil modem
-    //delay(100);
-  
-    if(WiFi.status()!=WL_CONNECTED){WiFi.begin(ssid,password);}
-    
-    //if(cstRec.IpLocal!=IPAddress(0,0,0,0)){
+
+    int wifistatus=WiFi.status();
+    Serial.print("WiFiStatus=");Serial.println(WiFi.status());
+    if(wifistatus!=WL_CONNECTED){                              // && wifistatus!=WL_DISCONNECTED ){
+
+      //WiFi.disconnect();
+      //delay(1000);
+      WiFi.begin(ssid,password);
+      delay(500);
+/*
+      if(cstRec.IpLocal!=IPAddress(0,0,0,0)){
       IPAddress dns(192,168,0,254);
       IPAddress gateway(192,168,0,254);
       IPAddress subnet(255,255,255,0);
       WiFi.config(cstRec.IpLocal, dns, gateway, subnet);
-    //}
+*/
+/*
+      WL_CONNECTED after successful connection is established
+      WL_NO_SSID_AVAIL in case configured SSID cannot be reached
+      WL_CONNECT_FAILED if password is incorrect
+      WL_IDLE_STATUS when Wi-Fi is in process of changing between statuses
+      WL_DISCONNECTED if module is not configured in station mode
+*/
   
-    Serial.print(" WIFI connecting to ");Serial.print(ssid);Serial.print("...");
-  
-    while(WiFi.status()!=WL_CONNECTED){
-      delay(200);Serial.print(i++);
-      if((millis()-beg)>WIFI_TO_CONNEXION){cxok=FAUX;break;}
+      Serial.print(" WIFI connecting to ");Serial.print(ssid);Serial.print("...");
+      while(WiFi.status()!=WL_CONNECTED){
+        delay(200);Serial.print(".");
+        if((millis()-beg)>WIFI_TO_CONNEXION){cxok=FAUX;break;}
       }
-  
+    }
     if(cxok){
       if(nbreBlink==BCODEWAITWIFI){ledblink(BCODEWAITWIFI+100);}
       Serial.print(" connected ; local IP : ");Serial.println(WiFi.localIP());
-      cstRec.IpLocal=WiFi.localIP();
+      cstRec.IpLocal=WiFi.localIP();        
+      WiFi.macAddress(mac);
+      serialPrintMac(mac);
       }
     else {Serial.println("\nfailed");if(nbreBlink==0){ledblink(BCODEWAITWIFI);}}
-    //}
-  return cxok;
+    return cxok;
 }
 
 void modemsleep()
@@ -713,73 +767,6 @@ void modemsleep()
   WiFi.forceSleepBegin();
   delay(100);
 }
-
-#if POWER_MODE==NO_MODE 
-
-/* switchs action -------------------- */
-
-uint8_t rdy(byte modesw,int sw) // pour les 3 sources, check bit enable puis etat source ; retour numsource valorisé si valide sinon 0
-{
-  /* ------ détecteur --------- */
-  if((modesw & SWMDLEN_VB) !=0){                         // det enable
-    uint8_t det=(modesw>>SWMDLNULS_PB)&0x03;          // numéro det
-    uint64_t swctl;memcpy(&swctl,cstRec.pulseCtl+sw*DLSWLEN,DLSWLEN);
-    uint16_t dlctl=(uint16_t)(swctl>>(det*DLBITLEN));
-    if(dlctl&DLENA_VB != 0){                          // dl enable
-      if(dlctl&DLEL_VB != 0){                         // dl local
-        uint8_t locdet=(dlctl>>DLNLS_PB)&0x07;        // num dl local 
-        if(((modesw>>SWMDLHL_PB)&0x01)==(cstRec.memDetec[locdet]>>DETBITLH_PB)){return 1;}      // ok détecteur local
-      }
-      else {}                                         // dl externe à traiter
-    }
-  }                                                                                                              
-
-  /* --------- serveur ---------- */
-  if((modesw & SWMSEN_VB) != 0){
-    if (((modesw>>SWMSHL_PB)&0x01)==((cstRec.swCde>>((2*sw)+1))&0x01)){return 2;}    // ok serveur
-  }
-
-  /* --------- pulse gen --------- */
-  //if(sw==0){Serial.print(" mode=");Serial.print(modesw,HEX);Serial.print(" sta=");Serial.print(staPulse[sw],HEX);Serial.print(" sta&puact=");Serial.print(staPulse[sw]&PUACT,HEX);}
-  //if(((modesw&0x02)!=0) && ((staPulse[sw]&PUACT)!=0) && ((modesw&0x01)==(staPulse[sw]&0x01))){return 3;}    // ok timer
-
-  return 0;                                                                     // ko 
-}
-
-void swAction()                                                                 // check cde des switchs
-{ 
-  uint8_t swa=0;
-  for(int w=0;w<NBSW;w++){
-    
-    // action OFF
-    swa=rdy(cstRec.offCde[w],w);
-//    Serial.print(cstRec.onCde[w],HEX);Serial.print(" serv=");Serial.print(cstRec.swCde,HEX);Serial.print(" ");for(int h=MAXSW;h>0;h--){Serial.print((cstRec.swCde>>(h*2-1))&0x01);}
-//    Serial.print(" swa(off)=");Serial.println(swa);
-    if(swa!=0){digitalWrite(pinSw[w],OFF);}
-    else{
-
-     // action ON 
-      swa=rdy(cstRec.onCde[w],w);
-//      Serial.print(cstRec.onCde[w],HEX);Serial.print(" serv=");Serial.print(cstRec.swCde,HEX);Serial.print(" ");for(int h=MAXSW;h>0;h--){Serial.print((cstRec.swCde>>(h*2-1))&0x01);}
-//      Serial.print(" swa(on)=");Serial.println(swa);
-      if(swa!=0){digitalWrite(pinSw[w],ON);swa+=10;}
-      else{
-        
-        /*
-      // action desactivation
-        swa=rdy(cstRec.desCde[w],w);
-        if(swa!=0){swa+=20;}                                               // à traiter
-        else{
-      
-      // action activation  
-          swa=rdy(cstRec.actCde[w],w);if(swa!=0){swa+=30;}                 // à traiter
-        }
-        */
-      }   // pas ON
-    }     // pas OFF
-  }       // switch
-}
-#endif PM==NO_MODE
 
 
 /* Read temp ------------------------- */
@@ -831,5 +818,5 @@ void readTemp()
 #if POWER_MODE==NO_MODE
     }   // test boucle tempTime
 #endif PM==NO_MODE
-  }     // talkStep
+  }     // talkStep = 0
 }

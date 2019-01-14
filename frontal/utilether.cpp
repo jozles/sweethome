@@ -43,7 +43,7 @@ void sdstore_textdh0(File* fhisto,char* val1,char* val2,char* val3)
         strcat(text,val1);strcat(text," ");               // +3
         strcat(text,val2);strcat(text," ");               // +3
         
-          fhisto->print(text);fhisto->print(val3);//Serial.print("SDstore ");Serial.print(text);Serial.print(" len ");Serial.println(strlen(val3));
+          fhisto->print(text);fhisto->print(val3);
 }
 
 void sdstore_textdh(File* fhisto,char* val1,char* val2,char* val3)

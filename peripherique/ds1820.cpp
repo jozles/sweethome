@@ -37,7 +37,10 @@
 #define FAUX 0
 #define VRAI 1
 bool bitmessage=FAUX; // VRAI Serial.print les bits du meesage
+
 byte dsmodel=0x00;
+#define MODEL_S 0x10
+#define MODEL_B 0x28
 
 Ds1820::Ds1820()  // constructeur de la classe 
 {
@@ -126,7 +129,7 @@ float Ds1820::readDs(uint8_t pin)
 
       r0=rep[1] & 0x80;
         
-    if(dsmodel==0x28){                                // DS18B20
+      if(dsmodel==MODEL_B){                                // DS18B20
       rp=rep[1];
       rp=(rp<<8) | rep[0];
       if(r0 != 0){rp=(rp^0xFFFF)+1;}

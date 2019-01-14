@@ -1,7 +1,7 @@
 #ifndef CONST_H_INCLUDED
 #define CONST_H_INCLUDED
 
-#define VERSION "1.d_"
+#define VERSION "1.e_"
 /* 1.1 allumage/extinction modem
  * 1.2 ajout voltage (n.nn) dans message ; modif unpackMac
  * 1.3 deep sleep (PERTEMP) ; gestion EEPROM ; conversion temp pendant sleep
@@ -28,13 +28,22 @@
  *     pilotage des switchs via on/off du serveur opérationnelle.
  * 1.b ajout des valeurs courantes de pulse et image des detecteurs dans cstRec
  * 1.d horloge séparée, détecteurs locaux/externes, variables d'état pulses, model, cstRec et read/write/initConstant revus
+ * 1.e moteur pulse, détecteurs en poling, transfert modèle DS18x00
+ *     pulse fonctionnel
  * 
 Modifier : 
+
+  généraliser l'automate de séquencement pour la totalité du périphérique : aucune attente ni délai ; création d'une fonction de reprise qui
+  stocke l'adresse de la fonction suite du traitement en cours et le délai et time out d'attente pour l'executet.
+
+  en fin de séquence dataread/save repasser en mode server systématiquement pour rendre ordreExt opérationnel
+  (vérifier le délai de setup pour server.begin)
+  (étudier le traitement/vidage d'une réception non traitée en mode serveur avant d'effectuer une commande read/save)
   
-  alarme lorsque connexion impossible... 
-  trouver une combine pour charger ssid et password sans reprogrammer le 8266
-  idem pour adresse IP et port du host
-  ---> soluce : connexion usb sur le module
+  gestion des alarmes avec message au serveur (tension, niveaux th et autres)
+  
+  créer un protocole usb pour charger ssid, password, IP et port du host sans reprogrammer le 8266
+  
 */
 
 #include "Arduino.h"
@@ -143,9 +152,15 @@ Modifier :
 
 // matériel
 
+/* ds18x00 model */
+#define MODEL_S 0x10
+#define MODEL_B 0x28
+
 /* bits de memDetec */ 
 #define  DETBITLH_VB  0x01 // 1 bit état HIGH LOW
 #define  DETBITLH_PB  0
+#define  DETBITUD_VB  0x02 // 1 bit flanc/état du déclenchement
+#define  DETBITUD_PB  1
 #define  DETBITST_VB  0x0C // 2 bits état (déclenché(TRIG)/attente(WAIT)/disable(DIS)) si DIS le bit d'état est invalide
 #define  DETBITST_PB  2
 #define  DETTRIG      0x03 // valeur DETBIST si déclenché (LH=L falling =H rising)
@@ -234,17 +249,16 @@ Modifier :
 
 // timings
 
-#define TCONVERSION 375           // millis délai conversion temp
-#define PERTEMP 60                // secondes période par défaut lecture temp
-#define PERTEMPKO 7200            // secondes période par défaut lecture temp si connexion wifi ko
-#define PERSERV 3600              // secondes période max entre 2 accès server
-#define TOINCHCLI 4000            // msec max attente car server
+#define TCONVERSION        375    // millis délai conversion temp
+#define PERTEMP             60    // secondes période par défaut lecture temp
+#define PERTEMPKO         7200    // secondes période par défaut lecture temp si connexion wifi ko
+#define PERSERV           3600    // secondes période max entre 2 accès server
+#define TOINCHCLI         4000    // msec max attente car server
 #define WIFI_TO_CONNEXION 5000    // msec
-#define WIFINBRETRY 2             // wifiConnexion
-#define TSERIALBEGIN 100
-#define TDEBOUNCE 50              // msec
-#define PERCTL 100                // millis période scrutation controles (switchs, pulses, detecteurs) 
-
+#define WIFINBRETRY          2    // wifiConnexion
+#define TSERIALBEGIN       100
+#define TDEBOUNCE           50    // msec
+#define PERFASTCLK           5    // millis période automate rapide (ordreExt, talkServer, debounce, etc) 
 
 typedef struct {
   uint8_t   cstlen;               //  1
@@ -267,7 +281,7 @@ typedef struct {
   uint32_t  cntPulseOne[MAXSW];   // 16   temps debut pulse 1
   uint32_t  cntPulseTwo[MAXSW];   // 16   temps debut pulse 2
   byte      pulseCtl[DLTABLEN];   // 24   ctle pulse   
-  byte      memDetec[MAXDET];     //  4   image mem des détecteurs (4 bits par détecteur)
+  byte      memDetec[MAXDET+MAXDSP+MAXDEX];  //  8  image mem des détecteurs (4 bits par détecteur ; detecteurs physiques + spéciaux)
   IPAddress IpLocal;              //  4
   byte      filler[103];          //  136
   uint8_t   cstcrc;               //  1   doit toujours être le dernier : utilisé pour calculer sa position
