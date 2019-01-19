@@ -20,7 +20,7 @@ EthernetUDP Udp;
 extern char months[36];
 extern char days[21];
 
-extern long amj,hms,amj2,hms2;
+extern uint32_t amj,hms,amj2,hms2;
 extern byte js;
 extern char strdate[33];
 
@@ -48,8 +48,9 @@ void sdstore_textdh0(File* fhisto,char* val1,char* val2,char* val3)
 
 void sdstore_textdh(File* fhisto,char* val1,char* val2,char* val3)
 {
-  getdate(&hms,&amj,&js);
+  long tm=millis();getdate(&hms,&amj,&js);
   sdstore_textdh0(fhisto,val1,val2,val3);
+  Serial.print("tdate=");Serial.println(millis()-tm);
 }
 
 

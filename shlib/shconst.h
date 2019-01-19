@@ -34,10 +34,11 @@
 #define MPOSPITCH   MPOSPERREFR+6   // pitch
 #define MPOSSWCDE   MPOSPITCH+5     // 4 commandes sw 0/1 (periSwVal)
 #define MPOSINTPAR0 MPOSSWCDE+5     // paramétres sw (4*HH+1sep)*4
-#define MPOSPULSON0 MPOSINTPAR0+MAXSW*9 // Timers tOne (4bytes)*4
-#define MPOSPULSOF0 MPOSPULSON0+MAXSW*9 // Timers tTwo (4bytes+1sep)*4
-#define MPOSPULSCTL MPOSPULSOF0+MAXSW*9 // paramètres timers (2*HH+1sep)*4
-#define MPOSMDIAG   MPOSPULSCTL+MAXSW*(DLSWLEN+1) // texte diag
+#define MPOSPULSONE MPOSINTPAR0+MAXSW*9 // Timers tOne (4bytes)*4
+#define MPOSPULSTWO MPOSPULSONE+MAXSW*9 // Timers tTwo (4bytes+1sep)*4
+#define MPOSPULSCTL MPOSPULSTWO+MAXSW*9 // paramètres timers (2*HH+1sep)*4
+#define MPOSEXTDEN  MPOSPULSCTL+MAXSW*(DLSWLEN+1) // ext detec enable+level
+#define MPOSMDIAG   MPOSEXTDEN+4    // texte diag
 #define MLMSET      MPOSMDIAG+5     // longueur message fonction incluse
 
     // fonctions
@@ -64,7 +65,7 @@
 #define TOINCHCLI 4000        // msec max attente car server
 #define TO_HTTPCX 4000        // nbre maxi retry connexion serveur
 
-#define SLOWBLINK 2000
+#define SLOWBLINK 3000
 #define FASTBLINK 500
 #define PULSEBLINK 40
 /* code blink  (valeurs impaires bloquantes) */
@@ -185,6 +186,10 @@ enum {OFF,ON};
 // most significant = MS ; least = LS
 //
 
+/* nombre détecteurs externes */
+
+#define NBDSRV 8
+
 /* description periSwPulseCtl (3+4*10 bits =48) */
 
 #define DLTABLEN     MAXSW*DLSWLEN  // nbre de bytes total periSwPulseCtl (4*6)
@@ -219,12 +224,12 @@ enum {OFF,ON};
 #define PMDM_TRANS  1                  // transitionnel
 #define DLLOCAL     1                  // détecteur local
 
-#define DLNMS_PB   DLNLS_PB+DLNULEN-1  // msb numéro (3 bits)
+#define DLNMS_PB   DLNLS_PB+DLNULEN-1  // msb numéro det (3 bits)
 #define DLNMS_VB   0x200
 #define DLNLS_PB   DLENA_PB+1          // lsb numéro
-#define DLNLS_VB   0x080
+#define DLNLS_VB   0x0080
 #define DLENA_PB   DLEL_PB+1           // enable (1 bit)
-#define DLENA_VB   0x040
+#define DLENA_VB   0x0040
 #define DLEL_PB    DLMFE_PB+1          // local/externe (1 bit)
 #define DLEL_VB    0x020
 #define DLMFE_PB   DLMHL_PB+1          // mode flanc/état (1 bit)
@@ -235,6 +240,21 @@ enum {OFF,ON};
 #define DLACMS_VB  0x004
 #define DLACLS_PB  0                   // lsb action
 #define DLACLS_VB  0x001
+
+
+/* bits memDetec */
+
+#define  DETBITLH_VB  0x01 // 1 bit état HIGH LOW
+#define  DETBITLH_PB  0
+#define  DETBITUD_PB  1
+#define  DETBITUD_VB  0x02 // 1 bit flanc/état du déclenchement
+#define  DETBITST_VB  0x0C // 2 bits état (déclenché(TRIG)/attente(WAIT)/disable(DIS)) si DIS le bit d'état est invalide
+#define  DETBITST_PB  2
+#define  DETTRIG      0x03 // valeur DETBIST si déclenché (LH=L falling =H rising)
+#define  DETWAIT      0x02 // valeur         si armé      (LH=H falling =L rising)
+#define  DETIDLE      0x01 // valeur         si pas d'interruption (LH valide)
+#define  DETDIS       0x00 // valeur         si disable (LH invalide)
+
 
 /* codes actions detecteurs logiques sur pulse */
 

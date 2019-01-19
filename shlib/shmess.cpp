@@ -48,8 +48,12 @@ extern uint8_t*  periSondeNb;                  // ptr ds buffer : nbre sonde
 extern boolean*  periProg;                     // ptr ds buffer : flag "programmable"
 extern byte*     periDetNb;                    // ptr ds buffer : Nbre de détecteurs maxi 4 (MAXDET)
 extern byte*     periDetVal;                   // ptr ds buffer : flag "ON/OFF" si détecteur (2 bits par détec))
-extern byte*     periDetVal;                   // ptr ds buffer : flag "ON/OFF" si détecteur (2 bits par détec))
-extern float*    periThOffset;                 // ptr ds buffer : offset correctif sur mesure températureextern int8_t    periMess;                     // code diag réception message (voir MESSxxx shconst.h)
+extern float*    periThOffset;                 // ptr ds buffer : offset correctif sur mesure température
+extern float*    periThmin;                    // ptr ds buffer : alarme mini th
+extern float*    periThmax;                    // ptr ds buffer : alarme maxi th
+extern float*    periVmin;                     // ptr ds buffer : alarme mini volts
+extern float*    periVmax;                     // ptr ds buffer : alarme maxi volts
+extern byte*     periDetServEn;                // ptr ds buffer ; 1 byte 8*enable detecteurs serveur
 
 extern byte      periMacBuf[6];
 extern int8_t    periMess;                     // code diag réception message (voir MESSxxx shconst.h)
@@ -62,6 +66,8 @@ extern int    nbfonct;
 extern char   bufServer[LBUFSERVER];
 
 extern byte   mac[6];
+
+extern byte memDetServ;  // image mémoire NBDSRV détecteurs (8)
 
 char*         periText={TEXTMESS};
 
@@ -243,13 +249,11 @@ char* periDiag(uint8_t diag)
 
 void assySet(char* message,int periCur,char* diag,char* date14)
 {
-#define MSETPERICUR 0
 #ifndef PERIF
+
   sprintf(message,"%02i",periCur);message[2]='\0';periMess=MESSOK;
   strcat(message,"_");
-#endif  ndef PERIF
-#define MSETMAC     3
-#ifndef PERIF
+
             if(periCur>0){                                          // si periCur >0 macaddr ok -> set
                 unpackMac(message+strlen(message),periMacr);}
 
@@ -258,61 +262,42 @@ void assySet(char* message,int periCur,char* diag,char* date14)
                   strcat(message,periDiag(periMess));}
 
             strcat(message,"_");
-#endif  ndef PERIF
-#define MSETDATEHEURE 21
-#ifndef PERIF
+
             memcpy(message+strlen(message),date14,14);
             Serial.println(date14);
             strcat(message,"_");
 
-#endif  ndef PERIF
-#define MSETPERREFR 36
-#ifndef PERIF
             long v1=0;
             if(periCur!=0){                                         // periCur!=0 tfr params
                 v1=*periPerRefr;
                 sprintf((message+strlen(message)),"%05d",v1);       // periPerRefr
                 strcat(message,"_");
-#endif  ndef PERIF
-#define MSETPITCH   42
-#ifndef PERIF
+
                 v1=*periPitch*100;
                 sprintf((message+strlen(message)),"%04d",v1);      // periPitch
                 strcat(message,"_");
 
-#endif  ndef PERIF
-#define MSETINTCDE  47
-#ifndef PERIF
                 v1=strlen(message);                                 // 4 bits commande (8,6,4,2)
                 for(int k=MAXSW;k>0;k--){
                     byte a=*periSwVal;
-                    //Serial.print("*peri==");Serial.println(a,HEX);
                     message[v1+MAXSW-k]=(char)( 48+ ((a>>((k*2)-1)) &0x01) );
                 }      // periSw (cdes)
                 memcpy(message+v1+MAXSW,"_\0",2);
 
-#endif  ndef PERIF
-#define MSETINTPAR  52
-#ifndef PERIF
                 v1+=MAXSW+1;
                 for(int k=0;k<MAXSW;k++){            // 4 bytes contrÔle sw (hh*4)+1 sép /sw
                     for(int p=0;p<MAXTAC;p++){
-                        //Serial.println(*(periSwMode+k*4+p),HEX);
                         conv_htoa(message+v1+k*(2*MAXTAC+1)+p*2,periSwMode+k*MAXTAC+p);
                         }
                     memcpy(message+v1+(k+1)*2*MAXTAC+k,"_\0",2);
                 }
-                //message[v1+MAXSW+MAXSW*9+9]='_';
 
-#endif  ndef PERIF
-#define MSETINTPULS 52+36=88
-#ifndef PERIF
                 v1+=MAXSW*(2*MAXTAC+1);            // len déjà copiée
                 for(int k=0;k<MAXSW*2;k++){                  // 2 compteurs/sw (8*9bytes)
                     sprintf(message+v1+k*(8+1),"%08u",*(periSwPulseOne+k));
                     memcpy(message+v1+(k+1)*8+k,"_\0",2);
                 }
-//Serial.println(message);
+
                 v1+=MAXSW*2*(8+1);
                 for(int k=0;k<MAXSW;k++){           //  bytes pulse Ctl (hh)*maxsw*pmdetlen
                     for(int k0=DLSWLEN-1;k0>=0;k0--){
@@ -321,17 +306,13 @@ void assySet(char* message,int periCur,char* diag,char* date14)
                     }
                     memcpy(message+v1+k*((DLSWLEN*2)+1)+(DLSWLEN*2),"_\0",2);
                 }
-//Serial.println(message);
+                v1+=MAXSW*(DLSWLEN*2+1);
+                conv_htoa(message+v1,(byte*)periDetServEn);
+                conv_htoa(message+v1+2,(byte*)(&memDetServ));
+                memcpy(message+v1+4,"_\0",2);
+
             }  // pericur != 0
-#endif  ndef PERIF
-#define MSETDIAG    88+4*2*9+4*5                          //  =180
 
             strcat(message,diag);                         // periMess
-
-#define MSETLEN     MSETDIAG+LPERIMESS                    //  +5+1=169
-        //Serial.println(message);Serial.println(*periSwPulseCtl,HEX);
-
-                                    #if MSETLEN >= LENMESS
-                                    message trop petit
-                                    #endif
+#endif  ndef PERIF
 }

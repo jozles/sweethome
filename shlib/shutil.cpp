@@ -10,17 +10,20 @@ static unsigned long blinktime=0;
 uint8_t nbreBlink=0;          // si nbreBlink impair   -> blocage
 uint8_t cntBlink=0;
 
+//#define FLAGTIMEOVF
 #define TIMEOVFSLOTNB 10
 uint32_t timeOvfSlot[TIMEOVFSLOTNB];
 
 
-  /* debug */
+  /* debug
 int   cntdebug[NBDBPTS];
 long  timedebug[NBDBPTS*NBDBOC];
 int*  v0debug[NBDBPTS*NBDBOC];
 int*  v1debug[NBDBPTS*NBDBOC];
 char* v2debug[NBDBPTS*NBDBOC];
 char* v3debug[NBDBPTS*NBDBOC];
+*/
+
 int   int00=0;
 int*  int0=&int00;
 
@@ -237,15 +240,17 @@ void timeOvfSet(uint8_t slot)
 
 void timeOvfCtl(uint8_t slot)
 {
+#ifdef FLAGTIMEOVF
     if(slot<=TIMEOVFSLOTNB){
     Serial.print("tOvf[");Serial.print(slot);
     Serial.print("]=");Serial.println((micros()-timeOvfSlot[slot-1]));
     if((micros()-timeOvfSlot[slot-1])>2000){Serial.print("<<<<<<<<<<<<");}
     }
+#endif
 }
 
-/* debug */
 
+/* debug
 
 void debug(int cas){
   if(cntdebug[cas]==0 || cas==1){
@@ -287,19 +292,21 @@ void initdebug()
     cntdebug[dg]=0;for(int dp=0;dp<NBDBOC;dp++){timedebug[dg*NBDBOC+dp]=0;}
   }
 }
+*/
+
 
 bool ctlpass(char* data,char* model)
 {
   int j=0;
   bool passok=FAUX;
 
-  dumpstr(data,16);
+  //dumpstr(data,16);
   for(j=0;j<LENVAL;j++){
 
     if(model[j]==0){passok=VRAI;break;}
     if(data[j]!=pass[j]){break;}
   }
-Serial.print(passok);Serial.println(data);
+//Serial.print(passok);Serial.println(data);
 
   return passok;
 }

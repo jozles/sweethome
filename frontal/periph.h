@@ -30,7 +30,7 @@ void readDS3231temp(byte *msb,byte *lsb);
 
 void ledblink(uint8_t nbre);
 
-void getdate(long* hms2,long* amj2,byte* js);
+void getdate(uint32_t* hms2,uint32_t* amj2,byte* js);
 
 int   periLoad(int num);
 int   periSave(int num);

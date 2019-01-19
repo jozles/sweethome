@@ -3,8 +3,7 @@
 
 //#define WEMOS
 
-#define _MODE_DEVT    // change l'adresse Mac de la carte IP, l'adresse IP et le port
-#define VERSION "1.1j"
+#define VERSION "1.1k"
 /* 1.1 ajout voltage dans données data_read_ ; modif unpackMac
  * 1.1a ajout volts et version dans table
  * 1.1b suppression dht ; ajout periDetVal et periSwVal avec affichage/saisie dans la table ; gestion serveur dev
@@ -23,6 +22,7 @@
  * 1.1g suppression accueil et fonctions associées, mise en place perisend(cliext)      
  * 1.1h pulse opérationnel ; ajout variable (float) periThOffset dans periRec (offset sur température mesurée)
  * 1.1j corespond à la version 1.c de peripherique
+ * 1.1k ajout alarmes th et volts + champs detecteurs du serveur
  *      
  * à faire :
  *     
@@ -32,10 +32,7 @@
  *     
  */
 
-#define DS3231_I2C_ADDRESS 0x68         // adresse 3231 sur bus I2C
-
-#define PINDHT11 2
-
+#define _MODE_DEVT    // change l'adresse Mac de la carte IP, l'adresse IP et le port
 
 #ifdef _MODE_DEVT
 #define IPMACADDR {0x90, 0xA2, 0xDA, 0x0F, 0xDF, 0xAC}   //adresse mac carte ethernet AB service ; AC devt
@@ -51,10 +48,13 @@
 #define NOMSERV "sweet home"
 #endif _MODE_DEVT
 
+#define DS3231_I2C_ADDRESS 0x68         // adresse 3231 sur bus I2C
+
+#define PINDHT11 2
 
 #define NBPERIF 10                           
 #define PERINAMLEN 16+1                      // longueur nom perif
-#define PERIRECLEN 193 // V1.1j              // longueur record périph
+#define PERIRECLEN 211 // V1.1j              // longueur record périph
 
 
 #define SDOK 1
@@ -378,5 +378,12 @@ total xxx
     1 byte      param           (bit 0 affichage O/N, bit 1 présente O/N, ... 
     
 */
+
+
+/* debug tips & tricks
+ *  si une variable ne reste pas modifiée après le re-affichage de péritable, c'est qu'il n'y a pas de periSave après la modif
+ *  apparition de 0D0A à la suite de la valeur dans GET ... -> filtrage des car < 0x21
+ */
+
 
 #endif // _CONST_H_

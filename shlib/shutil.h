@@ -23,11 +23,11 @@ bool ctlpass(char* data,char* model);
 void timeOvfSet(uint8_t slot);
 void timeOvfCtl(uint8_t slot);
 
-
+/*
 void initdebug();
 void showdebug();
 void debug(int cas);
 void setdebug(int cas,int* v0,int* v1,char* v2, char* v3);
-
+*/
 #endif UTIL_H_
 

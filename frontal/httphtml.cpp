@@ -10,12 +10,14 @@
 #include "utilether.h"
 
 #ifndef WEMOS
-  #include <avr/wdt.h>  //biblio watchdog
+//  #include <avr/wdt.h>  //biblio watchdog
 #endif ndef WEMOS
 
 extern File fhisto;      // fichier histo sd card
 extern long sdpos;
 extern char strSD[RECCHAR];
+
+extern byte memDetServ;  // image mémoire NBDSRV détecteurs (8)
 
 //extern EthernetClient cli;
 
@@ -56,6 +58,12 @@ extern boolean*  periProg;                     // ptr ds buffer : flag "programm
 extern byte*     periDetNb;                    // ptr ds buffer : Nbre de détecteurs maxi 4 (MAXDET)
 extern byte*     periDetVal;                   // ptr ds buffer : flag "ON/OFF" si détecteur (2 bits par détec))
 extern float*    periThOffset;                 // ptr ds buffer : offset correctif sur mesure température
+extern float*    periThmin;                    // ptr ds buffer : alarme mini th
+extern float*    periThmax;                    // ptr ds buffer : alarme maxi th
+extern float*    periVmin;                     // ptr ds buffer : alarme mini volts
+extern float*    periVmax;                     // ptr ds buffer : alarme maxi volts
+extern byte*     periDetServEn;                // ptr ds buffer : 1 byte 8*enable detecteurs serveur
+
 extern int8_t    periMess;                     // code diag réception message (voir MESSxxx shconst.h)
 extern byte      periMacBuf[6]; 
 
@@ -63,6 +71,8 @@ extern void init_params();
 extern int  chge_pwd; //=FAUX;
 
 extern byte mask[];
+
+  char colour[8];
 
 void cliPrintMac(EthernetClient* cli, byte* mac)
 {
@@ -135,7 +145,7 @@ int dumpsd(EthernetClient* cli)                 // liste le fichier de la carte 
     {
     inch=fhisto.read();ptr++;
 #ifndef WEMOS
-    cnt++;if(cnt>5000){wdt_reset();cnt=0;}  
+//    cnt++;if(cnt>5000){wdt_reset();cnt=0;}  
 #endif ndef WEMOS
     if(!ignore)
       {
@@ -156,6 +166,27 @@ int dumpsd(EthernetClient* cli)                 // liste le fichier de la carte 
   return sdOpen(FILE_WRITE,&fhisto,"fdhisto.txt");
   return SDOK;
 }
+
+void textTableHtml(EthernetClient* cli,char type,float* valfonct,float* valmin,float* valmax,uint8_t br,uint8_t td)
+{
+  memcpy(colour,"black\0",6);if(*valfonct<*valmin || *valfonct>*valmax){memcpy(colour,"red\0",4);}
+  if(td==1 || td==2){cli->print("<td>");}
+    cli->print("<font color=\"");cli->print(colour);cli->print("\"> ");
+/*    switch (type){
+      case 'b':cli->print(*(byte*)valfonct);break;
+      case 'd':cli->print(*(uint16_t*)valfonct);break;
+      case 'i':cli->print(*(int*)valfonct);break;
+      case 'l':cli->print(*(long*)valfonct);break;
+      case 'f':cli->print(*(float*)valfonct);break;
+      case 'g':cli->print(*(uint32_t*)valfonct);break;    
+      default:break;}
+*/
+  cli->print(*valfonct);  
+  cli->print("</font>");
+  if(br==1){cli->print("<br>");}
+  if(td==2 || td==3){cli->println("</td>");}
+}
+
 
 void lnkTableHtml(EthernetClient* cli,char* nomfonct,char* lib)
 {
@@ -217,6 +248,18 @@ void checkboxTableHtml(EthernetClient* cli,uint8_t* val,char* nomfonct,int etat,
       }
   if(td==1 || td==3){cli->print("</td>");}
   cli->println();
+}
+
+void subDSn(EthernetClient* cli,char* fnc,uint8_t val,uint8_t num) // checkbox transportant 1 bit 
+                                                                       // num le numéro du bit dans le byte
+                                                                       // le caractère LENNOM-1 est le numéro du bit(+PMFNCHAR) dans periDetServ 
+
+{
+  char fonc[LENNOM+1];
+  memcpy(fonc,fnc,LENNOM+1);
+  fonc[LENNOM-1]=(char)(PMFNCHAR+num);
+  val=(val>>num)&0x01;
+  checkboxTableHtml(cli,&val,fonc,-1,0);
 }
 
 void subMPn(EthernetClient* cli,uint8_t sw,uint8_t num,uint8_t nb)   // numbox transportant une valeur avec fonction peri_pmo__
@@ -366,13 +409,15 @@ Serial.print("début péritable ; remote_IP ");serialPrintIp(remote_IP_cur);Seri
           lnkTableHtml(cli,"dump_sd___","dump SDcard");
           cli->print("(");long sdsiz=fhisto.size();cli->print(sdsiz);cli->println(") ");
           numTableHtml(cli,'i',(uint32_t*)&sdpos,"sd_pos____",9,0,0);cli->print("<input type=\"submit\" value=\"ok\">");
-          cli->print(" <input type=\"password\" name=\"macmaster_\" id=\"macMaster\" value=\"\" size=\"6\" maxlength=\"8\" >");
+          cli->print(" <input type=\"password\" name=\"macmaster_\" id=\"macMaster\" value=\"\" size=\"6\" maxlength=\"8\" >    détecteurs serveur :");
+          for(int k=0;k<NBDSRV;k++){subDSn(cli,"mem_dsrv__\0",memDetServ,k);}
           cli->println("<br>");
+          
 
           cli->println("<table>");
               cli->println("<tr>");
                 //cli->println(" ON=VRAI=1=HAUT=CLOSE=GPIO2=ROUGE");
-                cli->println("<th></th><th><br>nom_periph</th><th><br>TH</th><th><br>  V </th><th>per<br>pth<br>ofs</th><th>nb<br>sd<br>pg</th><th>nb<br>sw</th><th><br>_O_I___</th><th>nb<br>dt</th><th></th><th>mac_addr<br>ip_addr</th><th>version<br>last out<br>last in</th><th></th><th>time One<br>time Two</th><th>f<br>r</th><th>e.l _f_H.a<br>n.x _t_L.c</th><th>___det__srv._pul<br></th>");
+                cli->println("<th></th><th><br>nom_periph</th><th><br>TH</th><th><br>  V </th><th>per<br>pth<br>ofs</th><th>nb<br>sd<br>pg</th><th>nb<br>sw</th><th><br>_O_I___</th><th>nb<br>dt</th><th></th><th>mac_addr<br>ip_addr</th><th>version<br>last out<br>last in</th><th></th><th>det<br>srv<br>en</th><th>time One<br>time Two</th><th>f<br>r</th><th>e.l _f_H.a<br>n.x _t_L.c</th><th>___det__srv._pul<br></th>");
               cli->println("</tr>");
 
               for(i=1;i<=NBPERIF;i++){
@@ -380,7 +425,9 @@ Serial.print("début péritable ; remote_IP ");serialPrintIp(remote_IP_cur);Seri
                 // pour permettre periLoad préalablement aux mises à jour des données quand le navigateur 
                 // envoie une commande GET/POST 
                 // et pour assurer l'effacement des bits de checkbox : le navigateur ne renvoie que ceux "checkés"
-                periInitVar();periLoad(i);periCur=i;
+                periInitVar();periLoad(i);
+                //memset(periLastDateIn,'0',LENPERIDATE);//memset(periLastDateOut,'0',LENPERIDATE);
+                periCur=i;
                 if(*periSwNb>MAXSW){*periSwNb=MAXSW;periSave(i);}
 
                 cli->println("<tr>");
@@ -389,8 +436,12 @@ Serial.print("début péritable ; remote_IP ");serialPrintIp(remote_IP_cur);Seri
                       numTableHtml(cli,'i',&periCur,"peri_cur__",2,1,0);
                       cli->print("<td><input type=\"text\" name=\"peri_nom__\" value=\"");
                          cli->print(periNamer);cli->print("\" size=\"12\" maxlength=\"");cli->print(PERINAMLEN-1);cli->print("\" ></td>");
-                      cli->print("<td>");cli->print(*periLastVal);cli->print("</td>");
-                      cli->print("<td>");cli->print(*periAlim);cli->println("</td>");
+                      textTableHtml(cli,'f',periLastVal,periThmin,periThmax,1,1);
+                      numTableHtml(cli,'f',periThmin,"peri_thmin",5,0,0);cli->print("<br>");
+                      numTableHtml(cli,'f',periThmax,"peri_thmax",5,3,0);
+                      textTableHtml(cli,'f',periAlim,periVmin,periVmax,1,1);
+                      numTableHtml(cli,'f',periVmin,"peri_vmin_",5,0,0);cli->print("<br>");
+                      numTableHtml(cli,'f',periVmax,"peri_vmax_",5,3,0);
                       numTableHtml(cli,'l',(uint32_t*)periPerRefr,"peri_refr_",5,2,0);cli->print("<br>");
                       numTableHtml(cli,'f',periPitch,"peri_pitch",5,0,0);cli->print("<br>");
                       numTableHtml(cli,'f',periThOffset,"peri_tofs_",5,3,0);
@@ -401,18 +452,21 @@ Serial.print("début péritable ; remote_IP ");serialPrintIp(remote_IP_cur);Seri
                       xradioTableHtml(cli,*periSwVal,"peri_intv\0",2,*periSwNb,3);
                       numTableHtml(cli,'b',periDetNb,"peri_detnb",1,1,0);
                       cli->print("<td>");
-                      for(uint8_t k=0;k<*periDetNb;k++){char oi[2]={'O','I'};byte b=*periDetVal; b=b >> k*2;b&=0x01;cli->print(oi[b]);if(k<*periDetNb-1){cli->print("<br>");}}
+                      for(uint8_t k=0;k<*periDetNb;k++){char oi[2]={'O','I'};cli->print(oi[(*periDetVal>>(k*2))&DETBITLH_VB]);if(k<*periDetNb-1){cli->print("<br>");}}
                       cli->println("</td>");
                       cli->print("<td><input type=\"text\" name=\"peri_mac__\" value=\"");for(int k=0;k<6;k++){cli->print(chexa[periMacr[k]/16]);cli->print(chexa[periMacr[k]%16]);}
-                         ;cli->println("\" size=\"11\" maxlength=\"12\" ><br><br>");
+                        cli->println("\" size=\"11\" maxlength=\"12\" ><br><br>");
                       cli->print("<font size=\"2\">");for(j=0;j<4;j++){cli->print(periIpAddr[j]);if(j<3){cli->print(".");}}cli->println("</font></td>");
                       cli->print("<td><font size=\"2\">");for(j=0;j<LENVERSION;j++){cli->print(periVers[j]);}cli->println("<br>");
                       char dateascii[12];
-                      unpackDate(dateascii,periLastDateIn);for(j=0;j<12;j++){cli->print(dateascii[j]);if(j==5){cli->print(" ");}}cli->println("<br>");
-                      unpackDate(dateascii,periLastDateOut);for(j=0;j<12;j++){cli->print(dateascii[j]);if(j==5){cli->print(" ");}}
-                         cli->println("</font></td>");
+                      unpackDate(dateascii,periLastDateOut);for(j=0;j<12;j++){cli->print(dateascii[j]);if(j==5){cli->print(" ");}}cli->println("<br>");
+                      unpackDate(dateascii,periLastDateIn);for(j=0;j<12;j++){cli->print(dateascii[j]);if(j==5){cli->print(" ");}}
+                        cli->println("</font></td>");
                       
                       cli->println("<td><input type=\"submit\" value=\"MàJ\"></td>");
+                      cli->println("<td>");for(int k=0;k<NBDSRV;k++){
+                        subDSn(cli,"peri_dsv__\0",*periDetServEn,k);if(k%2==1 && k<NBDSRV-1){cli->println("<br>");}}
+                      cli->println("</td>");
                       SwCtlTableHtml(cli,*periSwNb,4);
 
                   cli->print("</form>");
@@ -470,5 +524,8 @@ void cbErase()      // ******************** effacement des bits checkbox *******
         /* periSwMode */
         byte sh=SWMDLEN_VB+SWMDLHL_VB+SWMSEN_VB+SWMSHL_VB+SWMPEN_VB+SWMPHL_VB; // mask des bits / mode
         for(int sw=0;sw<(*periSwNb)*MAXTAC;sw++){*(periSwMode+sw)&= ~sh;}      // effacement 
+
+        /* periDetServ */
+        *periDetServEn=0;
 }
 

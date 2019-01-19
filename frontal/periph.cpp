@@ -41,7 +41,12 @@ extern boolean*  periProg;                     // ptr ds buffer : flag "programm
 extern byte*     periDetNb;                    // ptr ds buffer : Nbre de détecteurs maxi 4 (MAXDET)
 extern byte*     periDetVal;                   // ptr ds buffer : flag "ON/OFF" si détecteur (2 bits par détec))
 extern float*    periThOffset;                 // ptr ds buffer : offset correctif sur mesure température
-  
+extern float*    periThmin;                    // ptr ds buffer : alarme mini th
+extern float*    periThmax;                    // ptr ds buffer : alarme maxi th
+extern float*    periVmin;                     // ptr ds buffer : alarme mini volts
+extern float*    periVmax;                     // ptr ds buffer : alarme maxi volts
+extern byte*     periDetServEn;                // ptr ds buffer : 1 byte 8*enable detecteurs serveur
+      
 
 extern byte*     periBegOfRecord;
 extern byte*     periEndOfRecord;
@@ -102,6 +107,7 @@ Ymdhms now()
   Ymdhms ndt;
   uint8_t dayOfWeek;
   readDS3231time(&ndt.second,&ndt.minute,&ndt.hour,&dayOfWeek,&ndt.day,&ndt.month,&ndt.year);
+  Serial.print("DS3231=");Serial.print(ndt.year);Serial.print(ndt.month);Serial.println(ndt.day);
   return ndt;
 }
 
@@ -125,29 +131,7 @@ void readDS3231temp(byte* msb,byte* lsb)
   }
 }
 
-/*
-void lb0()
-{
-    if(millis()>blinktime){
-       if(digitalRead(PINLED)==HIGH){digitalWrite(PINLED,LOW);
-          if(cntBlink<=1){blinktime=millis()+SLOWBLINK;}
-          else{blinktime=millis()+FASTBLINK;}
-          if(cntBlink>0){cntBlink--;}
-       }
-       else {digitalWrite(PINLED,HIGH);blinktime=millis()+PULSEBLINK;}        
-       if(cntBlink==0){cntBlink=nbreBlink;}      // recharge cntblink
-    }
-}
-
-void ledblink(uint8_t nbBlk)    // nbre blinks rapides tous les PERBLINK
-{ 
-         if(nbreBlink==0){nbreBlink=nbBlk;}                   // une fois nbreBlink chargé, la consigne est ignorée
-         while(nbreBlink%2!=0){lb0();}                        // si nbreBlink impair blocage            
-         lb0();                                               // sinon blink 1 ou nbreBlink
-}
-*/
-
-void getdate(long* hms2,long* amj2,byte* js)
+void getdate(uint32_t* hms2,uint32_t* amj2,byte* js)
 {
   char* days={"SunMonTueWedThuFriSat"};
   char* months={"JanFebMarAprMayJunJulAugSepOctNovDec"};
@@ -156,7 +140,7 @@ void getdate(long* hms2,long* amj2,byte* js)
   char buf[8];for(byte i=0;i<8;i++){buf[i]=0;} 
   readDS3231time(&seconde,&minute,&heure,js,&jour,&mois,&annee);
   *hms2=(long)(heure)*10000+(long)minute*100+(long)seconde;*amj2=(long)(annee+2000)*10000+(long)mois*100+(long)jour;
-  for(i=0;i<32;i++){strdate[i]=0;}
+  memset(strdate,0x00,sizeof(strdate));
   strncpy(strdate,days+(*(js)-1)*3,3);strcat(strdate,", ");sprintf(buf,"%u",(byte)jour);strcat(strdate,buf);
   strcat(strdate," ");strncat(strdate,months+(mois-1)*3,3);strcat(strdate," ");sprintf(buf,"%u",annee+2000);strcat(strdate,buf);
   strcat(strdate," ");sprintf(buf,"%.2u",heure);strcat(strdate,buf);strcat(strdate,":");sprintf(buf,"%.2u",minute);
@@ -212,7 +196,7 @@ int periSave(int num)
     sta=SDOK;
     fperi.seek(0);
     for(i=0;i<PERIRECLEN;i++){fperi.write(periRec[i]);}
-    //for(i=0;i<PERIRECLEN+sizeof(float);i++){fperi.write(periRec[i]);}      // ajouter les longueurs des variables ajoutées avant de modifier PERIRECLEN
+//for(i=0;i<PERIRECLEN+4*sizeof(float)+2*sizeof(byte);i++){fperi.write(periRec[i]);}      // ajouter les longueurs des variables ajoutées avant de modifier PERIRECLEN
     fperi.close();
     for(int x=0;x<4;x++){lastIpAddr[x]=periIpAddr[x];}
   }
@@ -284,10 +268,21 @@ void periInit()                 // pointeurs de l'enregistrement de table couran
   temp +=sizeof(byte);
   periThOffset=(float*)temp;
   temp +=sizeof(float);
+  periThmin=(float*)temp;
+  temp +=sizeof(float);
+  periThmax=(float*)temp;
+  temp +=sizeof(float);  
+  periVmin=(float*)temp;
+  temp +=sizeof(float);  
+  periVmax=(float*)temp;
+  temp +=sizeof(float);  
+  periDetServEn=(byte*)temp;
+  temp +=1*sizeof(byte);
+//  dispo=(byte*)temp;
+  temp +=1*sizeof(byte);
   periEndOfRecord=(byte*)temp;      // doit être le dernier !!!
   temp ++;
   
-//#define PERIRECCTL sizeof(int)+sizeof(char)*(15+PERINAMLEN)+sizeof(byte)*6+sizeof(long)+sizeof(boolean)*6+sizeof(float)*2+4
 
   periInitVar();
 }
@@ -299,9 +294,9 @@ void periInitVar()
   *periPitch=0;
   *periLastVal=0;
   *periAlim=0;
-  memset(periLastDateIn,'0',LENPERIDATE);
-  memset(periLastDateOut,'0',LENPERIDATE);
-  memset(periLastDateErr,'0',LENPERIDATE);
+  memset(periLastDateIn,0x00,LENPERIDATE);
+  memset(periLastDateOut,0x00,LENPERIDATE);
+  memset(periLastDateErr,0x00,LENPERIDATE);
   *periErr=0;
   memset(periNamer,' ',PERINAMLEN);periNamer[PERINAMLEN-1]='\0';
   memset(periVers,' ',LENVERSION);periVers[LENVERSION-1]='\0';
@@ -322,6 +317,11 @@ void periInitVar()
   *periDetNb=0;
   *periDetVal=0;
   *periThOffset=0;
+  *periThmin=-99;
+  *periThmax=+125;
+  *periVmin=3.25;
+  *periVmax=3.50;
+   memset(periDetServEn,0x00,2);
 }
 
 void periConvert()        
