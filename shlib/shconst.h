@@ -41,10 +41,17 @@
 #define MPOSMDIAG   MPOSEXTDEN+4    // texte diag
 #define MLMSET      MPOSMDIAG+5     // longueur message fonction incluse
 
+
     // fonctions
 
+/*      message GET envoyé par periTable peut envoyer 251 fonctions (maxi version 1.1k)
+        le buffer strSD de l'enregistrement d'historique doit pouvoir le contenir + entete et pied
+        même pb pour valeurs, nvalf et libfonctions
+        valeurs et strSD n'ont pas une longueurs fixe pour chaque fonction donc contrôle de décap
+
+*/
 #define LENNOM  10    // nbre car nom de fonction
-#define NBVAL   64    // nbre maxi fonct/valeurs pour getnv() --- les noms de fonctions font 10 caractères + 2 séparateurs + la donnée associée = LENVAL
+#define NBVAL  256    // nbre maxi fonct/valeurs pour getnv() --- les noms de fonctions font 10 caractères + 2 séparateurs + la donnée associée = LENVAL
                       // taille macxi pour GET (IE)=2048  ; pour POST plusieurs mega
                       // avec un arduino Atmel la limitation vient de la taille de la ram
 #define LENVAL 128    // nbre car maxi valeur (vérifier datasave)

@@ -118,6 +118,10 @@ void htmlIntro(char* titre,EthernetClient* cli)
             cli->println("#cb1{width:10px; padding:0px; margin:0px; text-align: center};");
             cli->println("#cb2{width:20px; text-align: center};");
 
+            cli->print(".button { background-color: #195B6A; border: none; color: white; padding: 16px 40px;");
+            cli->println("text-decoration: none; font-size: 30px; margin: 2px; cursor: pointer;}");
+            cli->println(".button2 {background-color: #77878A;");
+
           cli->println("</style>");
   cli->println("</head>");
 }
@@ -165,6 +169,22 @@ int dumpsd(EthernetClient* cli)                 // liste le fichier de la carte 
 
   return sdOpen(FILE_WRITE,&fhisto,"fdhisto.txt");
   return SDOK;
+}
+
+void boutonHtml(EthernetClient* cli,byte* valfonct,char* nomfonct,uint8_t sw,uint8_t td)         
+{
+  char tonoff[]={'O','F','F','\0'};
+
+  nomfonct[LENNOM-2]=(char)(PMFNCHAR+sw);
+  nomfonct[LENNOM-1]='1';
+
+  if(td==1 || td==2){cli->print("<td>");}
+  if ((*valfonct>>(sw*2))&0x01==0) {nomfonct[LENNOM-1]='0';memcpy(tonoff,"ON \0",4);}
+  cli->print("<a href=\"");cli->print(nomfonct);cli->print("\"><button class=\"button\">");cli->print(tonoff);cli->println("</button></a>");
+//  cli->print("<input type=\"button\" name=\"");cli->print(nomfonct);cli->print("\" <button class=\"button\">");cli->print(tonoff);cli->println("</button></a>");
+  if(td==2 || td==3){cli->println("</td>");}
+//              cli->println("<p><a href=\"/B/off\"><button class=\"button button2\">OFF</button></a></p>");
+
 }
 
 void textTableHtml(EthernetClient* cli,char type,float* valfonct,float* valmin,float* valmax,uint8_t br,uint8_t td)
@@ -436,6 +456,7 @@ Serial.print("début péritable ; remote_IP ");serialPrintIp(remote_IP_cur);Seri
                       numTableHtml(cli,'i',&periCur,"peri_cur__",2,1,0);
                       cli->print("<td><input type=\"text\" name=\"peri_nom__\" value=\"");
                          cli->print(periNamer);cli->print("\" size=\"12\" maxlength=\"");cli->print(PERINAMLEN-1);cli->print("\" ></td>");
+                     // boutonHtml(cli,periSwVal,"peri_swb__",0,2);
                       textTableHtml(cli,'f',periLastVal,periThmin,periThmax,1,1);
                       numTableHtml(cli,'f',periThmin,"peri_thmin",5,0,0);cli->print("<br>");
                       numTableHtml(cli,'f',periThmax,"peri_thmax",5,3,0);

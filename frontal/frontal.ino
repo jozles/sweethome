@@ -65,8 +65,8 @@ EthernetServer periserv(PORTSERVER);      // port 1789 service, 1790 devt
 */
   byte    macMaster[6]={0,0,0,0,0,0};
 
-  int8_t  numfonct[NBVAL];             // les fonctions trouvées 
-  char*   fonctions="per_temp__macmaster_peri_pass_dump_sd___test2sw___done______per_refr__peri_tofs_per_date__reset_____password__sd_pos____data_save_data_read_peri_dispoperi_cur__peri_refr_peri_nom__peri_mac__accueil___peri_tableperi_prog_peri_sondeperi_pitchperi_pmo__peri_detnbperi_intnbperi_intv0peri_intv1peri_intv2peri_intv3peri_dispoperi_otf__peri_imn__peri_imc__peri_pto__peri_ptt__peri_thminperi_thmaxperi_vmin_peri_vmax_peri_dsv__mem_dsrv__last_fonc_";  //};
+  int8_t  numfonct[NBVAL];             // les fonctions trouvées  (au max version 1.1k 23+4*57=251)
+  char*   fonctions="per_temp__macmaster_peri_pass_dump_sd___test2sw___done______per_refr__peri_tofs_per_date__reset_____password__sd_pos____data_save_data_read_peri_swb__peri_cur__peri_refr_peri_nom__peri_mac__accueil___peri_tableperi_prog_peri_sondeperi_pitchperi_pmo__peri_detnbperi_intnbperi_intv0peri_intv1peri_intv2peri_intv3peri_dispoperi_otf__peri_imn__peri_imc__peri_pto__peri_ptt__peri_thminperi_thmaxperi_vmin_peri_vmax_peri_dsv__mem_dsrv__last_fonc_";  //};
                                        // nombre fonctions, valeur pour accueil, data_save_ fonctions multiples etc
   int     nbfonct=0,faccueil=0,fdatasave=0,fperiSwVal=0,fperiDetSs=0,fdone=0,fpericur=0,fperipass=0,fpassword=0;
   char    valeurs[LENVALEURS];         // les valeurs associées à chaque fonction trouvée
@@ -490,7 +490,7 @@ void loop()                             // =====================================
 //           Serial.print(i);Serial.print(" nf[i]=");Serial.print(numfonct[i]);Serial.print(" valf=");Serial.println(valf);            
 //          strSD = en-tete + n fonctions + pied(strSdEnd) ; le pied est écrasé à chaque ajout de fonction
             
-            if(strlen(strSD)+strlen(valf)+5+strlen(strSdEnd)<RECCHAR){
+            if((strlen(strSD)+strlen(valf)+5+strlen(strSdEnd))<RECCHAR){
               strSD[strlen(strSD)-strlen(strSdEnd)]='\0';sprintf(buf,"%d",numfonct[i]);strcat(strSD,buf);
               strcat(strSD," ");strcat(strSD,valf);strcat(strSD,";");strcat(strSD,strSdEnd);}
             else {strSD[strlen(strSD)-strlen(strSdEnd)]='*';}
@@ -523,7 +523,12 @@ void loop()                             // =====================================
               case 11: sdpos=0;conv_atobl(valf,&sdpos);break;                                               // SD pos
               case 12: what=1;periDataRead();break;                                                         // data_save
               case 13: what=3;periDataRead();break;                                                         // data_read
-              case 14: break;                                                                               // dispo
+              case 14: what=5;{                                                                              // peri swb (buton)
+                       uint8_t sw;sw=*(libfonctions+2*i)-PMFNCHAR;                                          // sw n° switch
+                       uint8_t sh;sh=libfonctions[2*i+1]-PMFNCHAR;                                          // sh 0 ou 1 état demandé
+                       byte mask=(0x01<<sw*2);
+                       *periSwVal&=~mask;*periSwVal|=mask;
+                       }break;
               case 15: what=4;periCur=0;conv_atob(valf,&periCur);                                           // N° périph courant  
                        if(periCur>NBPERIF){periCur=NBPERIF;}                                                // géré automatiquement (maj manuelle interdite)
                        periInitVar();periLoad(periCur);
@@ -804,7 +809,7 @@ int analyse(EthernetClient* cli)              // decode la chaine et remplit les
   memset(libfonctions,0x00,sizeof(libfonctions));
 
       nvalf[0]=0;
-      memset(valeurs,0,LENVALEURS);                     // effacement critique (password etc...)
+      memset(valeurs,0,LENVALEURS+1);                   // effacement critique (password etc...)
       memset(noms,' ',LENNOM);
       numfonct[0]=-1;                                   // aucune fonction trouvée
      
@@ -837,10 +842,10 @@ int analyse(EthernetClient* cli)              // decode la chaine et remplit les
               }
               if (nom==VRAI && c!='?' && c!=':' && c!='&' && c>' '){noms[j]=c;if(j<LENNOM-1){j++;}}              // acquisition nom
               if (val==VRAI && c!='&' && c!=':' && c!='=' && c>' '){
-                valeurs[nvalf[i+1]]=c;if(nvalf[i+1]<=LENVALEURS-1){nvalf[i+1]++;}}          
+                valeurs[nvalf[i+1]]=c;if(nvalf[i+1]<=LENVALEURS-1){nvalf[i+1]++;}}                               // contôle decap !
               if (val==VRAI && (c=='&' || c<=' ')){
                 nom=VRAI;val=FAUX;j=0;Serial.println();
-                if(c==' ' || c<=' '){termine=VRAI;}}                                                              // ' ' interdit dans valeur : indique fin données                                 
+                if(c==' ' || c<=' '){termine=VRAI;}}                                                             // ' ' interdit dans valeur : indique fin données                                 
             }
           }                                                                                             // acquisition valeur terminée (données aussi si c=' ')
         }

@@ -311,40 +311,6 @@ void memdetinit()
     memset(cstRec.cntPulseTwo,0x00,sizeof(cstRec.cntPulseTwo));
 }
 
-/*
-void initPolPin(uint8_t det)         // setup détecteur det selon pulseCtl en fin de debounce ;
-{                                     
-  uint64_t swctl;
-
-  Serial.print(det);Serial.print(" ********* initPolPin (");Serial.print((cstRec.memDetec[det]>>DETBITLH_PB)&0x01);Serial.print("->");
-
-  cstRec.memDetec[det] &= ~DETBITST_VB;                                        // raz bits ST
-  cstRec.memDetec[det] |= DETIDLE<<DETBITST_PB;                                // set bits ST (idle par défaut)
-  byte lev=levdet(det);                                                        // levdet positionne DETBITST pour les det externes
-                                                                               // donc après idle
-  cstRec.memDetec[det] &= ~DETBITLH_VB;                                        // raz bits LH
-  cstRec.memDetec[det] |= lev<<DETBITLH_PB;                                    // set bit  LH  = detec   
-
-  Serial.print(lev);Serial.print(") time=");
-   
-  for(uint8_t sw=0;sw<NBSW;sw++){                                 // recherche des utilisations du détecteur dans le périphérique
-    memcpy(&swctl,&cstRec.pulseCtl[sw*DLSWLEN],DLSWLEN);          // dans les bytes d'un switch
-    for(uint8_t dd=0;dd<DLNB;dd++){                               // pour chaque dl       
-      if(                                                                       // si...
-           ((swctl>>(dd*DLBITLEN+DLEL_PB))&0x01==DLLOCAL)                       // local
-        && ((swctl>>(dd*DLBITLEN+DLNLS_PB))&mask[DLNMS_PB-DLNLS_PB+1]==det)     // num ok
-        && ((swctl>>(dd*DLBITLEN+DLENA_PB)&0x01)!=0)                            // enable
-        )
-        {
-          cstRec.memDetec[det] &= ~DETBITST_VB;                                       // raz bits ST
-          cstRec.memDetec[det] |= DETWAIT<<DETBITST_PB;                               // set bits ST (armé)
-        }
-    }
-  }
-  Serial.println(detTime[det]);  
-  detTime[det]=0;
-}
-*/
 
 void polDx(uint8_t det)              // poling détecteurs physiques et spéciaux -> maj memDetec
 { 
@@ -434,5 +400,41 @@ void initIntPin(uint8_t det)              // enable interrupt du détecteur det 
 }
 */
 
+
+
+/*
+void initPolPin(uint8_t det)         // setup détecteur det selon pulseCtl en fin de debounce ;
+{                                     
+  uint64_t swctl;
+
+  Serial.print(det);Serial.print(" ********* initPolPin (");Serial.print((cstRec.memDetec[det]>>DETBITLH_PB)&0x01);Serial.print("->");
+
+  cstRec.memDetec[det] &= ~DETBITST_VB;                                        // raz bits ST
+  cstRec.memDetec[det] |= DETIDLE<<DETBITST_PB;                                // set bits ST (idle par défaut)
+  byte lev=levdet(det);                                                        // levdet positionne DETBITST pour les det externes
+                                                                               // donc après idle
+  cstRec.memDetec[det] &= ~DETBITLH_VB;                                        // raz bits LH
+  cstRec.memDetec[det] |= lev<<DETBITLH_PB;                                    // set bit  LH  = detec   
+
+  Serial.print(lev);Serial.print(") time=");
+   
+  for(uint8_t sw=0;sw<NBSW;sw++){                                 // recherche des utilisations du détecteur dans le périphérique
+    memcpy(&swctl,&cstRec.pulseCtl[sw*DLSWLEN],DLSWLEN);          // dans les bytes d'un switch
+    for(uint8_t dd=0;dd<DLNB;dd++){                               // pour chaque dl       
+      if(                                                                       // si...
+           ((swctl>>(dd*DLBITLEN+DLEL_PB))&0x01==DLLOCAL)                       // local
+        && ((swctl>>(dd*DLBITLEN+DLNLS_PB))&mask[DLNMS_PB-DLNLS_PB+1]==det)     // num ok
+        && ((swctl>>(dd*DLBITLEN+DLENA_PB)&0x01)!=0)                            // enable
+        )
+        {
+          cstRec.memDetec[det] &= ~DETBITST_VB;                                       // raz bits ST
+          cstRec.memDetec[det] |= DETWAIT<<DETBITST_PB;                               // set bits ST (armé)
+        }
+    }
+  }
+  Serial.println(detTime[det]);  
+  detTime[det]=0;
+}
+*/
 
 #endif NO_MODE
