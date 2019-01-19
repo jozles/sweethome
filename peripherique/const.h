@@ -126,8 +126,8 @@ Modifier :
 #define THESP01 '1'
 #define THESP12 '2'
 
-#define CARTE VR                      // <------------- modèle carte
-#define POWER_MODE NO_MODE            // <------------- type d'alimentation 
+#define CARTE THESP01                      // <------------- modèle carte
+#define POWER_MODE PO_MODE            // <------------- type d'alimentation 
 
 #if POWER_MODE==NO_MODE
   #define _SERVER_MODE
@@ -156,33 +156,21 @@ Modifier :
 #define MODEL_S 0x10
 #define MODEL_B 0x28
 
-/* bits de memDetec */ 
-#define  DETBITLH_VB  0x01 // 1 bit état HIGH LOW
-#define  DETBITLH_PB  0
-#define  DETBITUD_VB  0x02 // 1 bit flanc/état du déclenchement
-#define  DETBITUD_PB  1
-#define  DETBITST_VB  0x0C // 2 bits état (déclenché(TRIG)/attente(WAIT)/disable(DIS)) si DIS le bit d'état est invalide
-#define  DETBITST_PB  2
-#define  DETTRIG      0x03 // valeur DETBIST si déclenché (LH=L falling =H rising)
-#define  DETWAIT      0x02 // valeur         si armé      (LH=H falling =L rising)
-#define  DETIDLE      0x01 // valeur         si pas d'interruption (LH valide)
-#define  DETDIS       0x00 // valeur         si disable (LH invalide)
-
 #if CARTE==VR
-#define WPIN   4    // 1 wire ds1820
-#define NBSW   2    // nbre switchs
-#define PINSWA 5    // pin sortie switch A
-#define CLOSA  1    // valeur pour fermer (ouvert=!CLOSA)
-#define OPENA  0
-#define PINSWB 2    // pin sortie switch B
-#define CLOSB  0    // valeur pour fermer (ouvert=!CLOSB)
-#define OPENB  1
-#define PINSWC 5    // pin sortie switch C
-#define CLOSC  1    // valeur pour fermer (ouvert=!CLOSA)
-#define OPENC  0
-#define PINSWD 2    // pin sortie switch D
-#define CLOSD  0    // valeur pour fermer (ouvert=!CLOSB)
-#define OPEND  1
+#define WPIN   4       // 1 wire ds1820
+#define NBSW   2       // nbre switchs
+#define PINSWA 2       // pin sortie switch A
+#define CLOSA  LOW     // triac ON
+#define OPENA  HIGH    // triac off
+#define PINSWB 5       // pin sortie switch B (interrupteur)
+#define CLOSB  HIGH    // triac ON sortie haute
+#define OPENB  LOW     // triac OFF
+#define PINSWC 5       // pin sortie switch C
+#define CLOSC  CLOSA    
+#define OPENC  OPENA
+#define PINSWD 2       // pin sortie switch D
+#define CLOSD  CLOSB    
+#define OPEND  OPENB
 #define NBDET  4
 #define PINDTA 12   // pin entrée détect bit 0 
 #define PINDTB 14   // pin entrée détect bit 1 
@@ -281,16 +269,18 @@ typedef struct {
   uint32_t  cntPulseOne[MAXSW];   // 16   temps debut pulse 1
   uint32_t  cntPulseTwo[MAXSW];   // 16   temps debut pulse 2
   byte      pulseCtl[DLTABLEN];   // 24   ctle pulse   
-  byte      memDetec[MAXDET+MAXDSP+MAXDEX];  //  8  image mem des détecteurs (4 bits par détecteur ; detecteurs physiques + spéciaux)
-  IPAddress IpLocal;              //  4
-  byte      filler[103];          //  136
+  byte      memDetec[MAXDET+MAXDSP+MAXDEX];  //  8  image mem des détecteurs (1 byte par détecteur ; det physiques + spéciaux+externes)
+  byte      extDetEn;             //  1   1 bit enable par det externe   
+  byte      extDetLev;            //  1   1 bit level  par det externe
+  IPAddress IpLocal;              //  4  
+  byte      filler[79];           //  
   uint8_t   cstcrc;               //  1   doit toujours être le dernier : utilisé pour calculer sa position
              // total 240 = 60 mots ; reste 256 dispo (sizeof(constantValues)=size(membres)+4)
 } constantValues;
 
-
-
 #define LENRTC 240
+
+
 
 /*enum rst_reason {
  REASON_DEFAULT_RST      = 0,   // normal startup by power on 

@@ -28,7 +28,7 @@ extern byte mac[6];
 extern byte staPulse[MAXSW];            // état clock pulses
 extern uint8_t pinSw[MAXSW];
 extern uint8_t pinDet[MAXDET];
-extern long  detTime[MAXDET];
+extern long  detTime[MAXDET+MAXDSP+MAXDEX];
 
 extern constantValues cstRec;
 extern char* cstRecA;
@@ -44,8 +44,7 @@ bool readConstant()
 
 //  system_rtc_mem_read(temp,buf,1); // charge la longueur telle qu'enregistrée
 //  cstRec.cstlen=buf[0];
-  system_rtc_mem_read(temp,cstRecA,256);
-  
+  system_rtc_mem_read(temp,cstRecA,cstRec.cstlen);  
 #endif
 
 #if CONSTANT==EEPROMSAVED
@@ -66,14 +65,8 @@ return 0;
 
 void writeConstant()
 {
-cstRec.filler[100]=0xAA;
-cstRec.filler[101]=0x55;
-cstRec.filler[102]=0xCC;
-cstRec.cstlen=sizeof(cstRec);
 memcpy(cstRec.cstVers,VERSION,LENVERSION);
 cstRec.cstcrc=calcCrc(cstRecA,(uint8_t)cstRec.cstlen-1); 
-
-// la longueur totale de la structure est plus grande que la position du crc !
   
 #if CONSTANT==RTCSAVED
   int temp=CONSTANTADDR;
@@ -111,15 +104,18 @@ void initConstant()  // inits mise sous tension
   memcpy(cstRec.onCde,"\0\0\0\0",4);       // mode sw
   memcpy(cstRec.offCde,"\0\0\0\0",4);      // mode sw  
   memset(cstRec.pulseCtl,0x00,DLTABLEN);   // ctle pulse
-  for(int i=0;i<MAXSW;i++){cstRec.durPulseOne[i]=millis();}       // durée pulses (MAXSW=4*4)
-  for(int i=0;i<MAXSW;i++){cstRec.durPulseTwo[i]=millis();}       // durée pulses (MAXSW=4*4)
-  for(int i=0;i<MAXSW;i++){cstRec.cntPulseOne[i]=millis();}       // compt pulses (MAXSW=4*4)
-  for(int i=0;i<MAXSW;i++){cstRec.cntPulseTwo[i]=millis();}       // compt pulses (MAXSW=4*4)
+  for(int i=0;i<MAXSW;i++){
+  cstRec.durPulseOne[i]=0;       // durée pulses (MAXSW=4*4)
+  cstRec.durPulseTwo[i]=0;       // durée pulses (MAXSW=4*4)
+  cstRec.cntPulseOne[i]=0;       // compt pulses (MAXSW=4*4)
+  cstRec.cntPulseTwo[i]=0;}      // compt pulses (MAXSW=4*4)
   cstRec.IpLocal=IPAddress(0,0,0,0);
   char detDis=DETDIS<<DETBITST_PB;
   memset(cstRec.memDetec,detDis,MAXDET+MAXDSP+MAXDEX);
   memcpy(cstRec.cstVers,VERSION,LENVERSION);
   memcpy(cstRec.cstModel,model,LENMODEL);
+  cstRec.extDetEn=0;
+  cstRec.extDetLev=0;
   Serial.println("Init Constant done");
   writeConstant();
 }
@@ -179,13 +175,14 @@ void printConstant()
   Serial.println(" 3-TRIG 2-WAIT 1-IDLE 0-DIS");
   Serial.print("detTime =    ");for(int s=0;s<MAXDET;s++){Serial.print(detTime[s]);Serial.print("  -  ");}Serial.println();
   Serial.print("detect  =    ");for(int s=0;s<MAXDET;s++){Serial.print(digitalRead(pinDet[s]));Serial.print("   -   ");}Serial.println();  
-
+  Serial.print("ext detec =  ");for(int s=0;s<MAXDEX;s++){Serial.print((cstRec.extDetEn>>s)&0x01);Serial.print((cstRec.extDetLev>>s)&0x01);Serial.print(" ");}Serial.println();
   for(int i=0;i<NBSW;i++){
     Serial.print("sw=");Serial.print(i+1);Serial.print("-");Serial.print(digitalRead(pinSw[i]),HEX);
     Serial.print(" Cde=");Serial.print((cstRec.swCde>>(i*2+1))&0x01);
     memcpy(&swctl,&cstRec.pulseCtl[i*DLSWLEN],DLSWLEN);
     Serial.print("  dur1(");Serial.print((byte)(swctl>>PMTOE_PB)&0x01);Serial.print(")=");Serial.print(cstRec.cntPulseOne[i]);Serial.print("/");Serial.print(cstRec.durPulseOne[i]);
-    Serial.print("  dur2(");Serial.print((byte)(swctl>>PMTTE_PB)&0x01);Serial.print(")=");Serial.print(cstRec.cntPulseTwo[i]);Serial.print("/");Serial.println(cstRec.durPulseTwo[i]);
+    Serial.print("  dur2(");Serial.print((byte)(swctl>>PMTTE_PB)&0x01);Serial.print(")=");Serial.print(cstRec.cntPulseTwo[i]);Serial.print("/");Serial.print(cstRec.durPulseTwo[i]);
+    Serial.println("     codes actions 0=reset 1=raz 2=stop 3=start 4=short 5=end");
     //dumpstr((char*)&cstRec.pulseCtl[i*DLSWLEN],DLSWLEN);
     //dumpstr((char*)&swctl,DLSWLEN);
     subPC(i);

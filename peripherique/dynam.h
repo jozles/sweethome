@@ -15,10 +15,11 @@ void pulseClkisr();             // interrupt ou poling clk @10Hz
 //void isrD2();
 //void isrD3();
 //void initIntPin(uint8_t det);
-void initPolPin(uint8_t det);
+//void initPolPin(uint8_t det);
 void polDx(uint8_t det);
 void polAllDet();
 void swDebounce();
+void memdetinit();
 uint8_t swAction();
 
 #endif NO_MODE
