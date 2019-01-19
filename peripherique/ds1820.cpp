@@ -21,16 +21,18 @@
     (see datasheet)
     
     pin = number of Arduino pin used to connect Ds unit
+
+    Les DS18S20 "bugués" toujours négatifs sont utilisables pour les temp positives en appliquant le masque 0x7F sur la valeur lue
 */
 
 #include "Arduino.h"
 #include "Ds1820.h"
 
-// possible return status for getDs() function
+// possible return status for getDs()/readDs functions
 // values between -55 to +125 are valid data
 // romDs output family code 256+code 
 
-#define TOPRES -100
+#define TOPRES  -100
 #define CRC_ERR -101 
 
 #define T_WAIT_PRESENCE 240
@@ -49,6 +51,10 @@ Ds1820::Ds1820()  // constructeur de la classe
 byte calcBitCrc(byte shiftReg, byte data_bit);
 static uint8_t maskbit[]={1,2,4,8,16,32,64,128};  //  128,64,32,16,8,4,2,1
 
+void hexprint(byte hh)
+{
+  if(hh&0xf0==0x00){Serial.print("0");}Serial.print(hh,HEX);Serial.print(" ");
+}
 
 void writeDs(uint8_t pin,uint8_t nbbyteout,uint8_t* frameout)
 //write command nbbyteout @ nbbit/byte
@@ -58,7 +64,7 @@ void writeDs(uint8_t pin,uint8_t nbbyteout,uint8_t* frameout)
     
   digitalWrite(pin,HIGH);
   pinMode(pin,OUTPUT);
-  for(i=0;i<nbbyteout;i++){//Serial.print(frameout[i],HEX);
+  for(i=0;i<nbbyteout;i++){
     for(j=0;j<8;j++){
       delaylow=80;delayhigh=0;pinstat=LOW;if((frameout[i] & maskbit[j])!=0){pinstat=HIGH;delaylow=0;delayhigh=80;}
       noInterrupts();
@@ -118,7 +124,7 @@ float Ds1820::readDs(uint8_t pin)
   
   v=getDs(pin,cmd,2,rep,9);
 
-  if(v<=TOPRES){return v;}   // erreur 
+  if(v<=TOPRES){if(bitmessage){for(int rr=0;rr<9;rr++){hexprint(rep[rr]);}Serial.println();}return (float)v;}   // erreur TO présence ou CRC (-100,-101 etc) 
   else{
 
 //   complément à 2 : 
@@ -195,9 +201,10 @@ int Ds1820::getDs(uint8_t pin,uint8_t* frameout,uint8_t nbbyteout,uint8_t* frame
         noInterrupts();
         digitalWrite(pin,LOW);
         pinMode(pin,OUTPUT);
+        delayMicroseconds(0);
         // delay between low and read about 5,2 uSec (UNO) + delayMicroseconds
         // delayMicroseconds is n-1 micros ; pinMode about 3,1 uSec
-        pinMode(pin,INPUT);delayMicroseconds(0);buff[v]=digitalRead(pin);
+        pinMode(pin,INPUT);delayMicroseconds(1);buff[v]=digitalRead(pin);    // environ 1,5uS pour blocage bas par le DS 
         interrupts();
         if(buff[v]!=0){framein[i]+= maskbit[j];}
         delayMicroseconds(50);
@@ -207,13 +214,14 @@ int Ds1820::getDs(uint8_t pin,uint8_t* frameout,uint8_t nbbyteout,uint8_t* frame
   // check CRC
   byte shift_reg=0;
   for(i=0;i<nbbytein;i++){
-    for(j=0;j<8;j++){shift_reg=calcBitCrc(shift_reg,buff[i*8+j]);
-    if(bitmessage){Serial.print(buff[i*8+j]);}
-      }
-    if(bitmessage){Serial.print(" ");}
-    } 
-    if(bitmessage){Serial.print(" CRC ");Serial.println(shift_reg);}
-  if(shift_reg==0){return 1;}else{return CRC_ERR;} 
+    for(j=0;j<8;j++){
+      shift_reg=calcBitCrc(shift_reg,buff[i*8+j]);
+      if(bitmessage){Serial.print(buff[i*8+j]);}
+    }
+    if(bitmessage){Serial.print(" ");if(i==(nbbytein-2)){hexprint(shift_reg);}}
+  } 
+  if(bitmessage){Serial.print(" CRC ");hexprint(shift_reg);Serial.println();}
+  if(shift_reg==0){return 1;}else{return CRC_ERR;}
 }
 
 byte Ds1820::calcBitCrc (byte shiftReg, byte data_bit)
