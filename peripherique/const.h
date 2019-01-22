@@ -126,8 +126,8 @@ Modifier :
 #define THESP01 '1'
 #define THESP12 '2'
 
-#define CARTE VR                      // <------------- modèle carte
-#define POWER_MODE NO_MODE            // <------------- type d'alimentation 
+#define CARTE THESP01                      // <------------- modèle carte
+#define POWER_MODE PO_MODE            // <------------- type d'alimentation 
 
 #if POWER_MODE==NO_MODE
   #define _SERVER_MODE
@@ -247,7 +247,7 @@ Modifier :
 #define TSERIALBEGIN       100
 #define TDEBOUNCE           50    // msec
 #define PERFASTCLK           5    // millis période automate rapide (ordreExt, talkServer, debounce, etc) 
-#define DETIMP            1500    // millis trig cde impulsionnelle
+#define DETIMP            1000    // millis trig cde impulsionnelle
 
 typedef struct {
   uint8_t   cstlen;               //  1

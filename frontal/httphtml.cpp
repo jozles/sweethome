@@ -308,7 +308,7 @@ void subMPc(EthernetClient* cli,uint8_t sw,uint8_t num)         // checkbox tran
   uint64_t pipm=0;memcpy(&pipm,((char*)(periSwPulseCtl+sw*DLSWLEN)),DLSWLEN);
   uint8_t val=(pipm>>num)&0x01;
   fonc[LENNOM-2]=(char)(PMFNCHAR+sw);
-  if(num>25){num+=6;}                                            // '+6' pour skip ponctuations (valeur maxi utilisable 2*26=52)
+  if(num>26){num+=6;}                                            // '+6' pour skip ponctuations (valeur maxi utilisable 2*26=52)
   fonc[LENNOM-1]=(char)(PMFNCHAR+num);                     
   
   checkboxTableHtml(cli,&val,fonc,-1,0);
@@ -364,11 +364,11 @@ void SwCtlTableHtml(EthernetClient* cli,int nbsw,int nbtypes)
 
       cli->print("<td><font size=\"1\">");
       for(int nd=0;nd<DLNB;nd++){
-        subMPc(cli,i,nd*DLBITLEN+DLENA_PB);         // enable
-        subMPc(cli,i,nd*DLBITLEN+DLEL_PB);         // local/externe
-        subMPn(cli,i,nd*DLBITLEN+DLNLS_PB,DLNULEN); // numéro det
-        subMPc(cli,i,nd*DLBITLEN+DLMFE_PB);         // flanc/trans
-        subMPc(cli,i,nd*DLBITLEN+DLMHL_PB);         // H/L
+        subMPc(cli,i,nd*DLBITLEN+DLENA_PB);          // enable
+        subMPc(cli,i,nd*DLBITLEN+DLEL_PB);           // local/externe
+        subMPn(cli,i,nd*DLBITLEN+DLNLS_PB,DLNULEN);  // numéro det
+        subMPc(cli,i,nd*DLBITLEN+DLMFE_PB);          // flanc/trans
+        subMPc(cli,i,nd*DLBITLEN+DLMHL_PB);          // H/L
         subMPn(cli,i,nd*DLBITLEN+DLACLS_PB,DLACLEN); // numéro action
         if(nd<DLNB-1){cli->print("<br>");}                           
       }
@@ -446,7 +446,6 @@ Serial.print("début péritable ; remote_IP ");serialPrintIp(remote_IP_cur);Seri
                 // envoie une commande GET/POST 
                 // et pour assurer l'effacement des bits de checkbox : le navigateur ne renvoie que ceux "checkés"
                 periInitVar();periLoad(i);
-                //memset(periLastDateIn,'0',LENPERIDATE);//memset(periLastDateOut,'0',LENPERIDATE);
                 periCur=i;
                 if(*periSwNb>MAXSW){*periSwNb=MAXSW;periSave(i);}
 

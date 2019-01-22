@@ -232,7 +232,7 @@ enum {OFF,ON};
 #define DLLOCAL     1                  // détecteur local
 
 #define DLNMS_PB   DLNLS_PB+DLNULEN-1  // msb numéro det (3 bits)
-#define DLNMS_VB   0x200
+#define DLNMS_VB   0x0200
 #define DLNLS_PB   DLENA_PB+1          // lsb numéro
 #define DLNLS_VB   0x0080
 #define DLENA_PB   DLEL_PB+1           // enable (1 bit)
@@ -265,12 +265,13 @@ enum {OFF,ON};
 
 /* codes actions detecteurs logiques sur pulse */
 
-#define PMDCA_RESET 0       // reset
-#define PMDCA_RAZ   1       // raz
-#define PMDCA_STOP  2       // stop  clk
-#define PMDCA_START 3       // start clk
-#define PMDCA_SHORT 4       // short pulse
-#define PMDCA_END   5       // end pulse
+#define PMDCA_RESET 0x00       // reset
+#define PMDCA_RAZ   0x01       // raz
+#define PMDCA_STOP  0x02       // stop  clk
+#define PMDCA_START 0x03       // start clk
+#define PMDCA_SHORT 0x04       // short pulse
+#define PMDCA_END   0x05       // end pulse
+#define PMDCA_IMP   0x06       // start/stop impulsionnel
 
 /* codes etats générateur (bit droite=valeur) */
 

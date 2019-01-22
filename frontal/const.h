@@ -269,7 +269,8 @@
                   4) start : l'action start déclenche l'horloge selon l'état/flanc programmé
                   5) short : l'action short termine le compteur courant sans changer la période totale (le compteur suivant est augmenté)
                   6) fin : l'action fin termine le compteur courant. 
-                  7) pas d'action 
+                  7) stop impulsionnel : stop si le compteur depuis le début a moins de DETIMP (1,5sec) start sinon 
+                        (impDetTime=millis() si start, =0 si stop ou stop impulsionnel
 
                les détecteurs sont représentés par une variable en mémoire (memDetec 1byte/detecteur) ; pas d'accès direct aux ports
                   le changement d'état d'un port et la mise à jour de la variable sont gérés par isrDet().

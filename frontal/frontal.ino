@@ -390,7 +390,7 @@ void loop()                             // =====================================
       Serial.print("  ");serialPrintMac(macMaster);
       
       if (cli_a.connected()) 
-        {nbreparams=getnv(&cli_a);Serial.print("\nnbreparams ");Serial.println(nbreparams);dumpstr(valeurs,128);
+        {nbreparams=getnv(&cli_a);Serial.print("\nnbreparams ");Serial.println(nbreparams);//dumpstr(valeurs,128);
         
 /*  getnv() décode la chaine GET ou POST ; le reste est ignoré
     forme ?nom1:valeur1&nom2:valeur2&... etc (NBVAL max)
@@ -520,19 +520,18 @@ void loop()                             // =====================================
                        if(passok==FAUX){sdstore_textdh(&fhisto,"pw","ko",strSD);}
                        else {periTableHtml(&cli_a);what=0;}
                        break;
-              case 11: sdpos=0;conv_atobl(valf,&sdpos);break;                                               // SD pos
-              case 12: what=1;periDataRead();break;                                                         // data_save
-              case 13: what=3;periDataRead();break;                                                         // data_read
+              case 11: sdpos=0;conv_atobl(valf,&sdpos);break;                                                // SD pos
+              case 12: what=1;periDataRead();break;                                                          // data_save
+              case 13: what=3;periDataRead();break;                                                          // data_read
               case 14: what=5;{                                                                              // peri swb (buton)
-                       uint8_t sw;sw=*(libfonctions+2*i)-PMFNCHAR;                                          // sw n° switch
-                       uint8_t sh;sh=libfonctions[2*i+1]-PMFNCHAR;                                          // sh 0 ou 1 état demandé
-                       byte mask=(0x01<<sw*2);
+                       uint8_t sw;sw=*(libfonctions+2*i)-PMFNCHAR;                                           // sw n° switch
+                       uint8_t sh;sh=libfonctions[2*i+1]-PMFNCHAR;                                           // sh 0 ou 1 état demandé
+                       byte mask=(0x10<<sw*2);
                        *periSwVal&=~mask;*periSwVal|=mask;
                        }break;
               case 15: what=4;periCur=0;conv_atob(valf,&periCur);                                           // N° périph courant  
                        if(periCur>NBPERIF){periCur=NBPERIF;}                                                // géré automatiquement (maj manuelle interdite)
                        periInitVar();periLoad(periCur);
-                       //memset(periLastDateIn,'0',LENPERIDATE);//memset(periLastDateOut,'0',LENPERIDATE);
                        cbErase();
                        break;                                                                               // déclenche la mise à jour des variables du périphérique
               case 16: what=4;*periPerRefr=0;conv_atobl(valf,periPerRefr);break;                            // per refr periph courant
@@ -551,14 +550,15 @@ void loop()                             // =====================================
                        uint8_t sh;sh=libfonctions[2*i+1]-PMFNCHAR;if(sh>32){sh-=6;}                         // '-6' pour skip ponctuations (valeur maxi utilisable 2*26=52)
                        uint64_t pipm;memcpy(&pipm,(char*)(periSwPulseCtl+sw),DLSWLEN);                      // sh=[LENNOM-1]-PMFNCHAR nb de shifts dans le détecteur
                        byte msk;msk=0x01;if((sw&0xf0)!=0){msk=mask[DLNULEN];sw&=0x0f;}                      // si !=0 -> n° detecteurs ou code action sinon cb                               
-                       bitvSwCtl(periSwPulseCtl,sw,DLSWLEN,sh,msk);                                         // shift référencé au début du switch
+                       bitvSwCtl(periSwPulseCtl,sw,DLSWLEN,sh,msk);            // shift référencé au début du switch
+                       //if(libfonctions[2*i]=='Z' && libfonctions[2*i+1]=='Y'){Serial.print("bit enable 3ème dl ; sh=");Serial.println(sh);dumpstr((char*)(periSwPulseCtl+sw),6);}
                        }break;
               case 25: what=4;*periDetNb=*valf-48;if(*periDetNb>MAXDET){*periDetNb=MAXDET;}break;           // peri det Nb  
               case 26: what=4;*periSwNb=*valf-48;if(*periSwNb>MAXSW){*periSwNb=MAXSW;}break;                // peri sw Nb                       
-              case 27: what=5;*periSwVal&=0xfd;*periSwVal|=(*valf&0x01)<<1;break;                           // peri Sw Val
-              case 28: what=5;*periSwVal&=0xf7;*periSwVal|=(*valf&0x01)<<3;break;
-              case 29: what=5;*periSwVal&=0xdf;*periSwVal|=(*valf&0x01)<<5;break;
-              case 30: what=5;*periSwVal&=0x7f;*periSwVal|=(*valf&0x01)<<7;break;
+              case 27: what=5;*periSwVal&=0xfd;*periSwVal|=(*valf&0x01)<<1;break;                           // peri Sw Val 0
+              case 28: what=5;*periSwVal&=0xf7;*periSwVal|=(*valf&0x01)<<3;break;                           // peri Sw Val 1
+              case 29: what=5;*periSwVal&=0xdf;*periSwVal|=(*valf&0x01)<<5;break;                           // peri Sw Val 2
+              case 30: what=5;*periSwVal&=0x7f;*periSwVal|=(*valf&0x01)<<7;break;                           // peri Sw Val 3
               case 31: what=4;break;                                                                        // *** dispo
               case 32: what=5;{                                                                             // peri SwPulseCtl (otf) bits généraux (FOT)
                                 uint8_t sw=*(libfonctions+2*i)-PMFNCHAR,b=*(libfonctions+2*i+1);
@@ -569,27 +569,27 @@ void loop()                             // =====================================
                                   case 'T':sh=PMTTE_PB;break;
                                   default:break;
                                 }
-                                bitvSwCtl(periSwPulseCtl,sw,DLSWLEN,sh,0x01);          // shift référencé au début du switch
+                                bitvSwCtl(periSwPulseCtl,sw,DLSWLEN,sh,0x01);   // shift référencé au début du switch
                               }break;       
-              case 33: what=5;{uint8_t v=0,b=0;frecupptr(libfonctions+2*i,&v,&b,MAXTAC);             // numéro détecteur
+              case 33: what=5;{uint8_t v=0,b=0;frecupptr(libfonctions+2*i,&v,&b,MAXTAC);  
                               *(periSwMode+v) &= ~(mask[SWMDLNUMS_PB-SWMDLNULS_PB+1]<<SWMDLNULS_PB);
                               *(periSwMode+v) |= (*valf&mask[SWMDLNUMS_PB-SWMDLNULS_PB+1])<<SWMDLNULS_PB;
-                              };break;         // periSwMode N° detec
+                              };break;                                                                      // periSwMode N° detec
               case 34: what=5;{uint8_t v=0,b=0;frecupptr(libfonctions+2*i,&v,&b,MAXTAC);
                               *(periSwMode+v) &= maskbit[b*2];if(*valf&0x01!=0){*(periSwMode+v) |= maskbit[b*2+1];} 
-                              };break;         // periSwMode 6 checkbox
+                              };break;                                                                      // periSwMode 6 checkbox
               case 35: what=5;{int sw=*(libfonctions+2*i)-PMFNCHAR;
                               *(periSwPulseOne+sw)=0;*(periSwPulseOne+sw)=(uint32_t)convStrToNum(valf,&j);                              
-                              };break;         // peri Pulse On
+                              };break;                                                                      // peri Pulse On
               case 36: what=5;{int sw=*(libfonctions+2*i)-PMFNCHAR;
                               *(periSwPulseTwo+sw)=0;*(periSwPulseTwo+sw)=(uint32_t)convStrToNum(valf,&j);
-                              };break;         // peri Pulse Off
-              case 37: what=4;*periThmin=0;*periThmin=convStrToNum(valf,&j);break;                        // Th min
-              case 38: what=4;*periThmax=0;*periThmax=convStrToNum(valf,&j);break;                        // Th max
-              case 39: what=4;*periVmin=0;*periVmin=(float)convStrToNum(valf,&j);break;                   // V min
-              case 40: what=4;*periVmax=0;*periVmax=convStrToNum(valf,&j);break;                          // V max
-              case 41: what=5;*periDetServEn |= (byte)(*valf-48)<<(*(libfonctions+2*i+1)-PMFNCHAR);break; // Det Serv enable bits
-              case 42: what=4; memDetServ |= (byte)(*valf-48)<<(*(libfonctions+2*i+1)-PMFNCHAR);break;     // Det Serv level bits
+                              };break;                                                                      // peri Pulse Off
+              case 37: what=4;*periThmin=0;*periThmin=convStrToNum(valf,&j);break;                          // Th min
+              case 38: what=4;*periThmax=0;*periThmax=convStrToNum(valf,&j);break;                          // Th max
+              case 39: what=4;*periVmin=0;*periVmin=(float)convStrToNum(valf,&j);break;                     // V min
+              case 40: what=4;*periVmax=0;*periVmax=convStrToNum(valf,&j);break;                            // V max
+              case 41: what=5;*periDetServEn |= (byte)(*valf-48)<<(*(libfonctions+2*i+1)-PMFNCHAR);break;   // Det Serv enable bits
+              case 42: what=4; memDetServ |= (byte)(*valf-48)<<(*(libfonctions+2*i+1)-PMFNCHAR);break;      // Det Serv level bits
                               
               default:break;
               }
@@ -676,13 +676,11 @@ void periDataRead()             // traitement d'une chaine "dataSave" ou "dataRe
   
   if(periCur!=0){                                                 // si le périph a un numéro, ctle de l'adr mac
     periLoad(periCur);
-    //memset(periLastDateIn,'0',LENPERIDATE);//memset(periLastDateOut,'0',LENPERIDATE);
     if(memcmp(periMacBuf,periMacr,6)!=0){periCur=0;}}
     
   if(periCur==0){                                                 // si periCur=0 recherche si mac connu   
     for(i=1;i<=NBPERIF;i++){                                      // et, au cas où, une place libre
       periLoad(i);
-      //memset(periLastDateIn,'0',LENPERIDATE);//memset(periLastDateOut,'0',LENPERIDATE);
       if(compMac(periMacBuf,periMacr)){periCur=i;i=NBPERIF+1;}    // mac trouvé
       if(memcmp("\0\0\0\0\0\0",periMacr,6)==0 && perizer==0){perizer=i;}        // place libre trouvée
     }
@@ -691,7 +689,6 @@ void periDataRead()             // traitement d'une chaine "dataSave" ou "dataRe
   if(periCur==0 && perizer!=0){                                   // si pas connu utilisation N° perif libre "perizer"
       Serial.println(" Mac inconnu");
       periInitVar();periCur=perizer;periLoad(periCur);
-      //memset(periLastDateIn,'0',LENPERIDATE);//memset(periLastDateOut,'0',LENPERIDATE);
       periMess=MESSFULL;
   }
 
@@ -770,7 +767,7 @@ int periParamsHtml(EthernetClient* cli,char* host,int port)   // fonction set ou
           checkdate(5);
           if(zz==MESSOK){packDate(periLastDateOut,date14+2);}
           *periErr=zz;
-          periSave(periCur);                             // modifs de periTable et date effacèe par prochain periLoad si pas save
+          periSave(periCur);                           // modifs de periTable et date effacèe par prochain periLoad si pas save
           Serial.print("pPHtml=");Serial.println(zz);
           return zz;
 }
@@ -949,6 +946,7 @@ void bitvSwCtl(byte* data,uint8_t sw,uint8_t datalen,uint8_t shift,byte msk)
   pipm &= ~c;
   c=0;c=((uint64_t)(*valf-PMFNCVAL))<<shift;
   pipm +=c;
+//  Serial.print(" shift=");Serial.print(shift,HEX);Serial.print(" msk=");Serial.print(msk,HEX);Serial.print(" c=");dumpstr((char*)&c,8);
   memcpy((char*)(data+sw*datalen),(char*)&pipm,datalen);
 }
 
