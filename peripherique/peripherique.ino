@@ -77,19 +77,20 @@ WiFiClient cliext;              // client externe du serveur local
   int   blkPer=2000;
   long  debTime=millis();   // pour mesurer la durée power on
   long  debConv=millis();   // pour attendre la fin du délai de conversion
-  int   cntIntA=0;
-  int   cntIntB=0;
+  //int   cntIntA=0;
+  //int   cntIntB=0;
   long  detTime[MAXDET+MAXDSP+MAXDEX]={millis(),millis(),millis(),millis()};    // temps pour debounce
 
 
   uint8_t pinSw[MAXSW]={PINSWA,PINSWB,PINSWC,PINSWD};    // les switchs
   byte    staPulse[MAXSW];                               // état clock pulses
+  long    impDetTime[MAXSW];                             // timer pour gestion commandes impulsionnelles     
   uint8_t pinDet[MAXDET]={PINDTA,PINDTB,PINDTC,PINDTD};  // les détecteurs
   byte    pinDir[MAXDET]={LOW,LOW,LOW,LOW};              // flanc pour interruption des détecteurs (0 falling ; 1 rising)
   bool    pinLev[MAXDET];                                // curr level
   
-  void (*isrD[4])(void);                                 // tableau de pointeurs de fonctions
-  long isrTime=0;                                        // durée isr
+//  void (*isrD[4])(void);                                 // tableau de pointeurs de fonctions
+//  long isrTime=0;                                        // durée isr
 
   int   i=0,j=0,k=0;
   uint8_t oldswa[]={0,0,0,0};         // 1 par switch
@@ -149,7 +150,7 @@ void setup()
   pinMode(PINDTA,INPUT_PULLUP);
   pinMode(PININTA,INPUT_PULLUP);
   pinMode(PININTB,INPUT_PULLUP);
-  if(digitalRead(PINDTA==0) || digitalRead(PININTA)==0 || (digitalRead(PININTA)!=0 && digitalRead(PININTB)!=0)){cntIntA=1;}
+  //if(digitalRead(PINDTA==0) || digitalRead(PININTA)==0 || (digitalRead(PININTA)!=0 && digitalRead(PININTB)!=0)){cntIntA=1;}
 
  /* init tableau des fonctions d'interruption */
  

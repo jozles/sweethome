@@ -164,7 +164,7 @@ void printConstant()
   Serial.print(" serverTime=");Serial.print(cstRec.serverTime);Serial.print(" serverPer=");Serial.println(cstRec.serverPer);
   Serial.print("oldtemp=");Serial.print(cstRec.oldtemp);Serial.print(" tempPer=");Serial.print(cstRec.tempPer);
   Serial.print(" tempPitch=");Serial.println(cstRec.tempPitch);
-  Serial.print("swCde=");for(int sc=3;sc>=0;sc--){Serial.print((cstRec.swCde>>(sc*2+1))&01);Serial.print((cstRec.swCde>>(sc*2))&01);
+  Serial.print("swCde=");for(int sc=3;sc>=0;sc--){Serial.print((cstRec.swCde>>(sc*2+1))&01);Serial.print((cstRec.swCde>>(sc*2))&01);Serial.print("(");Serial.print(digitalRead(pinSw[sc]));Serial.print(")");
   Serial.print(" ");}Serial.println();
   Serial.print("staPulse=");for(int s=0;s<MAXSW;s++){Serial.print(s);Serial.print("-");Serial.print(staPulse[s],HEX);
   Serial.print(" ");}Serial.println("  C=DIS 0=IDLE 5=RUN1 7=RUN2 4=END1 6=END2");
@@ -180,11 +180,10 @@ void printConstant()
     Serial.print("sw=");Serial.print(i+1);Serial.print("-");Serial.print(digitalRead(pinSw[i]),HEX);
     Serial.print(" Cde=");Serial.print((cstRec.swCde>>(i*2+1))&0x01);
     memcpy(&swctl,&cstRec.pulseCtl[i*DLSWLEN],DLSWLEN);
+    Serial.print(" F/O=");Serial.print((byte)(swctl>>PMFRO_PB)&0x01);
     Serial.print("  dur1(");Serial.print((byte)(swctl>>PMTOE_PB)&0x01);Serial.print(")=");Serial.print(cstRec.cntPulseOne[i]);Serial.print("/");Serial.print(cstRec.durPulseOne[i]);
     Serial.print("  dur2(");Serial.print((byte)(swctl>>PMTTE_PB)&0x01);Serial.print(")=");Serial.print(cstRec.cntPulseTwo[i]);Serial.print("/");Serial.print(cstRec.durPulseTwo[i]);
-    Serial.println("     codes actions 0=reset 1=raz 2=stop 3=start 4=short 5=end");
-    //dumpstr((char*)&cstRec.pulseCtl[i*DLSWLEN],DLSWLEN);
-    //dumpstr((char*)&swctl,DLSWLEN);
+    Serial.println("     codes actions 0=reset 1=raz 2=stop 3=start 4=short 5=end 6=imp");
     subPC(i);
   }
 }

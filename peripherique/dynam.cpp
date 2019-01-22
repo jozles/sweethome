@@ -16,6 +16,7 @@ extern  uint8_t pinDet[MAXDET];
 extern  bool    pinLev[MAXDET];
 extern  byte    pinDir[MAXDET];
 extern  long    detTime[MAXDET+MAXDSP+MAXDEX];
+extern  long    impDetTime[MAXSW];                             // timer pour gestion commandes impulsionnelles     
 extern  long    isrTime;
 extern  void    (*isrD[4])(void);                              // tableau des pointeurs des isr détecteurs
 extern  byte    mask[];
@@ -86,7 +87,7 @@ extern  int*  int0=&(0x00);*/
   placé en mode comptage  (RUN)  suite à une action START d'un détecteur logique
   placé en mode fin       (END)  lorsque le comptage d'une phase est terminé et que la phase suivante est débranchée 
   staPulse est mis à jour par isrPulse
-  l'état des pulses est obtenu par croisement de memDetec et swPulseCtl
+  l'état des pulses est obtenu par croisement de memDetec et swPulseCtl qui contient le code de l'action à exécuter
  
 */
 
@@ -120,8 +121,18 @@ uint8_t rdy(byte modesw,int sw) // pour les 3 sources, check bit enable puis eta
 
   /* --------- pulse gen --------- */
   if((modesw & SWMPEN_VB) != 0){
-    if ((((modesw>>SWMPHL_PB)&0x01)==1 && staPulse[sw]==PM_RUN2)
-     || (((modesw>>SWMPHL_PB)&0x01)==0 && staPulse[sw]==PM_RUN1)){return 3;}         // ok timer
+    switch(staPulse[sw]){
+      case PM_RUN1: if(((modesw>>SWMPHL_PB)&0x01)==0){return 3;}break; 
+      case PM_RUN2: if(((modesw>>SWMPHL_PB)&0x01)==1){return 3;}break;
+      case PM_END1: if(((modesw>>SWMPHL_PB)&0x01)==0){return 3;}break;
+      case PM_END2: if(((modesw>>SWMPHL_PB)&0x01)==1){return 3;}break;
+      case PM_IDLE: if(((modesw>>SWMPHL_PB)&0x01)==0){             // IDLE et 0 si (cntOne!=0 ou cntOne+cntTwo==0)
+                      if((cstRec.cntPulseOne[sw]!=0) || ((cstRec.cntPulseOne[sw]+cstRec.cntPulseTwo[sw])==0))
+                        {return 3;}break;}
+                    else {                                         // IDLE et 1 si (cntTwo!=0)
+                      if(cstRec.cntPulseTwo[sw]!=0){return 3;}break;}
+      default: break;
+    }
   }
   return 0;                                                                          // ko 
 }
@@ -130,6 +141,7 @@ uint8_t swAction()      // poling check cde des switchs
 { 
   uint8_t swa=0;
   for(int sw=0;sw<NBSW;sw++){
+
     
     // action OFF
     //Serial.print("  -  sw=");Serial.print(sw);
@@ -174,9 +186,9 @@ void setPulseChg(int sw ,uint64_t* spctl,char timeOT)     // traitement fin de t
         else {staPulse[sw]=PM_END1;}                                      // sinon fin1
   }
   else {
-        if((*spctl&&PMFRO_VB)==0){                                         // oneshot -> idle
+        if((*spctl&PMFRO_VB)==0){                                         // oneshot -> idle
           cstRec.cntPulseTwo[sw]=0;cstRec.cntPulseOne[sw]=0;staPulse[sw]=PM_IDLE;}
-        else if((*spctl&&PMTOE_VB)!=0){                                    // free run -> run      
+        else if((*spctl&PMTOE_VB)!=0){                                    // free run -> run      
           cstRec.cntPulseTwo[sw]=0;cstRec.cntPulseOne[sw]=1;staPulse[sw]=PM_RUN1;}
         else {staPulse[sw]=PM_END2;}                                      // free run bloqué -> fin2
   }
@@ -212,59 +224,85 @@ void pulseClkisr()     // poling ou interruption ; action horloge sur pulses tou
   }
 }
 
+void hspr16b(uint16_t hp)
+{
+  if(hp&0xF000==0){Serial.print('0');}Serial.print(hp>>8,HEX);
+  if(hp&0x00F0==0){Serial.print('0');}Serial.print(hp,HEX);
+}
 
 void isrPul(uint8_t det)                        // maj staPulse au changement d'état d'un détecteur
 {                                               
-                                                 
+  Serial.print(det);Serial.print(" ");
 
   for(int sw=0;sw<NBSW;sw++){                                               // explo sw
 
-
+      Serial.print(sw);Serial.print(":");
       uint64_t spctl=0;memcpy(&spctl,cstRec.pulseCtl+sw*DLSWLEN,DLSWLEN);     // les DL d'un switch
       for(int nb=0;nb<DLNB;nb++){                                             // explo DL 
+        
         uint16_t spctlnb=(uint16_t)(spctl>>(nb*DLBITLEN))&DLBITMSK;           // spctnb les DLBITLEN bits du detecteur logique numéro nb
+        Serial.print(nb);Serial.print("/");hspr16b(spctlnb);Serial.print("/");
+        Serial.print((uint8_t)(spctlnb>>DLNLS_PB),HEX);Serial.print("/");Serial.print(DLNLS_PB);Serial.print("/");
+        Serial.print(DLNMS_PB);Serial.print("/");
         uint8_t test=0;                                                                                             // si ...
-        if( (uint8_t)((spctlnb>>DLNLS_PB)&mask[DLNMS_PB-DLNLS_PB+1])==det ){ Serial.print("1");test+=1;}            // =det courant
+        if( (uint8_t)((spctlnb>>DLNLS_PB)&mask[(DLNMS_PB)-(DLNLS_PB)+1])==det ){ Serial.print("1");test+=1;}            // =det courant
         if( (spctlnb&DLENA_VB)!=0 ){  Serial.print("2");test+=2;}                                                   // enable
         if( (spctlnb&DLEL_VB)!=0  ){  Serial.print("3");test+=4;}                                                   // local
         if( (byte)((spctlnb>>DLMHL_PB)&0x01)==(byte)((cstRec.memDetec[det]>>DETBITLH_PB)&0x01) ){  Serial.print("4");test+=8;}    // LH ok
         
         if( test==15){                                                                                              // dl déclenché
-          byte action=(byte)(spctlnb>>DLACLS_PB)&mask[DLACMS_PB-DLACLS_PB+1];                                       // exécuter l'action
-          byte actions[]={PMDCA_START,PMDCA_STOP,PMDCA_SHORT,PMDCA_RAZ,PMDCA_RESET,PMDCA_END};
+          byte action=(byte)((spctlnb>>DLACLS_PB)&mask[DLACMS_PB-DLACLS_PB+1])+1;                                       // exécuter l'action
+          byte actions[]={PMDCA_STOP+1,PMDCA_START+1,PMDCA_SHORT+1,PMDCA_RAZ+1,PMDCA_RESET+1,PMDCA_IMP+1,PMDCA_END+1,0x00};
 
-          switch(strchr((char*)actions,action)-(char*)actions){
-            case 0: Serial.print(" start");
+          byte act=(byte)(strchr((char*)actions,action)-(char*)actions);
+          Serial.print(" action=");Serial.print(action);
+          switch(act){
+            case 0: Serial.print(" stop");
+                    staPulse[sw]=PM_IDLE;
+                    impDetTime[sw]=0;
+                    break;
+            case 1: Serial.print(" start");
                     if(cstRec.cntPulseOne[sw]!=0){staPulse[sw]=PM_RUN1;}                   
                     else if(cstRec.cntPulseTwo[sw]!=0){staPulse[sw]=PM_RUN2;}
                     else {staPulse[sw]=PM_RUN1;}
-                    break;
-            case 1: Serial.print(" stop");
-                    staPulse[sw]=PM_IDLE;
+                    impDetTime[sw]=millis();
                     break;
             case 2: Serial.print(" short");
                     if(staPulse[sw]==PM_RUN1 || cstRec.cntPulseOne[sw]!=0){cstRec.cntPulseOne[sw]=cstRec.durPulseOne[sw]*10;}
                     else if(staPulse[sw]==PM_RUN2 || cstRec.cntPulseTwo[sw]!=0){cstRec.cntPulseTwo[sw]=cstRec.durPulseTwo[sw]*10;}
+                    impDetTime[sw]=0;
                     break;                 
             case 3: Serial.print(" raz");
                     cstRec.cntPulseOne[sw]=0;
                     cstRec.cntPulseTwo[sw]=0;
+                    impDetTime[sw]=0;
                     break;               
             case 4: Serial.print(" reset");
                     cstRec.cntPulseOne[sw]=0;cstRec.durPulseOne[sw]=0;
                     cstRec.cntPulseTwo[sw]=0;cstRec.durPulseTwo[sw]=0;
                     staPulse[sw]=PM_IDLE;
+                    impDetTime[sw]=0;
                     break;                 
-            case 5: Serial.print(" end");
+            case 5: Serial.print(" imp");
+                    if((millis()-impDetTime[sw])<DETIMP){
+                      staPulse[sw]=PM_IDLE;
+                      cstRec.cntPulseOne[sw]=0;
+                      cstRec.cntPulseTwo[sw]=0;}
+                    impDetTime[sw]=0;
+                    break;
+            case 6: Serial.print(" end");
                     if(staPulse[sw]==PM_RUN1 || cstRec.cntPulseOne[sw]!=0){setPulseChg(sw,&spctl,'O');}
                     else if(staPulse[sw]==PM_RUN2 || cstRec.cntPulseTwo[sw]!=0){setPulseChg(sw,&spctl,'T');}
-                    break;                            
-            default:Serial.print(" syserr=");Serial.print(action,HEX);
+                    impDetTime[sw]=0;
+                    break;
+            default:Serial.print(" syserr=");Serial.print(action,HEX);Serial.print(" ");
                     staPulse[sw]=PM_DISABLE;
                     break;
           }
         }
+      Serial.print(" ");      
       }
+      
   }
 }
 
