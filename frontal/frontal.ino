@@ -55,20 +55,21 @@ EthernetServer periserv(PORTSERVER);      // port 1789 service, 1790 devt
   byte    remote_MAC[6]={0,0,0,0,0,0};
   long    to_serv=0;                      // to du serveur pour reset password
   char    pass[]=SRVPASS;           
-  bool    passok=FAUX;
+  bool    periPassOk=FAUX;                // contrôle du mot de passe des périphériques
 
 /*  EthernetServer monserveur(1792);        // port pour browser
   uint8_t remote_IP_b[4]={0,0,0,0},remote_IP_b_cur[4]={0,0,0,0};
   long    to_serv_b=0;                    // to du serveur pour reset password
   char    pass_b[]=SRVPASS;           
-  bool    passok_b=FAUX;
 */
-  byte    macMaster[6]={0,0,0,0,0,0};
-
+  byte    macMaster[6]={0,0,0,0,0,0};  // adresse mac d'un browser chargée lors de la saisie du mot de passe dans peritable
+                                       // permet d'identifier le browser pour ne pas avoir à re-saisir le mot de passe 
+                                       // donne l'habilitation pour effectuer des modifs dans peritable
+                                       // (sinon renvoi à l'accueil)
   int8_t  numfonct[NBVAL];             // les fonctions trouvées  (au max version 1.1k 23+4*57=251)
   char*   fonctions="per_temp__macmaster_peri_pass_dump_sd___test2sw___done______per_refr__peri_tofs_per_date__reset_____password__sd_pos____data_save_data_read_peri_swb__peri_cur__peri_refr_peri_nom__peri_mac__accueil___peri_tableperi_prog_peri_sondeperi_pitchperi_pmo__peri_detnbperi_intnbperi_intv0peri_intv1peri_intv2peri_intv3peri_dispoperi_otf__peri_imn__peri_imc__peri_pto__peri_ptt__peri_thminperi_thmaxperi_vmin_peri_vmax_peri_dsv__mem_dsrv__last_fonc_";  //};
                                        // nombre fonctions, valeur pour accueil, data_save_ fonctions multiples etc
-  int     nbfonct=0,faccueil=0,fdatasave=0,fperiSwVal=0,fperiDetSs=0,fdone=0,fpericur=0,fperipass=0,fpassword=0;
+  int     nbfonct=0,faccueil=0,fdatasave=0,fperiSwVal=0,fperiDetSs=0,fdone=0,fpericur=0,fperipass=0,fpassword=0,fmacmaster=0;
   char    valeurs[LENVALEURS];         // les valeurs associées à chaque fonction trouvée
   uint16_t nvalf[NBVAL];               // offset dans valeurs[] des valeurs trouvées (séparées par '\0')
   char*   valf;                        // pointeur dans valeurs en cours de décodage
@@ -257,9 +258,9 @@ void setup() {                              // =================================
   fpericur=(strstr(fonctions,"peri_cur__")-fonctions)/LENNOM;
   fperipass=(strstr(fonctions,"peri_pass_")-fonctions)/LENNOM;
   fpassword=(strstr(fonctions,"password__")-fonctions)/LENNOM;
+  fmacmaster=(strstr(fonctions,"macmaster_")-fonctions)/LENNOM;
   
   periInit();
-  passok=FAUX;
 
   long periRecLength=(long)periEndOfRecord-(long)periBegOfRecord+1;
   
@@ -321,7 +322,7 @@ while(1){}
     Ethernet.begin (mac, localIp); //initialisation de la communication Ethernet
     }
     
-  Serial.print(" MacAddr=");serialPrintMac(mac);
+  Serial.print(" MacAddr=");serialPrintMac(mac,1);
   Serial.print("serveur ");Serial.print(NOMSERV);Serial.print(" sur adresse : "); Serial.print(Ethernet.localIP());Serial.print("/");Serial.println(PORTSERVER);
   
   periserv.begin();   // serveur périphériques
@@ -374,20 +375,37 @@ void getremote_IP(EthernetClient *client,uint8_t* ptremote_IP,byte* ptremote_MAC
 void loop()                             // =========================================
 {
 
+/*
+    contrôle de la pile
+    if(checkStack(originalStack)!=0){---------anomalie-------------}
+    initialisation avec :
+    char* originalStack=checkStack(0);
+
+char* checkStack(char* refstack)
+{
+  char ref;  
+  return (&ref-refstack);
+}
+*/
+
+
 #ifndef WEMOS
 //    if(!autoreset){wdt_reset();}        // watch dog reset
 #endif ndef WEMOS
   
     if(cli_a = periserv.available())    // attente d'un client
       {
-        // dévalidation mot de passe si time out ou IP change
-        if((to_serv+TO_SERV)<(millis()/1000)){passok=FAUX;Serial.println("pwd->0");}to_serv=millis()/1000;
-          getremote_IP(&cli_a,remote_IP,remote_MAC);
-          for(i=0;i<4;i++){if(remote_IP[i]!=remote_IP_cur[i]){passok=FAUX;}remote_IP_cur[i]=remote_IP[i];} 
+/*
+    Si le client est un périphérique, la fonction peripass doit précéder dataread/datasave et le mot de passe est systématiquement contrôlé
+    Si le client est un browser (la première fonction n'est pas peripass) et macMaster==ptremote_MAC 
+      alors pas de contrôle de mot de passe si le time out du dernier accés n'est pas atteint
+*/
+        periPassOk=FAUX;
         
-      Serial.print("\n pwd=");Serial.print(passok);Serial.print(" **** loop ");serialPrintIp(remote_IP_cur);Serial.print(" new=");serialPrintIp(remote_IP);
-      Serial.print(" MAC=");serialPrintMac(remote_MAC);
-      Serial.print("  ");serialPrintMac(macMaster);
+        getremote_IP(&cli_a,remote_IP,remote_MAC);
+
+      Serial.print(" **** loop ");serialPrintIp(remote_IP_cur);Serial.print(" new=");serialPrintIp(remote_IP);
+      Serial.print(" MAC=");serialPrintMac(remote_MAC,0);Serial.print("  ");serialPrintMac(macMaster,1);
       
       if (cli_a.connected()) 
         {nbreparams=getnv(&cli_a);Serial.print("\nnbreparams ");Serial.println(nbreparams);//dumpstr(valeurs,128);
@@ -453,32 +471,40 @@ void loop()                             // =====================================
         sprintf(buf,"%d",nbreparams+1);strcat(strSD," ");strcat(strSD,buf);strcat(strSD," = ");    // une ligne par transaction
         strcat(strSD,strSdEnd);
 
-/*
-      3 modes de fonctionnement :
-
-      1 - accueil : saisie de mot de passe
-      2 - serveur pour périphériques : (ip et mot de passe ok) seules fonctions dataRead et dataSave ;
-      contiennent l'adr mac pour identifier le périphérique.
-      3 - serveur pour navigateur : (ip et mot de passe ok) la première fonction d'un message GET ou POST doit être pericur 
-      si des données de périphérique sont modifiées par les fonctions suivantes.
-*/
-        what=0;
 /*      
     what indique le traitement à effectuer lorsque toutes les fonctions POSTées ou GETées ont été traitées
     what=0 rien à faire : commandes ponctuelles du serveur (refresh, reset, password etc)
     what=4 provoque l'enregistrement de la ligne de table via periParamsHtml
     what=5 effectue perisend et l'enregistrement de la ligne de table via periParamsHtml
+*/
+        what=0;
 
+/*
+      3 modes de fonctionnement :
+
+      1 - accueil : saisie de mot de passe
+      2 - serveur pour périphériques : seules fonctions dataRead et dataSave ; contiennent l'adr mac pour identifier le périphérique.
+      3 - serveur pour navigateur : dans les message GET ou POST, pericur doit précéder toute fonction de modification de donnée 
+
+    si la première fonction est fperipass, c'est un périphérique, sinon un browser 
+    si c'est un browser : 
+      (première fonction==(fpassword ou fmacmaster)      ... page d'accueil ou peritable et saisie macmaster
+      ou (macMaster==remote_MAC et pas TO))              ... macmaster et TO ok
+      sinon accueil
+    to_serv n'est pas armé par password_ car password_ ne sert que pour afficher peritable ou valider une fonction à suivre (future use)
 */     
-   
+      if(numfonct[0]!=fperipass){
+        if(numfonct[0]!=fpassword && numfonct[0]!=fmacmaster){
+          if(memcmp(macMaster,remote_MAC,6)!=0 || (to_serv+TO_SERV)<(millis()/1000)){
+            what=-1;nbreparams=-1;i=0;numfonct[i]=faccueil;memset(macMaster,0x00,6);to_serv=0;
+          }
+        }
+      }
+
+/*
+    boucle des fonctions accumulées par getnv
+*/   
         for (i=0;i<=nbreparams;i++){
-
-          if(!(passok==VRAI 
-            || macMaster[0]!=0
-            || numfonct[0]==fperipass 
-            || numfonct[0]==faccueil 
-            || numfonct[0]==fpassword)){what=-1;nbreparams=-1;i=0;numfonct[i]=faccueil;}
-
 
           if(i<NBVAL && i>=0){
           
@@ -490,20 +516,27 @@ void loop()                             // =====================================
 //           Serial.print(i);Serial.print(" nf[i]=");Serial.print(numfonct[i]);Serial.print(" valf=");Serial.println(valf);            
 //          strSD = en-tete + n fonctions + pied(strSdEnd) ; le pied est écrasé à chaque ajout de fonction
             
+/*            
+    controle de dépassement de capacité du buffer strSD ; si ok, ajout de la fonction, sinon ajout de '*'  
+*/
             if((strlen(strSD)+strlen(valf)+5+strlen(strSdEnd))<RECCHAR){
               strSD[strlen(strSD)-strlen(strSdEnd)]='\0';sprintf(buf,"%d",numfonct[i]);strcat(strSD,buf);
               strcat(strSD," ");strcat(strSD,valf);strcat(strSD,";");strcat(strSD,strSdEnd);}
             else {strSD[strlen(strSD)-strlen(strSdEnd)]='*';}
             //Serial.print("strSD=");Serial.print(strSD);dumpstr(valf,128);
 
+
             switch (numfonct[i])      
               {
               case 0: pertemp=0;conv_atobl(valf,&pertemp);break;
-              case 1: if(ctlpass(valf,pass)){ memcpy(macMaster,remote_MAC,6);}
-                      break;                                                                                // MacMaster
+              case 1: if(memcmp(remote_MAC,macMaster,6)==0 || ctlpass(valf,pass)){                          // macmaster_
+                        to_serv=millis()/1000;memcpy(macMaster,remote_MAC,6);}
+                      else {to_serv=0;memset(macMaster,0x00,6);what=-1;nbreparams=0;}
+                      Serial.print("macMaster=");serialPrintMac(macMaster,1);
+                      break;
               case 2: if(checkData(valf)==MESSOK){                                                          // peri_pass_
-                        passok=ctlpass(&valeurs[i*LENVAL+5],pass);
-                        if(passok==FAUX){sdstore_textdh(&fhisto,"pp","ko",strSD);}
+                        periPassOk=ctlpass(&valeurs[i*LENVAL+5],pass);
+                        if(periPassOk==FAUX){sdstore_textdh(&fhisto,"pp","ko",strSD);}
                       }break;
               case 3: dumpsd(&cli_a);break;
               case 4: test2Switchs();break;                                                                 // test2sw
@@ -514,18 +547,18 @@ void loop()                             // =====================================
               case 7: what=4;*periThOffset=0;*periThOffset=convStrToNum(valf,&j);break;                     // Th Offset
               case 8: perdate=0;conv_atobl(valf,&perdate);break;
               case 9: autoreset=VRAI;break;
-              case 10: Serial.print("password=");what=-1;nbreparams=0;                                      // password
-                       passok=ctlpass(&valeurs[i*LENVAL],pass);                                             // si saisie fausse -> accueil                          }
-                       Serial.println(passok);   
-                       if(passok==FAUX){sdstore_textdh(&fhisto,"pw","ko",strSD);}
-                       else {periTableHtml(&cli_a);what=0;}
-                       break;
-              case 11: sdpos=0;conv_atobl(valf,&sdpos);break;                                                // SD pos
-              case 12: what=1;periDataRead();break;                                                          // data_save
-              case 13: what=3;periDataRead();break;                                                          // data_read
-              case 14: what=5;{                                                                              // peri swb (buton)
-                       uint8_t sw;sw=*(libfonctions+2*i)-PMFNCHAR;                                           // sw n° switch
-                       uint8_t sh;sh=libfonctions[2*i+1]-PMFNCHAR;                                           // sh 0 ou 1 état demandé
+              case 10: to_serv=0;memset(macMaster,0x00,6);                                                  // password_
+                       if(!ctlpass(&valeurs[i*LENVAL],pass)){
+                         what=-1;nbreparams=0;
+                         sdstore_textdh(&fhisto,"pw","ko",strSD);break;}                                    // si faux accueil (what=-1)
+                       else if(nbreparams==0){periTableHtml(&cli_a);what=0;}                                // si vrai et pas de params peritable
+                       break;                                                                               // sinon param suivant (future use)
+              case 11: sdpos=0;conv_atobl(valf,&sdpos);break;                                               // SD pos
+              case 12: if(periPassOk==VRAI){what=1;periDataRead();periPassOk==FAUX;}break;                  // data_save
+              case 13: if(periPassOk==VRAI){what=3;periDataRead();periPassOk==FAUX;}break;                  // data_read
+              case 14: what=5;{                                                                             // peri swb (buton)
+                       uint8_t sw;sw=*(libfonctions+2*i)-PMFNCHAR;                                          // sw n° switch
+                       uint8_t sh;sh=libfonctions[2*i+1]-PMFNCHAR;                                          // sh 0 ou 1 état demandé
                        byte mask=(0x10<<sw*2);
                        *periSwVal&=~mask;*periSwVal|=mask;
                        }break;
@@ -540,7 +573,7 @@ void loop()                             // =====================================
                        memcpy(periNamer,valf,PERINAMLEN-1);periNamer[PERINAMLEN-1]='\0';                    // nom periph courant
                        }break;                                                                              // periSwPulseCtl
               case 18: what=4;for(j=0;j<6;j++){conv_atoh(valf+j*2,(periMacr+j));}break;                     // Mac periph courant
-              case 19: Serial.println("accueil");what=-1;break;                                             // accueil
+              case 19: Serial.println("accueil");accueilHtml(&cli_a);break;                                 // accueil
               case 20: periTableHtml(&cli_a);break;                                                         // peri Table
               case 21: what=4;*periProg=*valf-48;break;                                                     // peri prog
               case 22: what=4;*periSondeNb=*valf-48;if(*periSondeNb>MAXSDE){*periSondeNb=MAXSDE;}break;     // peri sonde
@@ -609,7 +642,7 @@ void loop()                             // =====================================
           case 3:periParamsHtml(&cli_a," ",0);break;            // data_read
           case 4:periSave(periCur);periTableHtml(&cli_a);break; // fonctions sans mise à jour des périphériques
           case 5:periSend();periTableHtml(&cli_a);break;        // fonctions avec mise à jour des périphériques (fait periParamsHtml)
-          default:accueilHtml(&cli_a,passok);break;
+          default:accueilHtml(&cli_a);break;
           }
           valeurs[0]='\0';
           cli_a.stop();

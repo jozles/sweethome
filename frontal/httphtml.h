@@ -3,7 +3,7 @@
 
 int  dumpsd(EthernetClient* cli);
 void periTableHtml(EthernetClient* cli);
-void accueilHtml(EthernetClient* cli,bool passok);
+void accueilHtml(EthernetClient* cli);
 void htmlIntro0(EthernetClient* cli);
 void htmlIntro(char* titre,EthernetClient* cli);
 void checkboxTableHtml(EthernetClient* cli,uint8_t* nom,char* nomfonct,int etat);

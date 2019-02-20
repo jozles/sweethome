@@ -50,7 +50,7 @@ void sdstore_textdh(File* fhisto,char* val1,char* val2,char* val3)
 {
   long tm=millis();getdate(&hms,&amj,&js);
   sdstore_textdh0(fhisto,val1,val2,val3);
-  Serial.print("tdate=");Serial.println(millis()-tm);
+  //Serial.print("tdate=");Serial.println(millis()-tm);
 }
 
 

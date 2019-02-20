@@ -413,23 +413,18 @@ Serial.print("début péritable ; remote_IP ");serialPrintIp(remote_IP_cur);Seri
           #ifdef _MODE_DEVT
             cli->print(" _MODE_DEVT ");
           #endif _MODE_DEVT
-          //cli->println("<br>");
           for(int zz=0;zz<12;zz++){cli->print(bufdate[zz]);if(zz==7){cli->print("-");}}
-          cli->println(" GMT<br>");
-          cli->print("local IP ");cli->print(Ethernet.localIP());cli->println(" ");
+          cli->println(" GMT ; local IP ");cli->print(Ethernet.localIP());cli->println(" ");
           cli->print(msb);cli->print(".");cli->print(lsb);cli->println("°C<br>");
           
+          cli->print("<input type=\"password\" name=\"macmaster_\" value=\"\" size=\"6\" maxlength=\"8\" > ");
           lnkTableHtml(cli,"reset_____","reset");
-
           lnkTableHtml(cli,"password__=17515A","refresh");                     //lnkTableHtml(cli,"peri_table","refresh");
           numTableHtml(cli,'i',(uint32_t*)&perrefr,"per_refr__",4,0,0);cli->println("<input type=\"submit\" value=\"ok\">");
-
           lnkTableHtml(cli,"test2sw___","testsw");
-          
           lnkTableHtml(cli,"dump_sd___","dump SDcard");
           cli->print("(");long sdsiz=fhisto.size();cli->print(sdsiz);cli->println(") ");
-          numTableHtml(cli,'i',(uint32_t*)&sdpos,"sd_pos____",9,0,0);cli->print("<input type=\"submit\" value=\"ok\">");
-          cli->print(" <input type=\"password\" name=\"macmaster_\" id=\"macMaster\" value=\"\" size=\"6\" maxlength=\"8\" >    détecteurs serveur :");
+          numTableHtml(cli,'i',(uint32_t*)&sdpos,"sd_pos____",9,0,0);cli->print("<input type=\"submit\" value=\"ok\"> détecteurs serveur :");
           for(int k=0;k<NBDSRV;k++){subDSn(cli,"mem_dsrv__\0",memDetServ,k);}
           cli->println("<br>");
           
@@ -497,19 +492,20 @@ Serial.print("début péritable ; remote_IP ");serialPrintIp(remote_IP_cur);Seri
 Serial.println("fin péritable");
 }
 
-void accueilHtml(EthernetClient* cli,bool passok)
+void accueilHtml(EthernetClient* cli)
 {
-
-          if(!passok){
             Serial.println(" saisie pwd");
             init_params();
             htmlIntro(NOMSERV,cli);
  
-            cli->println(VERSION);
-            cli->println("<body><form method=\"get\" ><p><label for=\"password\">password</label> : <input type=\"password\"");
-            cli->println(" name=\"password__\" id=\"password\" value=\"\" size=\"6\" maxlength=\"8\" ></p></form></body></html>");
-          }
-          else periTableHtml(cli);
+
+//            cli->println("<body><form method=\"get\" ><p><label for=\"password\">password</label> : <input type=\"password\"");
+//            cli->println(" name=\"password__\" id=\"password\" value=\"\" size=\"6\" maxlength=\"8\" ></p></form></body></html>");
+
+            cli->println("<body><form method=\"get\" >");
+            cli->println(VERSION);cli->println("<br>");
+            cli->println("<p>pass <input type=\"password\" name=\"password__\" value=\"\" size=\"6\" maxlength=\"8\" ></p>");
+            cli->println("</form></body></html>");
 }          
 
 

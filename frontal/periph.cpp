@@ -107,7 +107,7 @@ Ymdhms now()
   Ymdhms ndt;
   uint8_t dayOfWeek;
   readDS3231time(&ndt.second,&ndt.minute,&ndt.hour,&dayOfWeek,&ndt.day,&ndt.month,&ndt.year);
-  Serial.print("DS3231=");Serial.print(ndt.year);Serial.print(ndt.month);Serial.println(ndt.day);
+  //Serial.print("DS3231=");Serial.print(ndt.year);Serial.print(ndt.month);Serial.println(ndt.day);
   return ndt;
 }
 
