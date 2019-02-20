@@ -77,8 +77,7 @@ WiFiClient cliext;              // client externe du serveur local
   int   blkPer=2000;
   long  debTime=millis();   // pour mesurer la durée power on
   long  debConv=millis();   // pour attendre la fin du délai de conversion
-  //int   cntIntA=0;
-  //int   cntIntB=0;
+  int   tconversion=0;
   long  detTime[MAXDET+MAXDSP+MAXDEX]={millis(),millis(),millis(),millis()};    // temps pour debounce
 
 
@@ -123,6 +122,7 @@ int   dataRead();
 void  dataTransfer(char* data);  
 void  readTemp();
 void  ordreExt();
+void  talkServerWifiConnect();
 
 
 void tmarker()
@@ -204,9 +204,10 @@ void setup()
  byte setds[4]={0,0x7f,0x80,0x3f},readds[8];   // 187mS 10 bits accu 0,25°
  int v=ds1820.setDs(WPIN,setds,readds);if(v==1){Serial.print(" DS1820 version=0x");Serial.println(readds[0],HEX);}
  else {Serial.print(" DS1820 error ");Serial.println(v);}
+  tconversion=TCONVERSIONB;if(readds[0]==0X10){tonversion=TCONVERSIONS;}
 #if POWER_MODE==NO_MODE
   ds1820.convertDs(WPIN);
-  delay(TCONVERSION);
+  delay(tconversion);
 #endif PM==NO_MODE
 #if POWER_MODE==PO_MODE
   tmarker();
@@ -558,7 +559,8 @@ switch(cstRec.talkStep){
         break;
         
   default: break;
-  }  
+  }
+  //if(cstRec.talkStep>=9){server.begin(PORTSERVPERI);}  
 }
 
 #ifdef _SERVER_MODE
@@ -794,9 +796,9 @@ void readTemp()
 #if POWER_MODE==PO_MODE
       long ms=millis();           // attente éventuelle de la fin de la conversion initiée à l'allumage
       Serial.print("debConv=");Serial.print(debConv);Serial.print(" millis()=");Serial.print(ms);
-      Serial.print(" Tconversion=");Serial.print(TCONVERSION);Serial.print(" delay=");Serial.println(TCONVERSION-(ms-debConv));
-      if((ms-debConv)<TCONVERSION){
-        delay(TCONVERSION-(ms-debConv));}
+      Serial.print(" Tconversion=");Serial.print(tconversion);Serial.print(" delay=");Serial.println((long)tconversion-(ms-debConv));
+      if((ms-debConv)<tcnversion){
+        delay((long)tconversion-(ms-debConv));}
 #endif PM==PO_MODE
 
       temp=ds1820.readDs(WPIN);
