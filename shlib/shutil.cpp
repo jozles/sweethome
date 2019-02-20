@@ -178,11 +178,12 @@ void unpackMac(char* buf,byte* mac) //uint8_t* mac)
     buf[17]='\0';
 }
 
-void serialPrintMac(byte* mac)
+void serialPrintMac(byte* mac,uint8_t ln)
 {
   char macBuff[18];
   unpackMac(macBuff,mac);
-  Serial.println(macBuff);
+  Serial.print(macBuff);
+  if(ln!=0){Serial.println();}
 }
 
 
