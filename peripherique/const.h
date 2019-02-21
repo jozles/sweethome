@@ -1,7 +1,7 @@
 #ifndef CONST_H_INCLUDED
 #define CONST_H_INCLUDED
 
-#define VERSION "1.e_"
+#define VERSION "1.f_"
 /* 1.1 allumage/extinction modem
  * 1.2 ajout voltage (n.nn) dans message ; modif unpackMac
  * 1.3 deep sleep (PERTEMP) ; gestion EEPROM ; conversion temp pendant sleep
@@ -30,6 +30,8 @@
  * 1.d horloge séparée, détecteurs locaux/externes, variables d'état pulses, model, cstRec et read/write/initConstant revus
  * 1.e moteur pulse, détecteurs en poling, transfert modèle DS18x00
  *     pulse fonctionnel
+ * 1.f forçage communication au démarrage suivant si alim bloquée allumée (ne fonctionne que pour PO_MODE) ; 
+ *     gestion tconversion selon modèle DS18X
  * 
 Modifier : 
 
@@ -42,7 +44,11 @@ Modifier :
   
   gestion des alarmes avec message au serveur (tension, niveaux th et autres)
   
+  Lorsque l'alim est bloquée allumée, modèles PO_MODE, cstRec.serverTime=cstRec.serverPer+1 et writeconstant() 
+  pour forcer le déclenchement au prochain reboot. enchainer sur une attente de messages usb
+  SSID1nnnnn...,SSID2nnnn....,PWD1nnnn....,PWD2nnnn....,SERVIPPxxx.xxx.xxx.xxx/nnnn, (16 car pour SSID et 48 car pour PWD) à stocker séparément des constantes)
   créer un protocole usb pour charger ssid, password, IP et port du host sans reprogrammer le 8266
+  
   
 */
 
@@ -126,8 +132,8 @@ Modifier :
 #define THESP01 '1'
 #define THESP12 '2'
 
-#define CARTE VR                      // <------------- modèle carte
-#define POWER_MODE NO_MODE            // <------------- type d'alimentation 
+#define CARTE THESP01                      // <------------- modèle carte
+#define POWER_MODE PO_MODE            // <------------- type d'alimentation 
 
 #if POWER_MODE==NO_MODE
   #define _SERVER_MODE

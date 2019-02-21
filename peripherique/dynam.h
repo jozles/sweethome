@@ -23,4 +23,60 @@ void memdetinit();
 uint8_t swAction();
 
 #endif NO_MODE
+
+
+/*
+Mode d'emploi de la peritable :
+
+  pour chaque switch 3 colonnes : 
+    1) les compteurs avec bit d'enable et de free-run
+    2) le contrôle des détecteurs logiques : 
+        4 lignes pour 4 détecteurs avec : 
+        enable, local, n° physique (local) ou externe, transitionnel ou statiqiue, actif haut/bas, n° action éventuelle
+        (un détecteur est actif si : il est enable, local (externe à dev), son niveau correspond)
+                actions :
+                  0) reset : l'action reset remet les 2 compteurs à 0 en mode idle selon mode/état/flanc programmé 
+                  1) raz : l'action raz remet à 0 le compteur courant sans effet sur l'horloge selon mode/état/flanc programmé
+                  2) stop : l'action stop suspend l'horloge selon l'état/flanc programmé
+                  3) start : l'action start déclenche l'horloge selon l'état/flanc programmé
+                  4) short : l'action short termine le compteur courant sans changer la période totale (le compteur suivant est augmenté)
+                  5) fin : l'action fin termine le compteur courant. 
+                  6) stop impulsionnel : stop si le compteur depuis le début a moins de DETIMP (1,5sec) start sinon 
+                        (impDetTime=millis() si start, =0 si stop ou stop impulsionnel)
+                        
+    3) le contrôle des switchs :
+        (les lignes A et D sont inutilisées et sans effet)
+        ligne O pour OFF : 3 sources qui peuvent engendrer l'état OFF
+        ligne I pour ON  : 3 sources qui peuvent engendrer l'état ON
+        
+        1ère source : un détecteur logique : numéro (0 à 3) parmi les 4 de la colonne de contrôle des dl, bit enable, bit H/L
+        2nde source : le serveur : bit enable, bit H/L
+        3ème source : le générateur d'impulsion : bit enable, bit H/L
+
+exemple : positionner le switch 0 selon l'état du détecteur local 2 (P4 de la carte VR) et switch 1 à l'inverse
+          (contrôle des détecteurs / conrôle des switchs)    (contrôle des détecteurs / conrôle des switchs)    (x coché, _ vide)
+                  xx2_x0                I 1 xx____                  xx2__0                I 1 x_____                  
+                  xx2__0                O 2 x_____                  xx2_x0                O 2 xx____
+
+exemple : positionner le switch 0 selon l'état du bit de commande serveur 
+          (contrôle des détecteurs / conrôle des switchs)    (x coché, _ vide)
+                  _____0                I 0 __xx__                  
+                  _____0                O 0 __x___       
+
+exemple : faire clignoter le switch 0 sur déclenchement du détecteur local 2 au passage haut
+           compteurs  freerun          (contrôle des détecteurs / conrôle des switchs)    (x coché, _ vide)
+             x  4        x                     xx2_x3                I 0 ____xx                  
+             x  4                                                    O 0 ____x_       
+ 
+exemple : volets roulants avec détecteurs 0 et 1 (sur inter on off on P12 carte VR)
+           compteurs  freerun          (contrôle des détecteurs / conrôle des switchs)    (x coché, _ vide)
+             x  0        _                     xx0__3                I 0 __xxxx                  
+             x  12                             xx0_x6                O 0 __x_x_       
+                                               xx1__1
+ */
+ 
+
+
+
+
 #endif // DYNAM_H_INCLUDED

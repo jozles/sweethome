@@ -32,8 +32,8 @@ extern byte dsmodel;
   const char* password;
   const char* ssid1= "pinks";
   const char* password1 = "cain ne dormant pas songeait au pied des monts";
-  const char* ssid2= "PINKS2";
-  const char* password2= "il vit un oeil";
+  const char* ssid2= "devolo-5d3";
+  const char* password2= "JNCJTRONJMGZEEQL";
 #ifndef _MODE_DEVT
   const char* host = "192.168.0.34";
   const int   port = 1789;
@@ -204,7 +204,7 @@ void setup()
  byte setds[4]={0,0x7f,0x80,0x3f},readds[8];   // 187mS 10 bits accu 0,25°
  int v=ds1820.setDs(WPIN,setds,readds);if(v==1){Serial.print(" DS1820 version=0x");Serial.println(readds[0],HEX);}
  else {Serial.print(" DS1820 error ");Serial.println(v);}
-  tconversion=TCONVERSIONB;if(readds[0]==0X10){tonversion=TCONVERSIONS;}
+  tconversion=TCONVERSIONB;if(readds[0]==0X10){tconversion=TCONVERSIONS;}
 #if POWER_MODE==NO_MODE
   ds1820.convertDs(WPIN);
   delay(tconversion);
@@ -356,9 +356,16 @@ void loop(){        //=============================================
   /* power off */
   digitalWrite(PINPOFF,HIGH);        // power down
   pinMode(PINPOFF,OUTPUT);
+
 #endif PM==PO_MODE
 
-while(1){};
+  yield();
+  delay(2000);                           // si l'alim reste allumée
+  cstRec.serverTime=cstRec.serverPer+1;  // pour forcer une communication au prochain démarrage
+  writeConstant();
+
+
+while(1){delay(1000);};
 
 } //  fin setup si != NO_MODE
 
@@ -765,7 +772,7 @@ bool wifiConnexion(const char* ssid,const char* password)
       Serial.print(" connected ; local IP : ");Serial.println(WiFi.localIP());
       cstRec.IpLocal=WiFi.localIP();        
       WiFi.macAddress(mac);
-      serialPrintMac(mac);
+      serialPrintMac(mac,1);
       cstRec.tempPer=PERTEMP;
       }
     else {Serial.println("\nfailed");if(nbreBlink==0){ledblink(BCODEWAITWIFI);}}
@@ -797,7 +804,7 @@ void readTemp()
       long ms=millis();           // attente éventuelle de la fin de la conversion initiée à l'allumage
       Serial.print("debConv=");Serial.print(debConv);Serial.print(" millis()=");Serial.print(ms);
       Serial.print(" Tconversion=");Serial.print(tconversion);Serial.print(" delay=");Serial.println((long)tconversion-(ms-debConv));
-      if((ms-debConv)<tcnversion){
+      if((ms-debConv)<tconversion){
         delay((long)tconversion-(ms-debConv));}
 #endif PM==PO_MODE
 

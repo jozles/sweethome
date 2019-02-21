@@ -263,14 +263,14 @@
                   2) transitionnel : un détecteur en mode transitionnel agit selon le flanc programmé
                 
                 actions :
-                  1) reset : l'action reset remet les 2 compteurs à 0 en mode idle selon mode/état/flanc programmé 
-                  2) raz : l'action raz remet à 0 le compteur courant sans effet sur l'horloge selon mode/état/flanc programmé
-                  3) stop : l'action stop suspend l'horloge selon l'état/flanc programmé
-                  4) start : l'action start déclenche l'horloge selon l'état/flanc programmé
-                  5) short : l'action short termine le compteur courant sans changer la période totale (le compteur suivant est augmenté)
-                  6) fin : l'action fin termine le compteur courant. 
-                  7) stop impulsionnel : stop si le compteur depuis le début a moins de DETIMP (1,5sec) start sinon 
-                        (impDetTime=millis() si start, =0 si stop ou stop impulsionnel
+                  0) reset : l'action reset remet les 2 compteurs à 0 en mode idle selon mode/état/flanc programmé 
+                  1) raz : l'action raz remet à 0 le compteur courant sans effet sur l'horloge selon mode/état/flanc programmé
+                  2) stop : l'action stop suspend l'horloge selon l'état/flanc programmé
+                  3) start : l'action start déclenche l'horloge selon l'état/flanc programmé
+                  4) short : l'action short termine le compteur courant sans changer la période totale (le compteur suivant est augmenté)
+                  5) fin : l'action fin termine le compteur courant. 
+                  6) stop impulsionnel : stop si le compteur depuis le début a moins de DETIMP (1,5sec) start sinon 
+                        (impDetTime=millis() si start, =0 si stop ou stop impulsionnel)
 
                les détecteurs sont représentés par une variable en mémoire (memDetec 1byte/detecteur) ; pas d'accès direct aux ports
                   le changement d'état d'un port et la mise à jour de la variable sont gérés par isrDet().

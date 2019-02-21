@@ -35,7 +35,7 @@ extern "C" {
 
   EthernetClient cli_a;             // client du serveur periph  local
 //  EthernetClient cli_b;             // client du serveur browser local  
-#define TO_SERV  600                // sec
+#define TO_SERV  2000                // 1/2 sec ?
   EthernetClient cliext;            // client de serveur externe  
 
 

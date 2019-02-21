@@ -112,28 +112,42 @@ extern  int*  int0=&(0x00);*/
 
 uint8_t rdy(byte modesw,int sw) // pour les 3 sources, check bit enable puis etat source ; retour numéro source valorisé si valide sinon 0
 {
-  /* ------ détecteur --------- */
+/* pour chacune des sources, test du bit enable de la source SWxxEN_VB (xx=DL pour détecteur logique, MS pour serveur, MP pour pulse)
+   si pas enable, source suivante ; 
+*/
+  
+  /* ------ détecteur --------- 
+   si enable, recup n° detec logique 'det' pour isoler les bits d'info du det logique parmi 4 dans la description du switch
+   dans les bits d'infos : enable du det logique, local si !=0 ou externe, le n° de det physique si local, l'état du détecteur
+   Enfin, comparaison du niveau demandé avec l'image mémoire du détecteur physique dans memDetec
+   (détecteurs externes à traiter)
+  */
   if((modesw & SWMDLEN_VB) !=0){                      // det enable
     uint8_t det=(modesw>>SWMDLNULS_PB)&0x03;          // numéro det logique
-    uint64_t swctl;memcpy(&swctl,cstRec.pulseCtl+sw*DLSWLEN,DLSWLEN); // les 6 bytes du switch
+    uint64_t swctl;memcpy(&swctl,cstRec.pulseCtl+sw*DLSWLEN,DLSWLEN); // les 6 bytes de description du switch courant
     uint16_t dlctl=(uint16_t)(swctl>>(det*DLBITLEN)); // calés en poids faibles les bits du détecteur logique
 //Serial.print(" det=");Serial.print(det);Serial.print(" dlctl=");Serial.print(dlctl,HEX);Serial.print(" dlctl&DLENA_VB=");Serial.print(dlctl&DLENA_VB,HEX);Serial.print(" dlctl&DLEL_VB=");Serial.print(dlctl&DLEL_VB,HEX);
-    if((uint16_t)(dlctl&DLENA_VB) != 0){                          // dl enable
-      if((uint16_t)(dlctl&DLEL_VB) != 0){                         // dl local
-        uint8_t locdet=(dlctl>>DLNLS_PB)&0x07;                    // num det physique local 
-//Serial.print(" locdet=");Serial.print(locdet);Serial.print(" memDetec=");Serial.print(cstRec.memDetec[locdet],HEX);
-        if(((modesw>>SWMDLHL_PB)&0x01)==((cstRec.memDetec[locdet]>>DETBITLH_PB)&0x01)){return 1;}      // ok : bit detec = consigne
+    if((uint16_t)(dlctl&DLENA_VB) != 0){                                              // dl enable
+      if((uint16_t)(dlctl&DLEL_VB) != 0){                                             // dl local
+        uint8_t locdet=(dlctl>>DLNLS_PB)&0x07;                                        // num det physique local
+        if(((dlctl>>DLMHL_PB)&0x01)==((cstRec.memDetec[locdet]>>DETBITLH_PB)&0x01)){  // etat actif ?
+//Serial.print("sw=");Serial.print(sw);Serial.print(" locdet=");Serial.print(locdet);Serial.print(" memDetec=");Serial.print(cstRec.memDetec[locdet],HEX);
+//Serial.print(" SWMDHL=");Serial.print((modesw>>SWMDLHL_PB)&0x01);Serial.print(" DETBITLH=");Serial.println((cstRec.memDetec[locdet]>>DETBITLH_PB)&0x01);
+          if(((modesw>>SWMDLHL_PB)&0x01)==((cstRec.memDetec[locdet]>>DETBITLH_PB)&0x01)){return 1;} // comparaison bit et consigne
+        }
       }
       else {}                                         // dl externe à traiter
-    }
-  }                                                                                                              
-
+    }                                                                                                              
+  }
   /* --------- serveur ---------- */
-  if((modesw & SWMSEN_VB) != 0){
-    if (((modesw>>SWMSHL_PB)&0x01)==((cstRec.swCde>>((2*sw)+1))&0x01)){return 2;}    // ok serveur
+  if((modesw & SWMSEN_VB) != 0){                      // serveur enable
+    if (((modesw>>SWMSHL_PB)&0x01)==((cstRec.swCde>>((2*sw)+1))&0x01)){return 2;}    // comparaison bit et consigne
   }
 
-  /* --------- pulse gen --------- */
+  /* --------- pulse gen --------- 
+  si enable, selon staPulse et consigne détermination état du switch (ou pas) 
+  (voir états staPulse dans const.h de frontal)
+  */
   if((modesw & SWMPEN_VB) != 0){
   //Serial.print(" sw=");Serial.print(sw);Serial.print(" stapulse=");Serial.print(staPulse[sw]);
   bool lh=(modesw>>SWMPHL_PB)&0x01;
@@ -156,6 +170,10 @@ uint8_t rdy(byte modesw,int sw) // pour les 3 sources, check bit enable puis eta
 }
 
 uint8_t swAction()      // poling check cde des switchs
+                        // pour chaque switch, examen si une condition pour off est remplie 
+                        //                puis examen si une condition pour on  est remplie si pas de off
+                        // l'examen est effectué par la fonction rdy() qui teste l'état du bit enable et le niveau haut ou bas
+                        //              pour chacune des 3 sources (détecteur, switch du serveur, générateur de pulse)
 { 
   uint8_t swa=0;
   
