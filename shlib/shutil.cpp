@@ -2,7 +2,6 @@
 #include "Arduino.h"
 #include "shconst.h"
 
-
 extern char  pass[];
 extern char* chexa;
 
@@ -298,16 +297,18 @@ void initdebug()
 
 bool ctlpass(char* data,char* model)
 {
-  int j=0;
-  bool passok=FAUX;
+  return !memcmp(model,data,strlen(model));
+}
 
-  //dumpstr(data,16);
-  for(j=0;j<LENVAL;j++){
+bool ctlto(long time,long to)
+{
+    //Serial.print("ctlto=");Serial.print(time);Serial.print(" to=");Serial.println(to);
+ return (millis()-time)>to;
+}
 
-    if(model[j]==0){passok=VRAI;break;}
-    if(data[j]!=pass[j]){break;}
-  }
-//Serial.print(passok);Serial.println(data);
-
-  return passok;
+void startto(long* time,long* to,long valto)
+{
+  *to=valto;
+  *time=millis();
+        //Serial.print("startto=");Serial.print(*time);Serial.print(" to=");Serial.print(*to);Serial.print(" valto=");Serial.println(valto);
 }

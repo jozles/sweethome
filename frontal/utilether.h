@@ -12,5 +12,7 @@ void sdstore_textdh(File* fhisto,char* val1,char* val2,char* val3);  // getdate(
 void sdstore_textdh0(File* fhisto,char* val1,char* val2,char* val3);
 int getUDPdate(uint32_t* hms,uint32_t* amj,byte* js);
 
+void ShowMemory(void);
+
 
 #endif // _UTILETHER_H_

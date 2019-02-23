@@ -7,6 +7,8 @@
 #include "periph.h"
 #include "shconst.h"
 
+
+
 // udp DATA
 
 unsigned int localUDPPort = 8888;         // local port to listen for UDP packets
@@ -221,5 +223,6 @@ int getUDPdate(uint32_t* hms,uint32_t* amj,byte* js)
   }
   return 0;
 }
+
 
 

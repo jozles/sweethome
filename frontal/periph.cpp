@@ -7,9 +7,34 @@
 #include "shutil.h"
 #include "periph.h"
 
+/* >>>>>>>> fichier config <<<<<<< */
+
+File fconfig;     // fichier config
+
+extern char configRec[CONFIGRECLEN];
+  
+extern byte* mac;
+extern byte* localIp;
+extern int*  portserver;
+extern char* nomserver;
+extern char* pass;
+extern char* peripass;
+extern char* ssid;   
+extern char* passssid;
+extern int*  nbssid;
+
+extern byte* configBegOfRecord;
+extern byte* configEndOfRecord;
+
+byte lip[]=LOCALSERVERIP;
+
+/* >>>>>>> fichier périphériques <<<<<<<  */
+
 File fperi;       // fichiers perif
 
 extern char      periRec[PERIRECLEN];          // 1er buffer de l'enregistrement de périphérique
+extern char      periCache[PERIRECLEN*NBPERIF];   // cache des périphériques
+extern byte      periCacheStatus[NBPERIF];     // indicateur de validité du cache d'un périph
   
 extern int       periCur;                      // Numéro du périphérique courant
 
@@ -47,7 +72,6 @@ extern float*    periVmin;                     // ptr ds buffer : alarme mini vo
 extern float*    periVmax;                     // ptr ds buffer : alarme maxi volts
 extern byte*     periDetServEn;                // ptr ds buffer : 1 byte 8*enable detecteurs serveur
       
-
 extern byte*     periBegOfRecord;
 extern byte*     periEndOfRecord;
 
@@ -158,6 +182,107 @@ void alphaNow(char* buff)
   //Serial.println();
 }
 
+/* >>>>>>>>> configuration <<<<<<<<<< */
+
+void configInit()
+{
+byte* temp=(byte*)configRec;
+
+  configBegOfRecord=(byte*)temp;         // doit être le premier !!!
+ 
+  mac=(byte*)temp;
+  temp+=6;
+  localIp=(byte*)temp;
+  temp+=4;
+  portserver=(int*)temp;
+  temp+=sizeof(int);
+  nomserver=(char*)temp;
+  temp+=LNSERV;
+  pass=(char*)temp;
+  temp+=(LPWD+1);
+  peripass=(char*)temp;
+  temp+=(LPWD+1);
+  ssid=(char*)temp;
+  temp+=(MAXSSID*(LENSSID+1));
+  passssid=(char*)temp;
+  temp+=(MAXSSID*(LPWSSID+1));
+  nbssid=(int*)temp;
+  temp+=sizeof(int);
+
+  configEndOfRecord=(byte*)temp;      // doit être le dernier !!!
+  temp ++;
+//Serial.print((long)temp);Serial.print(" ");Serial.print((long)configEndOfRecord);Serial.print(" ");Serial.println((long)configBegOfRecord);
+  
+  configInitVar();
+//Serial.print((long)temp);Serial.print(" ");Serial.print((long)configEndOfRecord);Serial.print(" ");Serial.println((long)configBegOfRecord);
+}
+
+void configInitVar()
+{
+memcpy(mac,MACADDR,6);
+memcpy(localIp,lip,4);
+*portserver = PORTSERVER;
+memset(nomserver,0x00,LNSERV);memcpy(nomserver,NOMSERV,strlen(NOMSERV));
+memset(pass,0x00,LPWD+1);memcpy(pass,SRVPASS,strlen(SRVPASS));
+memset(peripass,0x00,LPWD+1);memcpy(peripass,SRVPASS,strlen(SRVPASS));
+//Serial.print(" strlen(SRVPASS)=");Serial.print(strlen(SRVPASS));Serial.print(" peripass=");for(int pp=0;pp<(LPWD+1);pp++){Serial.print(peripass[pp],HEX);Serial.print(" ");}Serial.println();
+memset(ssid,0x00,MAXSSID*(LENSSID+1));
+memcpy(ssid,SSID1,strlen(SSID1));memcpy(ssid+LENSSID+1,SSID2,strlen(SSID2));   
+//Serial.print(" strlen(SSID1)=");Serial.print(strlen(SSID1));Serial.print(" ssid=");for(int pp=0;pp<(LENSSID+1);pp++){Serial.print(ssid[pp]);}Serial.println();
+memset(passssid,0x00,MAXSSID*(LPWSSID+1));
+memcpy(passssid,PWDSSID1,strlen(PWDSSID1));memcpy(passssid+LPWSSID+1,PWDSSID2,strlen(PWDSSID2));
+*nbssid = MAXSSID;
+}
+
+void configPrint()
+{
+  Serial.print("Mac=");serialPrintMac(mac,0);
+  Serial.print(" ");Serial.print(nomserver);
+  Serial.print(" localIp=");for(int pp=0;pp<4;pp++){Serial.print((uint8_t)localIp[pp]);if(pp<3){Serial.print(".");}}Serial.print("/");Serial.println(*portserver);
+  Serial.print("password=");Serial.print(pass);Serial.print(" peripass=");Serial.println(peripass);
+  char bufssid[74];
+  for(int nb=0;nb<MAXSSID;nb++){
+    if(*(ssid+(nb*(LENSSID+1)))!='\0'){
+        memset(bufssid,0x00,74);bufssid[0]=0x20;sprintf(bufssid+1,"%1u",nb);strcat(bufssid," ");
+        strcat(bufssid,ssid+(nb*(LENSSID+1)));strcat(bufssid," ");
+        int lsp=(LENSSID-strlen(ssid+nb*(LENSSID+1)));for(int ns=0;ns<lsp;ns++){strcat(bufssid," ");}
+        strcat(bufssid,passssid+(nb*(LPWSSID+1)));
+        Serial.println(bufssid);
+    }
+  }
+}
+
+int configLoad()
+{
+  //Serial.println("load config");
+  int i=0;
+  char configFile[]="srvconf\0";
+  if(sdOpen(FILE_READ,&fconfig,configFile)==SDKO){return SDKO;}
+  for(i=0;i<CONFIGRECLEN;i++){configRec[i]=fconfig.read();}
+  fconfig.close();
+  return SDOK;
+}
+
+int configSave()
+{
+  int i=0;
+  int sta;
+  char configFile[]="srvconf\0";
+  
+  if(sdOpen(FILE_WRITE,&fconfig,configFile)!=SDKO){
+    sta=SDOK;
+    fconfig.seek(0);
+    for(i=0;i<CONFIGRECLEN;i++){fconfig.write(configRec[i]);}
+//for(i=0;i<CONFIGRECLEN+4*sizeof(float)+2*sizeof(byte);i++){fconfig.write(configRec[i]);}      // ajouter les longueurs des variables ajoutées avant de modifier PERIRECLEN
+    fconfig.close();
+  }
+  else sta=SDKO;
+  Serial.print("configSave status=");Serial.println(sta);
+  return sta;
+}
+
+/* >>>>>>>>> périphériques <<<<<<<<<< */
+
 void periFname(int num,char* fname)
 {
   strcpy(fname,"PERI");
@@ -168,12 +293,16 @@ void periFname(int num,char* fname)
 
 int periLoad(int num)
 {
-  //Serial.print("load table peri=");Serial.println(num);
   int i=0;
-  char periFile[7];periFname(num,periFile);
-  if(sdOpen(FILE_READ,&fperi,periFile)==SDKO){return SDKO;}
-  for(i=0;i<PERIRECLEN;i++){periRec[i]=fperi.read();}
-  fperi.close();
+  if(periCacheStatus[num]==0){
+    //Serial.print("load table peri=");Serial.println(num);
+    char periFile[7];periFname(num,periFile);
+    if(sdOpen(FILE_READ,&fperi,periFile)==SDKO){return SDKO;}
+    for(i=0;i<PERIRECLEN;i++){periCache[num*PERIRECLEN+i]=fperi.read();}              // periRec[i]=fperi.read();}
+    fperi.close();
+    periCacheStatus[num]=1;
+  }
+  for(i=0;i<PERIRECLEN;i++){periRec[i]=periCache[num*PERIRECLEN+i];}
   return SDOK;
 }
 
@@ -191,6 +320,9 @@ int periSave(int num)
   int sta;
   char periFile[7];periFname(num,periFile);
   
+  if(periCacheStatus[num]==0){ledblink(BCODEPERICACHEKO);}
+  for(i=0;i<PERIRECLEN;i++){periCache[num*PERIRECLEN+i]=periRec[i];}
+
   *periNum=periCur;
   if(sdOpen(FILE_WRITE,&fperi,periFile)!=SDKO){
     sta=SDOK;
@@ -207,6 +339,8 @@ int periSave(int num)
 
 void periInit()                 // pointeurs de l'enregistrement de table courant
 {
+  for(int nbp=0;nbp<NBPERIF;nbp++){periCacheStatus[nbp]=0x00;}
+  
   periCur=0;
   int* filler;
   byte* temp=(byte*)periRec;
@@ -290,7 +424,7 @@ void periInit()                 // pointeurs de l'enregistrement de table couran
 void periInitVar()
 {
   *periNum=0;
-  *periPerRefr=PERIPREF;
+  *periPerRefr=BROWSERPREF;
   *periPitch=0;
   *periLastVal=0;
   *periAlim=0;

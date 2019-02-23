@@ -8,25 +8,23 @@
 #include "periph.h"
 #include "httphtml.h"
 #include "utilether.h"
+#include "pageshtml.h"
 
 #ifndef WEMOS
 //  #include <avr/wdt.h>  //biblio watchdog
 #endif ndef WEMOS
 
-extern File fhisto;      // fichier histo sd card
-extern long sdpos;
-extern char strSD[RECCHAR];
+extern File   fhisto;      // fichier histo sd card
+extern long   sdpos;
+extern char*  nomserver;
+extern byte   memDetServ;  // image mémoire NBDSRV détecteurs (8)
+extern int    perrefr;
 
-extern byte memDetServ;  // image mémoire NBDSRV détecteurs (8)
-
-//extern EthernetClient cli;
-
-extern int   perrefr;
 extern char* chexa;
 
 extern uint8_t remote_IP[4],remote_IP_cur[4];
 
-extern char      periRec[PERIRECLEN];          // 1er buffer de l'enregistrement de périphérique
+extern char      periRec[PERIRECLEN];        // 1er buffer de l'enregistrement de périphérique
   
 extern int       periCur;                    // Numéro du périphérique courant
 
@@ -67,7 +65,7 @@ extern byte*     periDetServEn;                // ptr ds buffer : 1 byte 8*enabl
 extern int8_t    periMess;                     // code diag réception message (voir MESSxxx shconst.h)
 extern byte      periMacBuf[6]; 
 
-extern void init_params();
+
 extern int  chge_pwd; //=FAUX;
 
 extern byte mask[];
@@ -81,97 +79,7 @@ void cliPrintMac(EthernetClient* cli, byte* mac)
   cli->print(macBuff);
 }
 
-void htmlIntro0(EthernetClient* cli)    // suffisant pour commande péripheriques
-{
-  cli->println("HTTP/1.1 200 OK");
-  //cli->println("Location: http://82.64.32.56:1789/");
-  //cli->println("Cache-Control: private");
-  cli->println("CONTENT-Type: text/html; charset=UTF-8");
-  cli->println("Connection: close\n");
-  cli->println("<!DOCTYPE HTML ><html>");
-}
-
-void htmlIntro(char* titre,EthernetClient* cli)
-{
-  htmlIntro0(cli);
-
-  cli->println("<head>");
-  char buf[10]={0};
-  if(perrefr!=0){cli->print("<meta HTTP-EQUIV=\"Refresh\" content=\"");sprintf(buf,"%d",perrefr);cli->print(buf);cli->print("\">");}
-  cli->print("\<title>");cli->print(titre);cli->println("</title>");
-            cli->println("<style>");
-            cli->println("table {");
-              cli->println("font-family: Courier, sans-serif;");
-              cli->println("border-collapse: collapse;");
-              cli->println("width: 100%;");
-              cli->println("overflow: auto;");
-              cli->println("white-space:nowrap;"); 
-            cli->println("}");
-
-            cli->println("td, th {");
-              cli->println("border: 1px solid #dddddd;");
-              cli->println("text-align: left;"); 
-            cli->println("}");
-
-            cli->println("#nt1{width:10px;}");
-            cli->println("#nt2{width:18px;}");
-            cli->println("#cb1{width:10px; padding:0px; margin:0px; text-align: center};");
-            cli->println("#cb2{width:20px; text-align: center};");
-
-            cli->print(".button { background-color: #195B6A; border: none; color: white; padding: 16px 40px;");
-            cli->println("text-decoration: none; font-size: 30px; margin: 2px; cursor: pointer;}");
-            cli->println(".button2 {background-color: #77878A;");
-
-          cli->println("</style>");
-  cli->println("</head>");
-}
-
-int dumpsd(EthernetClient* cli)                 // liste le fichier de la carte sd
-{
-  char inch=0;
-  
-  if(sdOpen(FILE_READ,&fhisto,"fdhisto.txt")==SDKO){return SDKO;}
-  
-  long sdsiz=fhisto.size();
-  long pos=fhisto.position();
-  fhisto.seek(sdpos);
-  
-  Serial.print("histoSD ");Serial.println(sdsiz);
-
-  htmlIntro(NOMSERV,cli);cli->println("<body>");
-
-  cli->print("histoSD ");cli->print(sdsiz);cli->print(" ");cli->print(pos);cli->print("/");cli->print(sdpos);cli->print("<br>\n");
-  
-  int cnt=0,strSDpt=0;
-  int ignore=VRAI; // ignore until next line
-  long ptr=sdpos;
-  while (ptr<sdsiz || inch==-1)
-    {
-    inch=fhisto.read();ptr++;
-#ifndef WEMOS
-//    cnt++;if(cnt>5000){wdt_reset();cnt=0;}  
-#endif ndef WEMOS
-    if(!ignore)
-      {
-        
-      strSD[strSDpt]=inch;strSDpt++;strSD[strSDpt]='\0';
-      if((strSDpt>=(RECCHAR-1)) || (strSD[strSDpt-2]=='\r' && strSD[strSDpt-1]=='\n')){
-        cli->println(strSD);                                                                                                                                                                                                        
-        memset(strSD,'\0',RECCHAR);strSDpt=0;
-        Serial.print(inch);
-        }
-      }
-      else if (inch==10){ignore=FAUX;}
-    }
-  cli->println(strSD);
-
-  cli->println("</body>");
-
-  return sdOpen(FILE_WRITE,&fhisto,"fdhisto.txt");
-  return SDOK;
-}
-
-void boutonHtml(EthernetClient* cli,byte* valfonct,char* nomfonct,uint8_t sw,uint8_t td)         
+void boutonHtml(EthernetClient* cli,byte* valfonct,char* nomfonct,uint8_t sw,uint8_t td)      
 {
   char tonoff[]={'O','F','F','\0'};
 
@@ -402,7 +310,7 @@ void periTableHtml(EthernetClient* cli)
     
 Serial.print("début péritable ; remote_IP ");serialPrintIp(remote_IP_cur);Serial.println();
 
-  htmlIntro(NOMSERV,cli);
+  htmlIntro(nomserver,cli);
   char bufdate[15];alphaNow(bufdate);
   byte msb=0,lsb=0;                        // pour temp DS3231
   readDS3231temp(&msb,&lsb);
@@ -419,7 +327,8 @@ Serial.print("début péritable ; remote_IP ");serialPrintIp(remote_IP_cur);Seri
           
           cli->print("<input type=\"password\" name=\"macmaster_\" value=\"\" size=\"6\" maxlength=\"8\" > ");
           lnkTableHtml(cli,"reset_____","reset");
-          lnkTableHtml(cli,"password__=17515A","refresh");                     //lnkTableHtml(cli,"peri_table","refresh");
+          lnkTableHtml(cli,"password__=17515A","refresh");   
+          lnkTableHtml(cli,"cfgserv___","config");
           numTableHtml(cli,'i',(uint32_t*)&perrefr,"per_refr__",4,0,0);cli->println("<input type=\"submit\" value=\"ok\">");
           lnkTableHtml(cli,"test2sw___","testsw");
           lnkTableHtml(cli,"dump_sd___","dump SDcard");
@@ -491,23 +400,6 @@ Serial.print("début péritable ; remote_IP ");serialPrintIp(remote_IP_cur);Seri
         cli->println("</form></body></html>");
 Serial.println("fin péritable");
 }
-
-void accueilHtml(EthernetClient* cli)
-{
-            Serial.println(" saisie pwd");
-            init_params();
-            htmlIntro(NOMSERV,cli);
- 
-
-//            cli->println("<body><form method=\"get\" ><p><label for=\"password\">password</label> : <input type=\"password\"");
-//            cli->println(" name=\"password__\" id=\"password\" value=\"\" size=\"6\" maxlength=\"8\" ></p></form></body></html>");
-
-            cli->println("<body><form method=\"get\" >");
-            cli->println(VERSION);cli->println("<br>");
-            cli->println("<p>pass <input type=\"password\" name=\"password__\" value=\"\" size=\"6\" maxlength=\"8\" ></p>");
-            cli->println("</form></body></html>");
-}          
-
 
 void cbErase()      // ******************** effacement des bits checkbox ********************* 
                     // seuls les bits des switchs existants sont effacés pour accélérer la séquence

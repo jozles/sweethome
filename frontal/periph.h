@@ -40,4 +40,11 @@ void  periConvert();
 void  periInit();
 void  periInitVar(); // le contenu de periRec seul
 
+void  configInit();
+int   configLoad();
+int   configSave();
+void  configInit();
+void  configInitVar(); 
+void  configPrint();
+
 #endif // _PERIPH_

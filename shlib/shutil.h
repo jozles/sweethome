@@ -19,6 +19,8 @@ void serialPrintDate(char* datein);
 void ledblink(uint8_t nbBlk);
 void dumpstr(char* data,uint16_t len);
 bool ctlpass(char* data,char* model);
+bool ctlto(long time,long to);
+void startto(long* time,long* to,long valto);
 
 void timeOvfSet(uint8_t slot);
 void timeOvfCtl(uint8_t slot);

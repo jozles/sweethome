@@ -23,6 +23,8 @@
  * 1.1h pulse opérationnel ; ajout variable (float) periThOffset dans periRec (offset sur température mesurée)
  * 1.1j corespond à la version 1.c de peripherique
  * 1.1k ajout alarmes th et volts + champs detecteurs du serveur
+ *      gestion mots de passe et TO révisée (rémanence password via macMaster)
+ *      fichier config sur SD
  *      
  * à faire :
  *     
@@ -35,27 +37,40 @@
 #define _MODE_DEVT    // change l'adresse Mac de la carte IP, l'adresse IP et le port
 
 #ifdef _MODE_DEVT
-#define IPMACADDR {0x90, 0xA2, 0xDA, 0x0F, 0xDF, 0xAC}   //adresse mac carte ethernet AB service ; AC devt
-#define LOCALSERVERIP {192, 168, 0, 35}                  //adresse IP    ---- 34 service, 35 devt
+#define MACADDR "\x90\xA2\xDA\x0F\xDF\xAC"    //adresse mac carte ethernet AB service ; AC devt
+#define LOCALSERVERIP {192,168,0,35}                   //adresse IP    ---- 34 service, 35 devt
 #define PORTSERVER 1790
-#define NOMSERV "sweet hdev"
+#define NOMSERV "sweet hdev\0"
+#define LNSERV  17
 #endif _MODE_DEVT
 
 #ifndef _MODE_DEVT
-#define IPMACADDR {0x90, 0xA2, 0xDA, 0x0F, 0xDF, 0xAB}   //adresse mac carte ethernet AB service ; AC devt
-#define LOCALSERVERIP {192, 168, 0, 34}                  //adresse IP    ---- 34 service, 35 devt
+#define MACADDR "\x90\xA2\xDA\x0F\xDF\xAB"    //adresse mac carte ethernet AB service ; AC devt
+#define LOCALSERVERIP {192,168,0,34}                   //adresse IP    ---- 34 service, 35 devt
 #define PORTSERVER 1789
-#define NOMSERV "sweet home"
+#define NOMSERV "sweet home\0"
+#define LNSERV  17
 #endif _MODE_DEVT
 
 #define DS3231_I2C_ADDRESS 0x68         // adresse 3231 sur bus I2C
 
 #define PINDHT11 2
 
-#define NBPERIF 10                           
+#define NBPERIF 20                           
 #define PERINAMLEN 16+1                      // longueur nom perif
 #define PERIRECLEN 211 // V1.1j              // longueur record périph
 
+#define CONFIGRECLEN 582                     // longueur record config 
+
+#define MAXSSID   8
+#define LENSSID   16
+#define LPWSSID   48
+#define SSID1     "pinks"
+#define PWDSSID1  "cain ne dormant pas songeait au pied des monts"
+#define SSID2     "devolo-5d3"
+#define PWDSSID2  "JNCJTRONJMGZEEQL"
+
+#define BROWSERPREF 120                      // (sec) période auto-refr browser par défaut
 
 #define SDOK 1
 #define SDKO 0 
@@ -70,6 +85,7 @@
 #define AFF_SDerr    32
 #define AFF_SDhtml   64
 #define AFF_Ether   128
+
 
 /* codes fonctions
 00 per_temp__ valorisation période de la mesure et enregistrement de température du serveur

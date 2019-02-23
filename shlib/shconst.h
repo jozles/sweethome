@@ -15,7 +15,7 @@
 #define PINLED 0                    //  0 = ESP-12  ; 2 = ESP-01
 #define LEDON LOW
 #define LEDOFF HIGH
-#endif defPERIF
+#endif  defPERIF
 #ifndef PERIF
 #define PINLED 13
 #define LEDON HIGH
@@ -57,17 +57,15 @@
 #define LENVAL 128    // nbre car maxi valeur (vérifier datasave)
 #define MEANVAL  6    // pour donner un param de taille à valeurs[]
 #define LENVALEURS NBVAL*MEANVAL+1   // la taille effective de valeurs[]
-#define LENPSW  16    // nbre car maxi pswd
+//#define LENPSW  16    // nbre car maxi pswd
 #define RECHEAD 28                           // en-tete strSD date/heure/xx/yy + <br> + crlf
 #define RECCHAR NBVAL*(MEANVAL+3)+RECHEAD+8  // longueur maxi record histo
 
-#define PERIPREF 120                         // periode refr perif par défaut
-
 #define LBUFSERVER LENMESS+16                // longueur bufserver (messages in/out periphériques)
 
-#define SRVPASS     "17515A\0"
-#define SVRPASS_B   "17515B\0"
-#define LENSRVPASS  6
+#define SRVPASS     "17515A"
+#define SVRPASS_B   "17515B"
+#define LPWD        8
 
 #define TOINCHCLI 4000        // msec max attente car server
 #define TO_HTTPCX 4000        // nbre maxi retry connexion serveur
@@ -83,6 +81,8 @@
 #define BCODEWAITWIFI     4   // attente WIFI
 #define BCODESDCARDKO     5   // pas de SDCARD
 #define BCODELENVAL       7   // LENVAL trop petit
+#define BCODECONFIGRECLEN 9   // CONFIGRECLEN faux -> blocage
+#define BCODEPERICACHEKO 11   // periSave et cache invalide
 
 
 enum {FAUX,VRAI};
@@ -201,7 +201,7 @@ enum {OFF,ON};
 
 #define DLTABLEN     MAXSW*DLSWLEN  // nbre de bytes total periSwPulseCtl (4*6)
 
-/* bits compteurs */
+/* bits controle compteurs */
 
 #define PMTOE_PB (DLSWLEN*8)-1     // time one enable numéro du bit
 #define PMTOE_VB 0x800000000000    //                 valeur du bit

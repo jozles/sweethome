@@ -264,7 +264,7 @@ void assySet(char* message,int periCur,char* diag,char* date14)
             strcat(message,"_");
 
             memcpy(message+strlen(message),date14,14);
-            Serial.println(date14);
+            //Serial.println(date14);
             strcat(message,"_");
 
             long v1=0;
