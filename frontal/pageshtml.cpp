@@ -6,16 +6,21 @@
 #include "shconst.h"
 #include "shutil.h"
 #include "periph.h"
-#include "httphtml.h"
+#include "peritable.h"
 
 extern char* nomserver;
+extern byte* mac;              // adresse server
+extern char* pass;             // mot de passe browser
+extern char* peripass;         // mot de passe périphériques
 
-extern int  perrefr;
-extern File fhisto;      // fichier histo sd card
-extern long sdpos;
-extern char strSD[RECCHAR];
-extern char ssid[MAXSSID*(LENSSID+1)];   
-extern char passssid[MAXSSID*(LENSSID+1)];
+extern char* chexa;
+
+extern int   perrefr;
+extern File  fhisto;           // fichier histo sd card
+extern long  sdpos;
+extern char  strSD[RECCHAR];
+extern char* ssid;   
+extern char* passssid;
 
 
 void htmlIntro0(EthernetClient* cli)    // suffisant pour commande péripheriques
@@ -124,10 +129,16 @@ void cfgServerHtml(EthernetClient* cli)
 {
             Serial.println(" config serveur");
             htmlIntro(nomserver,cli);
+
+//configPrint();
             
             cli->println("<body><form method=\"get\" >");
             cli->println(VERSION);cli->println("<br>");
-            lnkTableHtml(cli,"password__=17515A","retour");cli->println("<br>");
+            char pwd[32]="password__=\0";strcat(pwd,pass);lnkTableHtml(cli,pwd,"retour");cli->println(" <input type=\"submit\" value=\"MàJ\"><br>");
+            cli->print(" password <input type=\"text\" name=\"pwdcfg____\" value=\"");cli->print(pass);cli->print("\" size=\"5\" maxlength=\"");cli->print(LPWD);cli->println("\" >");
+            cli->print(" peripass <input type=\"text\" name=\"peripcfg__\" value=\"");cli->print(peripass);cli->print("\" size=\"5\" maxlength=\"");cli->print(LPWD);cli->println("\" >");            
+            cli->print(" serverMac <input type=\"text\" name=\"maccfg____\" value=\"");for(int k=0;k<6;k++){cli->print(chexa[mac[k]/16]);cli->print(chexa[mac[k]%16]);}cli->print("\" size=\"11\" maxlength=\"");cli->print(12);cli->println("\" >");                        
+            
             
             cli->println("<table>");
               cli->println("<tr>");
@@ -137,15 +148,18 @@ void cfgServerHtml(EthernetClient* cli)
               for(int nb=0;nb<MAXSSID;nb++){
                 cli->println("<tr>");
                   cli->print("<td>");cli->print(nb);cli->print("</td>");
+
                   cli->print("<td><input type=\"text\" name=\"ssid_____");cli->print((char)(nb+PMFNCHAR));cli->print("\" value=\"");    
-                      cli->print((ssid+nb*(LENSSID+1)));cli->print("\" size=\"12\" maxlength=\"");cli->print(LENSSID);cli->println("\" ></td><td>");
-                  cli->println("<p>pass <input type=\"password\" name=\"passssid_");cli->print((char)(nb+PMFNCHAR));cli->print("\" value=\"");
-                      cli->print((passssid+nb*(LPWSSID+1)));cli->print("\" size=\"8\" maxlength=\"");cli->print(LPWSSID);cli->println("\" ></p></td>");
-                  cli->println("<td><input type=\"submit\" value=\"MàJ\"></td>");
+                      cli->print(ssid+(nb*(LENSSID+1)));cli->print("\" size=\"12\" maxlength=\"");cli->print(LENSSID);cli->println("\" ></td>");
+                      
+                  cli->print("<td><input type=\"text\" name=\"passssid_");cli->print((char)(nb+PMFNCHAR));cli->print("\" value=\"");
+                      cli->print(passssid+(nb*(LPWSSID+1)));cli->print("\" size=\"38\" maxlength=\"");cli->print(LPWSSID);cli->println("\" ></td>");
+                      
                 cli->println("</tr>");
               }
             cli->println("</table>");            
             cli->println("</form></body></html>");
+
 
 }
 

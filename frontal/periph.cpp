@@ -283,6 +283,8 @@ int configSave()
 
 /* >>>>>>>>> périphériques <<<<<<<<<< */
 
+void periCheck(int num,char* text){periSave(NBPERIF+1);periLoad(num);Serial.print(" ");Serial.print(text);Serial.print(" Nb(");Serial.print(num);Serial.print(")=");Serial.println(*periSwNb);periLoad(NBPERIF+1);}
+
 void periFname(int num,char* fname)
 {
   strcpy(fname,"PERI");
@@ -320,8 +322,9 @@ int periSave(int num)
   int sta;
   char periFile[7];periFname(num,periFile);
   
-  if(periCacheStatus[num]==0){ledblink(BCODEPERICACHEKO);}
-  for(i=0;i<PERIRECLEN;i++){periCache[num*PERIRECLEN+i]=periRec[i];}
+  //if(periCacheStatus[num]==0){ledblink(BCODEPERICACHEKO);}
+  for(i=0;i<PERIRECLEN;i++){periCache[num*PERIRECLEN+i]=periRec[i];}    // copie dans cache
+  periCacheStatus[num]=1;                                               // cache ok
 
   *periNum=periCur;
   if(sdOpen(FILE_WRITE,&fperi,periFile)!=SDKO){
@@ -333,7 +336,7 @@ int periSave(int num)
     for(int x=0;x<4;x++){lastIpAddr[x]=periIpAddr[x];}
   }
   else sta=SDKO;
-  Serial.print("periSave(");Serial.print(num);Serial.print(")status=");Serial.println(sta);
+  Serial.print("periSave(");Serial.print(num);Serial.print(")status=");Serial.print(sta);Serial.print(" periNum=");Serial.print(*periNum);Serial.print(" NbSw=");Serial.print(*periSwNb);if(num!=NBPERIF+1){Serial.println();}
   return sta;
 }
 
