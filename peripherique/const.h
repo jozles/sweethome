@@ -63,16 +63,18 @@ Modifier :
    2 cycles emboités :
    
       1) timing de base = période de lecture de la sonde thermomètre ; 
-            si timer externe c'est la période d'allumage,
-            sinon PERTEMP est la période par défaut en Sec,
-            cstRec.tempPer la période courante (directement utilisé dans le timer si deep sleep),
+            si DS_MODE ou PO_MODE c'est la période d'allumage ,
+            sinon PERTEMP est la période par défaut en Sec (PERTEMP doit être chargée avec la période d'allumage si timer externe)
+            cstRec.tempPer la période courante (directement utilisée dans le timer si deep sleep),
             et cstRec.tempTime le point de départ en millis() si loop.
             Donc, si millis()>temptime+tempPer lecture thermo et +tempPer à serverTime (ci-après)
             Si la valeur lue a plus de cstRec.pitch d'écart avec la valeur précédente -> accés serveur
       2) fréquence d'accés au serveur pour enregistrer une/des valeurs de sondes/détecteurs
             comptage du timing de base commun à tous les modes
-            PERSERV est la période par défaut en "timing de base"
-            cstRec.serverPer la période courante en secondes.
+            PERSERV est la période par défaut en secondes
+            cstRec.serverPer la période courante en secondes, mise à jour par le serveur à chaque dataread/save 
+              prend la valeur PERSERVKO lorsqu'il n'y a pas de connexion WIFI afin de limiter les tentatives de cx pour économiser les batteries
+              prend la valeur PERSERV si la connexion au wifi fonctionne (sera rechargée par le serveur juste après)
             et cstREc.serverTime le compteur de "timing de base"
             Donc, si serverTime>serverPer accès server (talkServer)
             
@@ -245,8 +247,8 @@ Modifier :
 
 #define TCONVERSIONB       375    // millis délai conversion temp
 #define TCONVERSIONS       500    // millis délai conversion temp
-#define PERTEMP             60    // secondes période par défaut lecture temp
-#define PERTEMPKO         7200    // secondes période par défaut lecture temp si connexion wifi ko
+#define PERTEMP             60    // secondes période par défaut lecture temp (en PO_MODE fixé par la résistance du 511x)
+#define PERSERVKO         7200    // secondes période par défaut accès serveur si connexion wifi ko
 #define PERSERV           3600    // secondes période max entre 2 accès server
 #define TOINCHCLI         4000    // msec max attente car server
 #define WIFI_TO_CONNEXION 5000    // msec
@@ -263,8 +265,8 @@ typedef struct {
   char      cstModel[LENMODEL];   //  6
   char      numPeriph[2];         //  2
   uint16_t  serverTime;           //  2   temps écoulé depuis la dernière cx au serveur
-  uint16_t  serverPer;            //  2   période (sec) de cx au serveur
-  uint16_t  tempPer;              //  2   période (sec) de mesure thermomètre (PERTEMP ou PERTEMPKO)
+  uint16_t  serverPer;            //  2   période (sec) de cx au serveur (PERSERVKO si pas de connexion Wifi)
+  uint16_t  tempPer;              //  2   période (sec) de mesure thermomètre (PERTEMP)
   uint8_t   tempPitch;            //  1   seuil de variation de la temp pour cx au serveur
   int16_t   oldtemp;              //  2
   uint8_t   talkStep;             //  1   pointeur pour l'automate talkServer()

@@ -55,8 +55,10 @@ Mode d'emploi de la peritable :
 
 exemple : positionner le switch 0 selon l'état du détecteur local 2 (P4 de la carte VR) et switch 1 à l'inverse
           (contrôle des détecteurs / conrôle des switchs)    (contrôle des détecteurs / conrôle des switchs)    (x coché, _ vide)
-                  xx2_x0                I 1 xx____                  xx2__0                I 1 x_____                  
-                  xx2__0                O 2 x_____                  xx2_x0                O 2 xx____
+                  xx2_x0                I 1 xx____                  xx2__0                I 0 x_____                  
+                  xx2__0                O 2 x_____                  xx2_x0                O 1 xx____
+                  __0__0                                            __0__0
+                  __0__0                                            __0__0   
 
 exemple : positionner le switch 0 selon l'état du bit de commande serveur 
           (contrôle des détecteurs / conrôle des switchs)    (x coché, _ vide)
@@ -66,14 +68,18 @@ exemple : positionner le switch 0 selon l'état du bit de commande serveur
 exemple : faire clignoter le switch 0 sur déclenchement du détecteur local 2 au passage haut
            compteurs  freerun          (contrôle des détecteurs / conrôle des switchs)    (x coché, _ vide)
              x  4        x                     xx2_x3                I 0 ____xx                  
-             x  4                                                    O 0 ____x_       
+             x  4                              __0__0                O 0 ____x_       
+                                               __0__0
+                                               __0__0
+
  
 exemple : volets roulants avec détecteurs 0 et 1 (sur inter on off on P12 carte VR)
            compteurs  freerun          (contrôle des détecteurs / conrôle des switchs)    (x coché, _ vide)
              x  0        _                     xx0__3                I 0 __xxxx                  
              x  12                             xx0_x6                O 0 __x_x_       
                                                xx1__1
- */
+                                               __0__0
+*/         
  
 
 

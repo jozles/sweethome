@@ -122,13 +122,17 @@ int   dataRead();
 void  dataTransfer(char* data);  
 void  readTemp();
 void  ordreExt();
-void  talkServerWifiConnect();
+bool  talkServerWifiConnect();
 
 
 void tmarker()
 {
   pinMode(WPIN,OUTPUT);for(int t=0;t<6;t++){digitalWrite(WPIN,LOW);delayMicroseconds(100);digitalWrite(WPIN,HIGH);delayMicroseconds(100);}
 }
+
+void trigTemp(){startto(tempTime,cstRec.tempPer,PERTEMP);}
+bool chkTrigTemp(){return ctlto(tempTime,cstRec.tempPer*1000);}
+void forceTrigTemp(){cstRec.tempPer=0;}
 
 void setup() 
 { 
@@ -233,7 +237,7 @@ void setup()
 /* si le crc des variables permanentes est faux, initialiser
    et lancer une conversion */
 
-  cstRec.cstlen=( sizeof(constantValues));
+  cstRec.cstlen=(sizeof(constantValues));
   if(cstRec.cstlen!=LENRTC){Serial.print(" len RTC=");Serial.print(cstRec.cstlen);while(1){};}
   if(!readConstant()){
     Serial.println("initialisation constantes");
@@ -248,16 +252,8 @@ delay(2000);
 
 #if POWER_MODE==NO_MODE
 
-    while(cstRec.talkStep!=4){  
-      cstRec.talkStep=1;
-      ssid=ssid1;password=password1;
-      talkServerWifiConnect();if(cstRec.talkStep!=4){
-        ssid=ssid2;password=password2;
-        talkServerWifiConnect();}
-    }cstRec.talkStep=0;
-
-  cstRec.tempPer=PERTEMP;
-  cstRec.serverTime=cstRec.serverPer;     // force connexion server 
+  cstRec.serverTime=cstRec.serverPer+1;
+  forceTrigTemp();    // force connexion server 
 
   memdetinit();
 
@@ -467,15 +463,15 @@ void dataTransfer(char* data)           // transfert contenu de set ou ack dans 
         infos("dataTransfer",data,0);
 }
 
-void talkServerWifiConnect()
+bool talkServerWifiConnect()
 {
       int retry=0;
-      while((retry<=WIFINBRETRY)&&!wifiConnexion(ssid,password)){delay(1000);retry++;}
-      if(retry>=WIFINBRETRY && cstRec.talkStep==1){cstRec.talkStep=2;}
-      else if(retry>=WIFINBRETRY && cstRec.talkStep==2){cstRec.talkStep=98;}
-      else {
-        cstRec.talkStep=4;
-   }
+      while((retry<=WIFINBRETRY)){
+        retry++;
+        if(wifiConnexion(ssid,password)){break;}
+        else {delay(1000);}
+      }
+      return (retry<=WIFINBRETRY);
 }
 
 int talkServer()    // si numPeriph est à 0, dataRead pour se faire reconnaitre ; 
@@ -489,23 +485,15 @@ infos(" talkServer","",cstRec.talkStep);
 
 switch(cstRec.talkStep){
   case 1:
-#if POWER_MODE!=NO_MODE
       ssid=ssid1;password=password1;
-      talkServerWifiConnect();
-#endif PM!=NO_MODE
-#if POWER_MODE==NO_MODE
-      cstRec.talkStep=4;
-#endif PM==NO_MODE
+      if(talkServerWifiConnect()){cstRec.talkStep=4;}
+      else {cstRec.talkStep=2;}
       break;
       
   case 2:
-#if POWER_MODE!=NO_MODE      
       ssid=ssid2;password=password2; // tentative sur ssid bis
-      talkServerWifiConnect();
-#endif PM!=NO_MODE
-#if POWER_MODE==NO_MODE
-      cstRec.talkStep=4;
-#endif PM==NO_MODE
+      if(talkServerWifiConnect()){cstRec.talkStep=4;}
+      else {cstRec.talkStep=98;}
       break;
 
   case 3:    
@@ -558,7 +546,7 @@ switch(cstRec.talkStep){
 
 
   case 98:      // pas réussi à connecter au WiFi ; tempo 2h
-        cstRec.serverPer=PERTEMPKO;
+        cstRec.serverPer=PERSERVKO;
 
   case 99:      // mauvaise réponse du serveur ou wifi ko ; raz numPeriph
         memcpy(cstRec.numPeriph,"00",2);
@@ -732,7 +720,7 @@ bool wifiConnexion(const char* ssid,const char* password)
 {
   int i=0;
   long beg=millis();
-  bool cxok=VRAI;
+  bool cxstatus=VRAI;
 
     ledblink(BCODEONBLINK);
 
@@ -764,19 +752,19 @@ bool wifiConnexion(const char* ssid,const char* password)
       Serial.print(" WIFI connecting to ");Serial.print(ssid);Serial.print("...");
       while(WiFi.status()!=WL_CONNECTED){
         delay(200);Serial.print(".");
-        if((millis()-beg)>WIFI_TO_CONNEXION){cxok=FAUX;break;}
+        if((millis()-beg)>WIFI_TO_CONNEXION){cxstatus=FAUX;break;}
       }
     }
-    if(cxok){
+    if(cxstatus){
       if(nbreBlink==BCODEWAITWIFI){ledblink(BCODEWAITWIFI+100);}
       Serial.print(" connected ; local IP : ");Serial.println(WiFi.localIP());
       cstRec.IpLocal=WiFi.localIP();        
       WiFi.macAddress(mac);
       serialPrintMac(mac,1);
-      cstRec.tempPer=PERTEMP;
+      cstRec.serverPer=PERSERV;
       }
     else {Serial.println("\nfailed");if(nbreBlink==0){ledblink(BCODEWAITWIFI);}}
-    return cxok;
+    return cxstatus;
 }
 
 void modemsleep()
@@ -795,8 +783,8 @@ void readTemp()
                                 // (les autres modes terminent talkServer avec talkStep=0)
     
 #if POWER_MODE==NO_MODE
-    if(millis()>(tempTime+cstRec.tempPer*1000) && cstRec.serverPer!=PERTEMPKO){
-      tempTime=millis();
+    if(chkTrigTemp()){
+      trigTemp();
       dateon=millis();
 #endif PM==NO_MODE
 
@@ -829,7 +817,6 @@ void readTemp()
       cstRec.serverTime+=cstRec.tempPer;
       if(cstRec.serverTime>cstRec.serverPer){
         cstRec.serverTime=0;
-        //cstRec.tempPer=PERTEMP;
         cstRec.talkStep=1;
       }
 
