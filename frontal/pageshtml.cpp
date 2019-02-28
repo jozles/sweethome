@@ -10,17 +10,18 @@
 
 extern char* nomserver;
 extern byte* mac;              // adresse server
-extern char* pass;             // mot de passe browser
+extern char* usrpass;          // mot de passe browser
+extern char* modpass;          // mot de passe modif
 extern char* peripass;         // mot de passe périphériques
 
 extern char* chexa;
 
-extern int   perrefr;
-extern File  fhisto;           // fichier histo sd card
-extern long  sdpos;
-extern char  strSD[RECCHAR];
-extern char* ssid;   
-extern char* passssid;
+extern uint16_t perrefr;
+extern File     fhisto;           // fichier histo sd card
+extern long     sdpos;
+extern char     strSD[RECCHAR];
+extern char*    ssid;   
+extern char*    passssid;
 
 
 void htmlIntro0(EthernetClient* cli)    // suffisant pour commande péripheriques
@@ -134,8 +135,9 @@ void cfgServerHtml(EthernetClient* cli)
             
             cli->println("<body><form method=\"get\" >");
             cli->println(VERSION);cli->println("<br>");
-            char pwd[32]="password__=\0";strcat(pwd,pass);lnkTableHtml(cli,pwd,"retour");cli->println(" <input type=\"submit\" value=\"MàJ\"><br>");
-            cli->print(" password <input type=\"text\" name=\"pwdcfg____\" value=\"");cli->print(pass);cli->print("\" size=\"5\" maxlength=\"");cli->print(LPWD);cli->println("\" >");
+            char pwd[32]="password__=\0";strcat(pwd,usrpass);lnkTableHtml(cli,pwd,"retour");cli->println(" <input type=\"submit\" value=\"MàJ\"><br>");
+            cli->print(" password <input type=\"text\" name=\"pwdcfg____\" value=\"");cli->print(usrpass);cli->print("\" size=\"5\" maxlength=\"");cli->print(LPWD);cli->println("\" >");
+            cli->print("  modpass <input type=\"text\" name=\"modpcfg___\" value=\"");cli->print(modpass);cli->print("\" size=\"5\" maxlength=\"");cli->print(LPWD);cli->println("\" >");            
             cli->print(" peripass <input type=\"text\" name=\"peripcfg__\" value=\"");cli->print(peripass);cli->print("\" size=\"5\" maxlength=\"");cli->print(LPWD);cli->println("\" >");            
             cli->print(" serverMac <input type=\"text\" name=\"maccfg____\" value=\"");for(int k=0;k<6;k++){cli->print(chexa[mac[k]/16]);cli->print(chexa[mac[k]%16]);}cli->print("\" size=\"11\" maxlength=\"");cli->print(12);cli->println("\" >");                        
             
@@ -159,7 +161,4 @@ void cfgServerHtml(EthernetClient* cli)
               }
             cli->println("</table>");            
             cli->println("</form></body></html>");
-
-
 }
-

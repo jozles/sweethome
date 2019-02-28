@@ -2,7 +2,7 @@
 #define _SHCONST_H_
 
 
-//#define PERIF
+#define PERIF
 
 #define LENVERSION  4
 #define LENMODEL    6
@@ -63,9 +63,23 @@
 
 #define LBUFSERVER LENMESS+16                // longueur bufserver (messages in/out periphériques)
 
-#define SRVPASS     "17515A"
-#define SVRPASS_B   "17515B"
+#define SRVPASS     "17515A" // pwd accès serveur pour péri
+#define PERIPASS    SRVPASS
+#define USRPASS     "17515A" // pwd accès serveur via browser
+#define MODPASS     "17515A" // pwd modif serveur via browser
 #define LPWD        8
+
+
+/* >>>> WIFI <<<<< */
+
+#define MAXSSID   8
+#define LENSSID   16
+#define LPWSSID   48
+#define SSID1     "pinks"
+#define PWDSSID1  "cain ne dormant pas songeait au pied des monts"
+#define SSID2     "devolo-5d3"
+#define PWDSSID2  "JNCJTRONJMGZEEQL"
+
 
 #define TOINCHCLI 4000        // msec max attente car server
 #define TO_HTTPCX 4000        // nbre maxi retry connexion serveur

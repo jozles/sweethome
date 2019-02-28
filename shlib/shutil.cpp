@@ -300,13 +300,13 @@ bool ctlpass(char* data,char* model)
   return !memcmp(model,data,strlen(model));
 }
 
-bool ctlto(long time,long to)
+bool ctlto(long time,uint16_t to)
 {
     //Serial.print("ctlto=");Serial.print(time);Serial.print(" to=");Serial.println(to);
- return (millis()-time)>to;
+ return (millis()-time)>(to*1000);
 }
 
-void startto(long* time,long* to,long valto)
+void startto(long* time,uint16_t* to,uint16_t valto)
 {
   *to=valto;
   *time=millis();

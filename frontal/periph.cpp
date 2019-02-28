@@ -11,13 +11,16 @@
 
 File fconfig;     // fichier config
 
+extern uint16_t perrefr;
+
 extern char configRec[CONFIGRECLEN];
   
 extern byte* mac;
 extern byte* localIp;
 extern int*  portserver;
 extern char* nomserver;
-extern char* pass;
+extern char* usrpass;
+extern char* modpass;
 extern char* peripass;
 extern char* ssid;   
 extern char* passssid;
@@ -198,8 +201,10 @@ byte* temp=(byte*)configRec;
   temp+=sizeof(int);
   nomserver=(char*)temp;
   temp+=LNSERV;
-  pass=(char*)temp;
+  usrpass=(char*)temp;
   temp+=(LPWD+1);
+  modpass=(char*)temp;  
+  temp+=(LPWD+1);  
   peripass=(char*)temp;
   temp+=(LPWD+1);
   ssid=(char*)temp;
@@ -223,8 +228,9 @@ memcpy(mac,MACADDR,6);
 memcpy(localIp,lip,4);
 *portserver = PORTSERVER;
 memset(nomserver,0x00,LNSERV);memcpy(nomserver,NOMSERV,strlen(NOMSERV));
-memset(pass,0x00,LPWD+1);memcpy(pass,SRVPASS,strlen(SRVPASS));
-memset(peripass,0x00,LPWD+1);memcpy(peripass,SRVPASS,strlen(SRVPASS));
+memset(usrpass,0x00,LPWD+1);memcpy(usrpass,USRPASS,strlen(SRVPASS));
+memset(modpass,0x00,LPWD+1);memcpy(modpass,MODPASS,strlen(MODPASS));
+memset(peripass,0x00,LPWD+1);memcpy(peripass,SRVPASS,strlen(PERIPASS));
 //Serial.print(" strlen(SRVPASS)=");Serial.print(strlen(SRVPASS));Serial.print(" peripass=");for(int pp=0;pp<(LPWD+1);pp++){Serial.print(peripass[pp],HEX);Serial.print(" ");}Serial.println();
 memset(ssid,0x00,MAXSSID*(LENSSID+1));
 memcpy(ssid,SSID1,strlen(SSID1));memcpy(ssid+LENSSID+1,SSID2,strlen(SSID2));   
@@ -239,7 +245,7 @@ void configPrint()
   Serial.print("Mac=");serialPrintMac(mac,0);
   Serial.print(" ");Serial.print(nomserver);
   Serial.print(" localIp=");for(int pp=0;pp<4;pp++){Serial.print((uint8_t)localIp[pp]);if(pp<3){Serial.print(".");}}Serial.print("/");Serial.println(*portserver);
-  Serial.print("password=");Serial.print(pass);Serial.print(" peripass=");Serial.println(peripass);
+  Serial.print("password=");Serial.print(usrpass);Serial.print(" modpass=");Serial.print(modpass);Serial.print(" peripass=");Serial.println(peripass);
   char bufssid[74];
   for(int nb=0;nb<MAXSSID;nb++){
     if(*(ssid+(nb*(LENSSID+1)))!='\0'){
@@ -285,6 +291,7 @@ int configSave()
 
 void periCheck(int num,char* text){periSave(NBPERIF+1);periLoad(num);Serial.print(" ");Serial.print(text);Serial.print(" Nb(");Serial.print(num);Serial.print(")=");Serial.println(*periSwNb);periLoad(NBPERIF+1);}
 
+
 void periFname(int num,char* fname)
 {
   strcpy(fname,"PERI");
@@ -300,11 +307,11 @@ int periLoad(int num)
     //Serial.print("load table peri=");Serial.println(num);
     char periFile[7];periFname(num,periFile);
     if(sdOpen(FILE_READ,&fperi,periFile)==SDKO){return SDKO;}
-    for(i=0;i<PERIRECLEN;i++){periCache[num*PERIRECLEN+i]=fperi.read();}              // periRec[i]=fperi.read();}
+    for(i=0;i<PERIRECLEN;i++){periCache[(num-1)*PERIRECLEN+i]=fperi.read();}              // periRec[i]=fperi.read();}
     fperi.close();
     periCacheStatus[num]=1;
   }
-  for(i=0;i<PERIRECLEN;i++){periRec[i]=periCache[num*PERIRECLEN+i];}
+  for(i=0;i<PERIRECLEN;i++){periRec[i]=periCache[(num-1)*PERIRECLEN+i];}
   return SDOK;
 }
 
@@ -318,12 +325,13 @@ int periRemove(int num)
 
 int periSave(int num)
 {
+
   int i=0;
   int sta;
   char periFile[7];periFname(num,periFile);
   
   //if(periCacheStatus[num]==0){ledblink(BCODEPERICACHEKO);}
-  for(i=0;i<PERIRECLEN;i++){periCache[num*PERIRECLEN+i]=periRec[i];}    // copie dans cache
+  for(i=0;i<PERIRECLEN;i++){periCache[(num-1)*PERIRECLEN+i]=periRec[i];}    // copie dans cache
   periCacheStatus[num]=1;                                               // cache ok
 
   *periNum=periCur;
@@ -333,6 +341,7 @@ int periSave(int num)
     for(i=0;i<PERIRECLEN;i++){fperi.write(periRec[i]);}
 //for(i=0;i<PERIRECLEN+4*sizeof(float)+2*sizeof(byte);i++){fperi.write(periRec[i]);}      // ajouter les longueurs des variables ajoutées avant de modifier PERIRECLEN
     fperi.close();
+
     for(int x=0;x<4;x++){lastIpAddr[x]=periIpAddr[x];}
   }
   else sta=SDKO;

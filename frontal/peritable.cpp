@@ -13,14 +13,15 @@
 //  #include <avr/wdt.h>  //biblio watchdog
 #endif ndef WEMOS
 
-extern File   fhisto;      // fichier histo sd card
-extern long   sdpos;
-extern char*  nomserver;
-extern byte   memDetServ;  // image mémoire NBDSRV détecteurs (8)
-extern int    perrefr;
+extern File      fhisto;      // fichier histo sd card
+extern long      sdpos;
+extern char*     nomserver;
+extern byte      memDetServ;  // image mémoire NBDSRV détecteurs (8)
+extern uint16_t  perrefr;
 
-extern char* pass;             // mot de passe browser
-extern char* peripass;         // mot de passe périphériques
+extern char* usrpass;             // mot de passe browser
+extern char* modpass;             // mot de passe modif
+extern char* peripass;            // mot de passe périphériques
 
 extern char* chexa;
 
@@ -181,8 +182,8 @@ void checkboxTableHtml(EthernetClient* cli,uint8_t* val,char* nomfonct,int etat,
 }
 
 void subDSn(EthernetClient* cli,char* fnc,uint8_t val,uint8_t num) // checkbox transportant 1 bit 
-                                                                       // num le numéro du bit dans le byte
-                                                                       // le caractère LENNOM-1 est le numéro du bit(+PMFNCHAR) dans periDetServ 
+                                                                   // num le numéro du bit dans le byte
+                                                                   // le caractère LENNOM-1 est le numéro du bit(+PMFNCHAR) dans periDetServ 
 
 {
   char fonc[LENNOM+1];
@@ -242,8 +243,12 @@ void SwCtlTableHtml(EthernetClient* cli,int nbsw,int nbtypes)
   htmlIntro(nomserver,cli);
             
   cli->println("<body><form method=\"get\" >");
-  cli->println(VERSION);cli->print("  ");cli->print(periCur);cli->print("-");cli->print(periNamer);cli->println("<br>");
-  char pwd[32]="password__=\0";strcat(pwd,pass);lnkTableHtml(cli,pwd,"retour");cli->println("<br>");
+  cli->println(VERSION);cli->print("  ");numTableHtml(cli,'i',&periCur,"peri_cur__",2,1,0);cli->print("-");cli->print(periNamer);cli->println("<br>");
+  char pwd[32]="password__=\0";strcat(pwd,usrpass);lnkTableHtml(cli,pwd,"retour");
+  cli->println(" <input type=\"submit\" value=\"MàJ\"><br>");
+
+  cli->println("<table>");
+  cli->println("<tr><th>sw</th><th>time One<br>time Two</th><th>f<br>r</th><th>e.l _f_H.a<br>n.x _t_L.c</th><th>0-3<br>___det__srv._pul</th></tr>");
   
   
   char nfonc[]="peri_imn__\0";            // transporte le numéro de detecteur des sources
@@ -253,9 +258,6 @@ void SwCtlTableHtml(EthernetClient* cli,int nbsw,int nbtypes)
   char rfonc[]="peri_otf__\0";            // transporte les bits freerun et enable pulse de periPulseMode (LENNOM-1= ,'F','O','T')
 
   char nac[]="ADIO";                      // nom du type d'acttion (activ/désactiv/ON/OFF)
-
-  cli->println("<table>");
-  cli->println("<tr><th>sw</th><th>time One<br>time Two</th><th>f<br>r</th><th>e.l _f_H.a<br>n.x _t_L.c</th><th>___det__srv._pul<br></th></tr>");
    
     for(int i=0;i<nbsw;i++){                                           // i n° de switch
 
@@ -280,7 +282,7 @@ void SwCtlTableHtml(EthernetClient* cli,int nbsw,int nbtypes)
       uint64_t pipm;memcpy(&pipm,(char*)(periSwPulseCtl+i*DLSWLEN),DLSWLEN);
       uint8_t val=((pipm>>PMFRO_PB)&0x01)+PMFNCVAL;rfonc[LENNOM-1]='F';                    // bit freerun
       checkboxTableHtml(cli,&val,rfonc,-1,0);                    
-      cli->print("<br>");cli->print((char)periSwPulseSta[i]);cli->print("</td>");                // staPulse 
+      cli->print("<br>");cli->print((char)periSwPulseSta[i]);cli->print("</td>");          // staPulse 
                                                                  
 // colonne des détecteurs
 
@@ -322,10 +324,12 @@ void SwCtlTableHtml(EthernetClient* cli,int nbsw,int nbtypes)
 void periTableHtml(EthernetClient* cli)
 {
   int i,j;
-    
+
 Serial.print("début péritable ; remote_IP ");serialPrintIp(remote_IP_cur);Serial.println();
 
   htmlIntro(nomserver,cli);
+
+  
   char bufdate[15];alphaNow(bufdate);
   byte msb=0,lsb=0;                        // pour temp DS3231
   readDS3231temp(&msb,&lsb);
@@ -336,20 +340,21 @@ Serial.print("début péritable ; remote_IP ");serialPrintIp(remote_IP_cur);Seri
           #ifdef _MODE_DEVT
             cli->print(" _MODE_DEVT ");
           #endif _MODE_DEVT
-          for(int zz=0;zz<12;zz++){cli->print(bufdate[zz]);if(zz==7){cli->print("-");}}
+          for(int zz=0;zz<14;zz++){cli->print(bufdate[zz]);if(zz==7){cli->print("-");}}
           cli->println(" GMT ; local IP ");cli->print(Ethernet.localIP());cli->println(" ");
           cli->print(msb);cli->print(".");cli->print(lsb);cli->println("°C<br>");
-          
+
           cli->print("<input type=\"password\" name=\"macmaster_\" value=\"\" size=\"6\" maxlength=\"8\" > ");
           lnkTableHtml(cli,"reset_____","reset");
-          char pwd[32]="password__=\0";strcat(pwd,pass);lnkTableHtml(cli,pwd,"refresh");
+          char pwd[32]="password__=\0";strcat(pwd,modpass);lnkTableHtml(cli,pwd,"refresh");
           lnkTableHtml(cli,"cfgserv___","config");
 
-          numTableHtml(cli,'i',(uint32_t*)&perrefr,"per_refr__",4,0,0);cli->println("<input type=\"submit\" value=\"ok\">");
+          numTableHtml(cli,'d',&perrefr,"per_refr__",4,0,0);cli->println("<input type=\"submit\" value=\"ok\">");
           lnkTableHtml(cli,"test2sw___","testsw");
           lnkTableHtml(cli,"dump_sd___","dump SDcard");
           cli->print("(");long sdsiz=fhisto.size();cli->print(sdsiz);cli->println(") ");
           numTableHtml(cli,'i',(uint32_t*)&sdpos,"sd_pos____",9,0,0);cli->print("<input type=\"submit\" value=\"ok\"> détecteurs serveur :");
+
           for(int k=0;k<NBDSRV;k++){subDSn(cli,"mem_dsrv__\0",memDetServ,k);}
           cli->println("<br>");
           
@@ -357,7 +362,7 @@ Serial.print("début péritable ; remote_IP ");serialPrintIp(remote_IP_cur);Seri
           cli->println("<table>");
               cli->println("<tr>");
                 //cli->println(" ON=VRAI=1=HAUT=CLOSE=GPIO2=ROUGE");
-                cli->println("<th></th><th><br>nom_periph</th><th><br>TH</th><th><br>  V </th><th>per<br>pth<br>ofs</th><th>nb<br>sd<br>pg</th><th>nb<br>sw</th><th><br>_O_I___</th><th>nb<br>dt</th><th></th><th>mac_addr<br>ip_addr</th><th>version<br>last out<br>last in</th><th></th><th>det<br>srv<br>en</th>"); //<th>time One<br>time Two</th><th>f<br>r</th><th>e.l _f_H.a<br>n.x _t_L.c</th><th>___det__srv._pul<br></th>");
+                cli->println("<th></th><th><br>nom_periph</th><th><br>TH</th><th><br>  V </th><th>per<br>pth<br>ofs</th><th>nb<br>sd<br>pg</th><th>nb<br>sw</th><th><br>_O_I___</th><th>nb<br>dt</th><th></th><th>mac_addr<br>ip_addr</th><th>version DS18x<br>last out<br>last in</th><th></th><th>det<br>srv<br>en</th>"); //<th>time One<br>time Two</th><th>f<br>r</th><th>e.l _f_H.a<br>n.x _t_L.c</th><th>___det__srv._pul<br></th>");
               cli->println("</tr>");
 
               for(i=1;i<=NBPERIF;i++){

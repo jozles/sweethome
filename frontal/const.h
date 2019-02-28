@@ -60,15 +60,7 @@
 #define PERINAMLEN 16+1                      // longueur nom perif
 #define PERIRECLEN 211 // V1.1j              // longueur record périph
 
-#define CONFIGRECLEN 582                     // longueur record config 
-
-#define MAXSSID   8
-#define LENSSID   16
-#define LPWSSID   48
-#define SSID1     "pinks"
-#define PWDSSID1  "cain ne dormant pas songeait au pied des monts"
-#define SSID2     "devolo-5d3"
-#define PWDSSID2  "JNCJTRONJMGZEEQL"
+#define CONFIGRECLEN 591                     // longueur record config 
 
 #define BROWSERPREF 120                      // (sec) période auto-refr browser par défaut
 
