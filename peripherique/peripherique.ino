@@ -49,8 +49,8 @@ WiFiClient cliext;              // client externe du serveur local
 
   String headerHttp;
 
-  char* srvpswd=SRVPASS;
-  byte  lsrvpswd=LENSRVPASS;
+  char* srvpswd=PERIPASS;
+  byte  lsrvpswd=LPWD;
 
 // enregistrement pour serveur externe
 
@@ -130,14 +130,14 @@ void tmarker()
   pinMode(WPIN,OUTPUT);for(int t=0;t<6;t++){digitalWrite(WPIN,LOW);delayMicroseconds(100);digitalWrite(WPIN,HIGH);delayMicroseconds(100);}
 }
 
-void trigTemp(){startto(tempTime,cstRec.tempPer,PERTEMP);}
-bool chkTrigTemp(){return ctlto(tempTime,cstRec.tempPer*1000);}
+void trigTemp(){startto(&tempTime,&cstRec.tempPer,PERTEMP);}
+bool chkTrigTemp(){return ctlto(tempTime,cstRec.tempPer);}
 void forceTrigTemp(){cstRec.tempPer=0;}
 
 void setup() 
 { 
 
-      /* Hardware Init */
+/* >>>>>> pins Init <<<<<< */
 
 #if POWER_MODE==PO_MODE
   digitalWrite(PINPOFF,LOW);
@@ -155,9 +155,8 @@ void setup()
   pinMode(PININTA,INPUT_PULLUP);
   pinMode(PININTB,INPUT_PULLUP);
   //if(digitalRead(PINDTA==0) || digitalRead(PININTA)==0 || (digitalRead(PININTA)!=0 && digitalRead(PININTB)!=0)){cntIntA=1;}
-
- /* init tableau des fonctions d'interruption */
  
+// fonctions d'interruption
 // isrD[0]=isrD0;
 // isrD[1]=isrD1;
 // isrD[2]=isrD2;
@@ -165,7 +164,7 @@ void setup()
           
 #endif PM==NO_MODE
 
-/* inits variables */
+/* >>>>>> inits variables <<<<<< */
 
   model[0]=CARTE;
   model[1]=POWER_MODE;
@@ -173,8 +172,6 @@ void setup()
   model[3]='1';
   model[4]=(char)(NBSW+48);
   model[5]=(char)(NBDET+48);  
-  
-  memset(staPulse,0x00,MAXSW);
 
   nbfonct=(strstr(fonctions,"last_fonc_")-fonctions)/LENNOM;
   fset_______=(strstr(fonctions,"set_______")-fonctions)/LENNOM;
@@ -187,11 +184,9 @@ void setup()
   ftestboff__=(strstr(fonctions,"testboff__")-fonctions)/LENNOM;  
   ftestb_on__=(strstr(fonctions,"testb_on__")-fonctions)/LENNOM;
 
-  Serial.begin(115200);
-  delay(1000);
+/* >>>>>> debut <<<<<< */
 
-  
-//initdebug();  
+  Serial.begin(115200);delay(10);
 
 #ifdef _MODE_DEVT
   Serial.print("\nSlave 8266 _MODE_DEVT");
@@ -200,11 +195,8 @@ void setup()
   Serial.print("\n\n");Serial.print(VERSION);Serial.print(" power_mode=");Serial.print(POWER_MODE);
   Serial.print(" carte=");Serial.print(CARTE);
 
-#if CONSTANT==EEPROMSAVED
-  EEPROM.begin(512);
-#endif
+/* >>>>>> gestion ds18x00 <<<<<< */
 
- tmarker();
  byte setds[4]={0,0x7f,0x80,0x3f},readds[8];   // 187mS 10 bits accu 0,25°
  int v=ds1820.setDs(WPIN,setds,readds);if(v==1){Serial.print(" DS1820 version=0x");Serial.println(readds[0],HEX);}
  else {Serial.print(" DS1820 error ");Serial.println(v);}
@@ -214,11 +206,9 @@ void setup()
   delay(tconversion);
 #endif PM==NO_MODE
 #if POWER_MODE==PO_MODE
-  tmarker();
   ds1820.convertDs(WPIN);
   debConv=millis();
 #endif PM==PO_MODE
-
 
 #if POWER_MODE==DS_MODE
 /* si pas sortie de deep sleep faire une conversion 
@@ -232,6 +222,12 @@ void setup()
     initConstant();
     }
 #endif PM==DS_MODE
+
+/* >>>>>> gestion variables permanentes <<<<<< */
+
+#if CONSTANT==EEPROMSAVED
+  EEPROM.begin(512);
+#endif
 
 #if POWER_MODE!=DS_MODE
 /* si le crc des variables permanentes est faux, initialiser
@@ -256,15 +252,15 @@ delay(2000);
   forceTrigTemp();    // force connexion server 
 
   memdetinit();
+  memset(staPulse,0x00,MAXSW);
 
-#ifdef  _SERVER_MODE
+  #ifdef  _SERVER_MODE
     server.begin(PORTSERVPERI);
     Serial.println("server-begin");
-#endif  def_SERVER_MODE
+  #endif  def_SERVER_MODE
 
-}    // fin setup NO_MODE
-
-void loop(){        //=============================================      
+  }    // fin setup NO_MODE
+  void loop(){  //=== NO_MODE =================================      
 
   // la réception de commande est prioritaire sur tout et (si une commande valide est reçue) toute communication
   // en cours est avortée pour traiter la commande reçue.
@@ -285,7 +281,7 @@ void loop(){        //=============================================
   //  
    
 
-#ifdef  _SERVER_MODE
+  #ifdef  _SERVER_MODE
   
       if(millis()>(clkTime+PERFASTCLK)){        // période 5mS/step
         switch(clkFastStep++){
@@ -321,7 +317,7 @@ void loop(){        //=============================================
         }
         clkTime=millis();
       }
-#endif def_SERVER_MODE  
+  #endif def_SERVER_MODE  
 
 #endif PM==NO_MODE
 
@@ -334,7 +330,7 @@ void loop(){        //=============================================
     Serial.print("   talkStep=");Serial.println(cstRec.talkStep);
     yield();talkServer();}
 
-/* sauvegarde variables permanentes avant sleep ou power off */
+  /* sauvegarde variables permanentes avant sleep ou power off */
   writeConstant();
 
   Serial.print("durée ");Serial.print(millis());Serial.print(" - ");
@@ -343,31 +339,26 @@ void loop(){        //=============================================
   delay(10); // purge serial
 
 
-#if POWER_MODE==DS_MODE
+  #if POWER_MODE==DS_MODE
   /* deep sleep */
-  system_deep_sleep_set_option(4);
-  ESP.deepSleep(cstRec.tempPer*1e6); // microseconds
-#endif PM==DS_MODE
-#if POWER_MODE==PO_MODE
+    system_deep_sleep_set_option(4);
+    ESP.deepSleep(cstRec.tempPer*1e6); // microseconds
+  #endif PM==DS_MODE
+  #if POWER_MODE==PO_MODE
   /* power off */
-  digitalWrite(PINPOFF,HIGH);        // power down
-  pinMode(PINPOFF,OUTPUT);
-
-#endif PM==PO_MODE
+    digitalWrite(PINPOFF,HIGH);        // power down
+    pinMode(PINPOFF,OUTPUT);
+  #endif PM==PO_MODE
 
   yield();
   delay(2000);                           // si l'alim reste allumée
-  cstRec.serverTime=cstRec.serverPer+1;  // pour forcer une communication au prochain démarrage
+  cstRec.serverTime=cstRec.serverPer+1;  // force une communication au prochain démarrage
   writeConstant();
+  while(1){delay(1000);};
 
-
-while(1){delay(1000);};
-
-} //  fin setup si != NO_MODE
-
+  } //  fin setup si != NO_MODE
 void loop() {
 #endif PM!=NO_MODE
-
 }  // fin loop pour toutes les options
 
 /* =================== communications ========================
@@ -751,7 +742,7 @@ bool wifiConnexion(const char* ssid,const char* password)
   
       Serial.print(" WIFI connecting to ");Serial.print(ssid);Serial.print("...");
       while(WiFi.status()!=WL_CONNECTED){
-        delay(200);Serial.print(".");
+        delay(500);Serial.print(".");
         if((millis()-beg)>WIFI_TO_CONNEXION){cxstatus=FAUX;break;}
       }
     }
@@ -807,10 +798,10 @@ void readTemp()
       Serial.print((float)ESP.getVcc()/1024.00f);Serial.println("V");
       
 /* temp (suffisament) changée ? */
-      if((int)(temp*10)>(cstRec.oldtemp+(int)(cstRec.tempPitch*10)) || (int)(temp*10)<(cstRec.oldtemp-(int)(cstRec.tempPitch*10))){
-        cstRec.oldtemp=(int)(temp*10);
+      if((int)(temp*100)>(cstRec.oldtemp+(int)(cstRec.tempPitch)) || (int)(temp*100)<(cstRec.oldtemp-(int)(cstRec.tempPitch))){
+        cstRec.oldtemp=(int)(temp*100);
         cstRec.talkStep=1;     // temp changée -> talkServer
-        cstRec.serverTime=0;  
+        cstRec.serverTime=0;
       }
       
 /* avance timer server ------------------- */

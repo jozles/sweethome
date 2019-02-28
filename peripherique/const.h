@@ -245,11 +245,11 @@ Modifier :
 
 // timings
 
-#define TCONVERSIONB       375    // millis délai conversion temp
+#define TCONVERSIONB       400    // millis délai conversion temp
 #define TCONVERSIONS       500    // millis délai conversion temp
-#define PERTEMP             60    // secondes période par défaut lecture temp (en PO_MODE fixé par la résistance du 511x)
-#define PERSERVKO         7200    // secondes période par défaut accès serveur si connexion wifi ko
-#define PERSERV           3600    // secondes période max entre 2 accès server
+#define PERTEMP            245    // secondes période par défaut lecture temp (en PO_MODE fixé par la résistance du 511x)
+#define PERSERVKO 7200/PERTEMP    // secondes période par défaut accès serveur si connexion wifi ko
+#define PERSERV   3600/PERTEMP    // secondes période max entre 2 accès server
 #define TOINCHCLI         4000    // msec max attente car server
 #define WIFI_TO_CONNEXION 5000    // msec
 #define WIFINBRETRY          2    // wifiConnexion
