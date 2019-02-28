@@ -33,7 +33,23 @@ extern long  detTime[MAXDET+MAXDSP+MAXDEX];
 extern constantValues cstRec;
 extern char* cstRecA;
 
+extern float voltage;
 
+void checkVoltage()
+{
+      voltage=(float)ESP.getVcc()/(float)1024;
+      Serial.print(" ");Serial.print(voltage);Serial.print("V ");
+#if POWER_MODE != NO_MODE
+      if(voltage<3.2){
+#if POWER_MODE == PO_MODE
+       digitalWrite(PINPOFF,HIGH);        // power down
+       pinMode(PINPOFF,OUTPUT);}
+#endif PO_MODE
+#if POWER_MODE == DS_MODE
+       deepsleep(0);}
+#endif DS_MODE        
+#endif NO_MODE
+}
 
 bool readConstant()
 {

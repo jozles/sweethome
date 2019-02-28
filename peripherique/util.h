@@ -7,6 +7,7 @@ void writeConstant();
 void initConstant();
 void printConstant();
 
+void checkVoltage();
 
 #endif // UTIL_H_INCLUDED
 

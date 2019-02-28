@@ -98,6 +98,8 @@ constantValues cstRec;
 
 char* cstRecA=(char*)&cstRec;
 
+  float voltage=0; // tension alim
+  
   byte  mac[6];
   char  buf[3]; //={0,0,0};
 
@@ -194,6 +196,8 @@ void setup()
 
   Serial.print("\n\n");Serial.print(VERSION);Serial.print(" power_mode=");Serial.print(POWER_MODE);
   Serial.print(" carte=");Serial.print(CARTE);
+  
+  checkVoltage();
 
 /* >>>>>> gestion ds18x00 <<<<<< */
 
@@ -655,7 +659,7 @@ int buildReadSave(char* nomfonction,char* data)   //   assemble et envoie read/s
       strcat(message,data);strcat(message,"_");                       // temp, âge (dans data_save seul) - 15
 
       sb=strlen(message);
-      sprintf(message+sb,"%1.2f",(float)ESP.getVcc()/1024.00f);       // alim                        - 5
+      sprintf(message+sb,"%1.2f",voltage);                            // alim                        - 5
       strncpy(message+sb+4,"_\0",2);
       strncpy(message+sb+5,VERSION,LENVERSION);                       // VERSION contient le "_"     - 3
       char ds='B';if(dsmodel==MODEL_S){ds='S';}
@@ -794,8 +798,9 @@ void readTemp()
 #endif PM!=PO_MODE
 
       tempAge=millis()/1000;
-      Serial.print("temp ");Serial.print(temp);Serial.print(" ");
-      Serial.print((float)ESP.getVcc()/1024.00f);Serial.println("V");
+      Serial.print("temp ");Serial.print(temp);
+      checkVoltage();
+      Serial.println();
       
 /* temp (suffisament) changée ? */
       if((int)(temp*100)>(cstRec.oldtemp+(int)(cstRec.tempPitch)) || (int)(temp*100)<(cstRec.oldtemp-(int)(cstRec.tempPitch))){
