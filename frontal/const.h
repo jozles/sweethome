@@ -24,13 +24,17 @@
  * 1.1j corespond à la version 1.c de peripherique
  * 1.1k ajout alarmes th et volts + champs detecteurs du serveur
  *      gestion mots de passe et TO révisée (rémanence password via macMaster)
- *      fichier config sur SD
+ *      fichier config sur SD, séparation pages switch dans peritable, multiples révisions des fonctions.
  *      
  * à faire :
  *     
- *     ajouter alarmes dans peritable : alim+/- temp+/- detecteurs temps non communication
- *     créer une table mac/ip/date-heure des password valides (qui ont donné un mot de passe ok) et effacer après un délai d'inutilisation
- *     mettre en sub tout le traitement des fonctions (depuis cli.connected jusqu'après what) et ajouter connexion/server spécial browser
+ *     
+ *    ajouter alarmes dans peritable : alim+/- temp+/- detecteurs temps non communication
+ *    mettre en sub tout le traitement des fonctions (depuis cli.connected jusqu'après what) et ajouter connexion/server spécial browser
+ *     
+ *     html :
+ *     comment faire un bouton pour renvoyer "GET /fonction..." (switchs____ dans periTableHtml, lien "retour" un peu partout)
+ *     comment renvoyer une fonction par submit sans élément à saisir/cliquer (peri_erase dans SwCtlTableHtml)
  *     
  */
 

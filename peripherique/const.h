@@ -134,8 +134,8 @@ Modifier :
 #define THESP01 '1'
 #define THESP12 '2'
 
-#define CARTE THESP01                      // <------------- modèle carte
-#define POWER_MODE PO_MODE            // <------------- type d'alimentation 
+#define CARTE VR                      // <------------- modèle carte
+#define POWER_MODE NO_MODE            // <------------- type d'alimentation 
 
 #if POWER_MODE==NO_MODE
   #define _SERVER_MODE
@@ -189,6 +189,7 @@ Modifier :
 #define PININTC 13  // in interupt
 #define MEMDINIT 0x1111 // bits enable
 #define PINPOFF 3   // power off TPL5111 (RX ESP01)
+#define PERTEMP 20  // secondes période par défaut lecture temp (en PO_MODE fixé par la résistance du 511x)
 #endif CARTE==VR
 
 #if CARTE==THESP01
@@ -215,6 +216,7 @@ Modifier :
 #define PININTB 5   // in interupt
 #define MEMDINIT 0x0000 // bits enable memDetec
 #define PINPOFF 3   // power off TPL5111 (RX ESP01)
+#define PERTEMP 165    // secondes période par défaut lecture temp (en PO_MODE fixé par la résistance du 511x)
 #endif CARTE==THESP01
 
 #if CARTE==THESP12
@@ -240,6 +242,7 @@ Modifier :
 #define PININTA 12  // in interupt
 #define PININTB 14  // in interupt
 #define PINPOFF 3   // power off TPL5111 (RX ESP01)
+#define PERTEMP 60  // secondes période par défaut lecture temp (en PO_MODE fixé par la résistance du 511x)
 #endif CARTE==THESP12
 
 
@@ -247,7 +250,7 @@ Modifier :
 
 #define TCONVERSIONB       400    // millis délai conversion temp
 #define TCONVERSIONS       500    // millis délai conversion temp
-#define PERTEMP            165    // secondes période par défaut lecture temp (en PO_MODE fixé par la résistance du 511x)
+//#define PERTEMP             60    // secondes période par défaut lecture temp (en PO_MODE fixé par la résistance du 511x)
 #define PERSERVKO 7200/PERTEMP    // secondes période par défaut accès serveur si connexion wifi ko
 #define PERSERV   3600/PERTEMP    // secondes période max entre 2 accès server
 #define TOINCHCLI         4000    // msec max attente car server

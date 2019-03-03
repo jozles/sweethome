@@ -65,7 +65,7 @@ extern uint32_t* periSwPulseCurrTwo;           // ptr ds buffer : temps courant 
 extern byte*     periSwPulseCtl;               // ptr ds buffer : mode pulses
 extern byte*     periSwPulseSta;               // ptr ds buffer : état clock pulses
 extern uint8_t*  periSondeNb;                  // ptr ds buffer : nbre sonde
-extern boolean*  periProg;                     // ptr ds buffer : flag "programmable"
+extern boolean*  periProg;                     // ptr ds buffer : flag "programmable" (périphériques serveurs)
 extern byte*     periDetNb;                    // ptr ds buffer : Nbre de détecteurs maxi 4 (MAXDET)
 extern byte*     periDetVal;                   // ptr ds buffer : flag "ON/OFF" si détecteur (2 bits par détec))
 extern float*    periThOffset;                 // ptr ds buffer : offset correctif sur mesure température
@@ -289,7 +289,7 @@ int configSave()
 
 /* >>>>>>>>> périphériques <<<<<<<<<< */
 
-void periCheck(int num,char* text){periSave(NBPERIF+1);periLoad(num);Serial.print(" ");Serial.print(text);Serial.print(" Nb(");Serial.print(num);Serial.print(")=");Serial.println(*periSwNb);periLoad(NBPERIF+1);}
+void periCheck(int num,char* text){periSave(NBPERIF+1);periLoad(num);Serial.print(" ");Serial.print(text);Serial.print(" Nb(");Serial.print(num);Serial.print(") sw=");Serial.print(*periSwNb);Serial.print(" det=");Serial.println(*periDetNb);periLoad(NBPERIF+1);}
 
 
 void periFname(int num,char* fname)
@@ -298,6 +298,12 @@ void periFname(int num,char* fname)
   fname[4]=(char)(num/10+48);
   fname[5]=(char)(num%10+48);
   fname[6]='\0';
+}
+
+void  periPrint(int num)
+{
+  Serial.print(num);Serial.print("/");Serial.print(*periNum);Serial.print(" ");Serial.print(periNamer);Serial.print(" ");
+  serialPrintMac(periMacr,0);Serial.print(" ");serialPrintIp(periIpAddr);Serial.print(" sw=");Serial.print(*periSwNb);Serial.print(" det=");Serial.print(*periDetNb);Serial.print(" ");Serial.println(periVers);
 }
 
 int periLoad(int num)

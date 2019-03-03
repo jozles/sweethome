@@ -162,3 +162,23 @@ void cfgServerHtml(EthernetClient* cli)
             cli->println("</table>");            
             cli->println("</form></body></html>");
 }
+
+
+
+void testHtml(EthernetClient* cli)
+{
+            Serial.println(" page d'essais");
+            htmlIntro(nomserver,cli);
+
+            
+            cli->println("<body><form method=\"get\" >");
+
+            cli->print("<a href=page.html?retour: >retourner</a>");
+/*
+            cli->print(" ce que je ne veux plus voir <input type=\"text\" name=\"ma_fonct_1\" value=\"\"><br>");
+            cli->println(" ce que je veux toujour voir <input type=\"text\" name=\"ma_fonct_2\" value=\"\"><br>");
+*/
+            cli->println(" <input type=\"submit\" value=\"MàJ\"><br>");
+
+            cli->println("</form></body></html>");            
+}            

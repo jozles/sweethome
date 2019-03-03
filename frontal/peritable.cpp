@@ -55,7 +55,7 @@ extern uint32_t* periSwPulseCurrTwo;           // ptr ds buffer : temps courant 
 extern byte*     periSwPulseCtl;               // ptr ds buffer : mode pulses 
 extern byte*     periSwPulseSta;               // ptr ds buffer : état clock pulses
 extern uint8_t*  periSondeNb;                  // ptr ds buffer : nbre sonde
-extern boolean*  periProg;                     // ptr ds buffer : flag "programmable"
+extern boolean*  periProg;                     // ptr ds buffer : flag "programmable" (périphériques serveurs)
 extern byte*     periDetNb;                    // ptr ds buffer : Nbre de détecteurs maxi 4 (MAXDET)
 extern byte*     periDetVal;                   // ptr ds buffer : flag "ON/OFF" si détecteur (2 bits par détec))
 extern float*    periThOffset;                 // ptr ds buffer : offset correctif sur mesure température
@@ -243,7 +243,8 @@ void SwCtlTableHtml(EthernetClient* cli,int nbsw,int nbtypes)
   htmlIntro(nomserver,cli);
             
   cli->println("<body><form method=\"get\" >");
-  cli->println(VERSION);cli->print("  ");numTableHtml(cli,'i',&periCur,"peri_cur__",2,1,0);cli->print("-");cli->print(periNamer);cli->println("<br>");
+  cli->println(VERSION);cli->print("  ");numTableHtml(cli,'i',&periCur,"peri_t_sw_",2,1,0); // pericur n'est pas modifiable (fixation pericur, periload, cberase)
+  cli->print("-");cli->print(periNamer);cli->println("<br>");
   char pwd[32]="password__=\0";strcat(pwd,usrpass);lnkTableHtml(cli,pwd,"retour");
   cli->println(" <input type=\"submit\" value=\"MàJ\"><br>");
 
@@ -350,7 +351,7 @@ Serial.print("début péritable ; remote_IP ");serialPrintIp(remote_IP_cur);Seri
           lnkTableHtml(cli,"cfgserv___","config");
 
           numTableHtml(cli,'d',&perrefr,"per_refr__",4,0,0);cli->println("<input type=\"submit\" value=\"ok\">");
-          lnkTableHtml(cli,"test2sw___","testsw");
+          lnkTableHtml(cli,"testhtml__","test_html");
           lnkTableHtml(cli,"dump_sd___","dump SDcard");
           cli->print("(");long sdsiz=fhisto.size();cli->print(sdsiz);cli->println(") ");
           numTableHtml(cli,'i',(uint32_t*)&sdpos,"sd_pos____",9,0,0);cli->print("<input type=\"submit\" value=\"ok\"> détecteurs serveur :");
@@ -372,6 +373,7 @@ Serial.print("début péritable ; remote_IP ");serialPrintIp(remote_IP_cur);Seri
                 // et pour assurer l'effacement des bits de checkbox : le navigateur ne renvoie que ceux "checkés"
                 periInitVar();periLoad(i);periCur=i;
                 if(*periSwNb>MAXSW){periCheck(i,"perT");periInitVar();periSave(i);}
+                if(*periDetNb>MAXDET){periCheck(i,"perT");periInitVar();periSave(i);}
 
                 cli->println("<tr>");
                   cli->println("<form method=\"GET \">");

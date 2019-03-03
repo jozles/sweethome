@@ -6,6 +6,7 @@ void htmlIntro0(EthernetClient* cli);
 void htmlIntro(char* titre,EthernetClient* cli);
 void cfgServerHtml(EthernetClient* cli);
 void accueilHtml(EthernetClient* cli);
+void testHtml(EthernetClient* cli);
 
 
 #endif // _PAGESHTML_H_

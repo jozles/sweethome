@@ -803,8 +803,9 @@ void readTemp()
       Serial.println();
       
 /* temp (suffisament) changée ? */
-      if((int)(temp*100)>(cstRec.oldtemp+(int)(cstRec.tempPitch)) || (int)(temp*100)<(cstRec.oldtemp-(int)(cstRec.tempPitch))){
-        cstRec.oldtemp=(int)(temp*100);
+      temp*=100;
+      if( temp>(cstRec.oldtemp+cstRec.tempPitch) || temp<(cstRec.oldtemp-cstRec.tempPitch)){
+        cstRec.oldtemp=(int16_t)temp;
         cstRec.talkStep=1;     // temp changée -> talkServer
         cstRec.serverTime=0;
       }

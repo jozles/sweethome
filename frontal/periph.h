@@ -40,6 +40,7 @@ void  periConvert();
 void  periInit();
 void  periInitVar(); // le contenu de periRec seul
 void  periCheck(int num,char* text);
+void  periPrint(int num);
 
 void  configInit();
 int   configLoad();
