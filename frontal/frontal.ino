@@ -98,8 +98,8 @@ EthernetServer periserv(1790);  // port 1789 service, 1790 devt
   byte      msb=0,lsb=0;                   // pour temp DS3231
   float     tempf;
   long      curtemp=0;                     // mémo last millis() pour temp
-#define PTEMP 3600                         // sec
-  uint32_t  pertemp=PTEMP;                 // période ech temp       
+#define PTEMP 120                          // sec
+  uint32_t  pertemp=PTEMP;                 // période ech temp sur le serveur
   uint16_t  perrefr=0;                     // periode rafraichissement de l'affichage
   
   int   stime=0;int mtime=0;int htime=0;
@@ -119,7 +119,8 @@ EthernetServer periserv(1790);  // port 1789 service, 1790 devt
   uint16_t   periCur=0;                         // Numéro du périphérique courant
   
   uint16_t* periNum;                        // ptr ds buffer : Numéro du périphérique courant
-  uint32_t* periPerRefr;                    // ptr ds buffer : période datasave minimale
+  uint32_t* periPerRefr;                    // ptr ds buffer : période maximale d'accès au serveur
+  uint16_t* periPerTemp;                    // ptr ds buffer : période de lecture tempèrature
   float*    periPitch;                      // ptr ds buffer : variation minimale de température pour datasave
   float*    periLastVal;                    // ptr ds buffer : dernière valeur de température  
   float*    periAlim;                       // ptr ds buffer : dernière tension d'alimentation
@@ -284,7 +285,7 @@ void setup() {                              // =================================
   delay(100);if(configRecLength!=CONFIGRECLEN){ledblink(BCODECONFIGRECLEN);}
   configPrint();configSave();configLoad();configPrint();
   
-  periInit();long periRecLength=(long)periEndOfRecord-(long)periBegOfRecord+1;periCheck(8,"");
+  periInit();long periRecLength=(long)periEndOfRecord-(long)periBegOfRecord+1;
   
   Serial.print("PERIRECLEN=");Serial.print(PERIRECLEN);Serial.print("/");Serial.print(periRecLength);
   delay(100);if(periRecLength!=PERIRECLEN){ledblink(BCODEPERIRECLEN);}
@@ -309,7 +310,7 @@ while(1){}
     periConvert();
     Serial.println("terminé");
     while(1){};
-//*/  
+*/  
 /*  création des fichiers de périphériques
     periInit();
     for(i=11;i<=NBPERIF;i++){
@@ -559,7 +560,7 @@ char* checkStack(char* refstack)
 
             switch (numfonct[i])      
               {
-              case 0:  pertemp=0;conv_atobl(valf,&pertemp);break;
+              case 0:  pertemp=0;conv_atobl(valf,&pertemp);break;                                           // pertemp serveur
               case 1:  if((memcmp(macMaster,remote_MAC,6)==0 && memcmp(remote_IP_Mac,remote_IP,4)==0 && !chkTrigPwd()) || ctlpass(valf,modpass)){
                          trigPwd();memcpy(macMaster,remote_MAC,6);memcpy(remote_IP_Mac,remote_IP,4);}       // macmaster_
                        else {disTrigPwd();memset(macMaster,0x00,6);memset(remote_IP_Mac,0x00,4);what=-1;nbreparams=0;}
@@ -600,9 +601,8 @@ char* checkStack(char* refstack)
               case 15: what=4;periCur=0;conv_atob(valf,&periCur);                                           // peri cur  N° périph courant (1ère fonction ligne table)
                        if(periCur>NBPERIF){periCur=NBPERIF;}                                                // fixe periCur et charge la ligne
                        periInitVar();periLoad(periCur);
-                       if(periProg!=0){what=5;}                                                             // si périphérique serveur -> perisend                           
-                       break;                                                                               // sinon perisave seul
-              case 16: *periPerRefr=0;conv_atobl(valf,periPerRefr);break;                            // per refr periph courant
+                       break;                                                                        
+              case 16: *periPerRefr=0;conv_atobl(valf,periPerRefr);break;                            // per maxi accès serveur periph courant
               case 17: memset(periNamer,0x00,PERINAMLEN-1);                                          // nom periph courant
                        memcpy(periNamer,valf,nvalf[i+1]-nvalf[i]);
                        break;                                                                              
@@ -625,7 +625,7 @@ char* checkStack(char* refstack)
               case 28: *periSwVal&=0xf7;*periSwVal|=(*valf&0x01)<<3;break;                           // peri Sw Val 1
               case 29: *periSwVal&=0xdf;*periSwVal|=(*valf&0x01)<<5;break;                           // peri Sw Val 2
               case 30: *periSwVal&=0x7f;*periSwVal|=(*valf&0x01)<<7;break;                           // peri Sw Val 3
-              case 31: periCur=0;conv_atob(valf,&periCur);                                           // peri_t_sw_
+              case 31: what=5;periCur=0;conv_atob(valf,&periCur);                                    // peri_t_sw_
                        if(periCur>NBPERIF){periCur=NBPERIF;}
                        periInitVar();periLoad(periCur);cbErase();                                    // effacement checkboxs des switchs du periphérique courant
                        break;  
@@ -665,10 +665,11 @@ char* checkStack(char* refstack)
                        memset(passssid+nb*(LPWSSID+1),0x00,LENSSID+1);memcpy(passssid+nb*(LPWSSID+1),valf,nvalf[i+1]-nvalf[i]);
                        }break;
               case 45: cfgServerHtml(&cli_a);configPrint();break;break;                              // config
-              case 46: memset(usrpass,0x00,LPWD);memcpy(usrpass,valf,nvalf[i+1]-nvalf[i]);configSave();break;     // passwordcfg
-              case 47: memset(modpass,0x00,LPWD);memcpy(modpass,valf,nvalf[i+1]-nvalf[i]);configSave();break;     // modpasscfg
-              case 48: memset(peripass,0x00,LPWD);memcpy(peripass,valf,nvalf[i+1]-nvalf[i]);configSave();break;   // peripasscfg
-              case 49: for(j=0;j<6;j++){conv_atoh(valf+j*2,(mac+j));}configSave();break;                          // Mac config
+              case 46: what=6;                                                                       // 1ère fonction 
+                       memset(usrpass,0x00,LPWD);memcpy(usrpass,valf,nvalf[i+1]-nvalf[i]);break;     // pwdcfg____
+              case 47: memset(modpass,0x00,LPWD);memcpy(modpass,valf,nvalf[i+1]-nvalf[i]);break;     // modpcfg___
+              case 48: memset(peripass,0x00,LPWD);memcpy(peripass,valf,nvalf[i+1]-nvalf[i]);break;   // peripcfg__
+              case 49: for(j=0;j<6;j++){conv_atoh(valf+j*2,(mac+j));}break;                          // Mac config
                               
               default:break;
               }
@@ -682,11 +683,12 @@ char* checkStack(char* refstack)
           }                                           // 1 ligne par commande GET
 
         //configPrint();
-        periCheck(8,"what");
+        //periCheck(8,"what");
 
 /*
    periParamsHtml (fait perisave) effectue une réponse ack ou set ou envoie une commande get /set si applelé par perisend
 */
+        if(what==4 && *periProg){what=5;}                       // si périphérique serveur -> perisend                           
        
         switch(what){                                           
           case 0:break;                                         // fonctions ponctuelles du serveur
@@ -695,7 +697,7 @@ char* checkStack(char* refstack)
           case 3:periParamsHtml(&cli_a," ",0);break;            // data_read
           case 4:periSave(periCur);periTableHtml(&cli_a);break; // periphériques non serveurs pas de commande get /set ...
           case 5:periSend();periTableHtml(&cli_a);break;        // périphériques serveurs            commande get /set ... (fait periParamsHtml)
-          case 6:break;                                         // dispo        
+          case 6:configSave();periTableHtml(&cli_a);break;      // config        
           case 7:periSend();SwCtlTableHtml(&cli_a,*periSwNb,4);break; // config switchs - smise à jour des périphériques (fait periParamsHtml)
           default:accueilHtml(&cli_a);break;
           }
@@ -763,20 +765,24 @@ void periDataRead()             // traitement d'une chaine "dataSave" ou "dataRe
   if(periCur==0){                                                 // si periCur=0 recherche si mac connu   
     for(i=1;i<=NBPERIF;i++){                                      // et, au cas où, une place libre
       periLoad(i);
-      if(compMac(periMacBuf,periMacr)){periCur=i;i=NBPERIF+1;}    // mac trouvé
-      if(memcmp("\0\0\0\0\0\0",periMacr,6)==0 && perizer==0){perizer=i;}        // place libre trouvée
+      if(compMac(periMacBuf,periMacr)){
+        periCur=i;i=NBPERIF+1;
+        Serial.println(" DataRead/Save Mac connu");
+      }                                                                         // mac trouvé
+      if(memcmp("\0\0\0\0\0\0",periMacr,6)==0 && perizer==0){
+        perizer=i;
+        Serial.println(" DataRead/Save place libre");
+      }        // place libre trouvée
     }
   }
     
   if(periCur==0 && perizer!=0){                                   // si pas connu utilisation N° perif libre "perizer"
-      Serial.println(" Mac inconnu");
+      Serial.println(" DataRead/Save Mac inconnu");
       periInitVar();periCur=perizer;periLoad(periCur);
       periMess=MESSFULL;
   }
 
   if(periCur!=0){                                                 // si ni trouvé, ni place libre, periCur=0 
-    Serial.println(" place libre ou Mac connu");
-       
     memcpy(periMacr,periMacBuf,6);
     k=valf+2+1+17+1;*periLastVal=convStrToNum(k,&i);                                    // température si save
     k+=i;convStrToNum(k,&i);                                                            // age si save
@@ -1059,5 +1065,4 @@ void testSwitch(char* command,char* perihost,int periport)
             cliext.stop();
             delay(1);
 }
-
 

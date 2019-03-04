@@ -43,6 +43,7 @@ extern int       periCur;                      // Numéro du périphérique cour
 
 extern int16_t*  periNum;                      // ptr ds buffer : Numéro du périphérique courant
 extern int32_t*  periPerRefr;                  // ptr ds buffer : période datasave minimale
+extern uint16_t* periPerTemp;                    // ptr ds buffer : période de lecture tempèrature
 extern float*    periPitch;                    // ptr ds buffer : variation minimale de température pour datasave
 extern float*    periLastVal;                  // ptr ds buffer : dernière valeur de température  
 extern float*    periAlim;                     // ptr ds buffer : dernière tension d'alimentation
@@ -310,7 +311,7 @@ int periLoad(int num)
 {
   int i=0;
   if(periCacheStatus[num]==0){
-    //Serial.print("load table peri=");Serial.println(num);
+    Serial.print("sdload table peri=");Serial.println(num);
     char periFile[7];periFname(num,periFile);
     if(sdOpen(FILE_READ,&fperi,periFile)==SDKO){return SDKO;}
     for(i=0;i<PERIRECLEN;i++){periCache[(num-1)*PERIRECLEN+i]=fperi.read();}              // periRec[i]=fperi.read();}
@@ -345,7 +346,7 @@ int periSave(int num)
     sta=SDOK;
     fperi.seek(0);
     for(i=0;i<PERIRECLEN;i++){fperi.write(periRec[i]);}
-//for(i=0;i<PERIRECLEN+4*sizeof(float)+2*sizeof(byte);i++){fperi.write(periRec[i]);}      // ajouter les longueurs des variables ajoutées avant de modifier PERIRECLEN
+//for(i=0;i<PERIRECLEN+sizeof(uint16_t);i++){fperi.write(periRec[i]);}      // ajouter les longueurs des variables ajoutées avant de modifier PERIRECLEN
     fperi.close();
 
     for(int x=0;x<4;x++){lastIpAddr[x]=periIpAddr[x];}
@@ -430,6 +431,8 @@ void periInit()                 // pointeurs de l'enregistrement de table couran
   temp +=sizeof(float);  
   periDetServEn=(byte*)temp;
   temp +=1*sizeof(byte);
+  periPerTemp=(uint16_t*)temp;
+  temp +=sizeof(uint16_t);
 //  dispo=(byte*)temp;
   temp +=1*sizeof(byte);
   periEndOfRecord=(byte*)temp;      // doit être le dernier !!!
@@ -442,7 +445,8 @@ void periInit()                 // pointeurs de l'enregistrement de table couran
 void periInitVar()
 {
   *periNum=0;
-  *periPerRefr=BROWSERPREF;
+  *periPerRefr=MAXSERVACCESS;
+  *periPerTemp=TEMPERPREF;
   *periPitch=0;
   *periLastVal=0;
   *periAlim=0;
@@ -494,7 +498,7 @@ void periConvert()
   char periFile[7];
   int i=0;
   periInitVar();            // les champs ajoutés sont initialisés ; les autres récupèreront les valeurs précédentes
-  for(i=1;i<=NBPERIF;i++){
+  for(i=1;i<=NBPERIF+1;i++){
     periFname(i,periFile);Serial.print(periFile);
     if(periLoad(i)!=SDOK){Serial.print(" load KO");}
     else{

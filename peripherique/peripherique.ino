@@ -428,12 +428,12 @@ void dataTransfer(char* data)           // transfert contenu de set ou ack dans 
         else if(!compMac(mac,fromServerMac)){periMess=MESSMAC;}
         else {
                              // si ok transfert des données                                    
-            strncpy(cstRec.numPeriph,data+MPOSNUMPER,2);                     // num périph
+            strncpy(cstRec.numPeriph,data+MPOSNUMPER,2);                        // num périph
             int sizeRead;
-            cstRec.serverPer=(long)convStrToNum(data+MPOSPERREFR,&sizeRead); // per refresh server
-            cstRec.tempPitch=(long)convStrToNum(data+MPOSPITCH,&sizeRead);   // pitch mesure
+            cstRec.serverPer=(long)convStrToNum(data+MPOSPERREFR,&sizeRead);    // per refresh server
+            cstRec.tempPitch=(long)convStrToNum(data+MPOSPITCH,&sizeRead);      // pitch mesure
             cstRec.swCde='\0';
-            for(int i=0;i<MAXSW;i++){                                             // 1 byte état/cdes serveur + 4 bytes par switch (voir const.h du frontal)
+            for(int i=0;i<MAXSW;i++){                                           // 1 byte état/cdes serveur + 4 bytes par switch (voir const.h du frontal)
               
               cstRec.swCde |= (*(data+MPOSSWCDE+MAXSW-1-i)-48)<<(2*(i+1)-1);    // bit cde (bits 8,6,4,2)  
               conv_atoh((data+MPOSINTPAR0+i*9),&cstRec.actCde[i]);
@@ -696,7 +696,7 @@ if(strlen(message)>LENVAL-4){Serial.print("******* LENVAL ***** MESSAGE ******")
 int dataSave()
 {
   char tempstr[16];
-      sprintf(tempstr,"%+02.2f",temp);                                    // 6 car
+      sprintf(tempstr,"%+02.2f",temp/100);                                // 6 car
       if(strstr(tempstr,"nan")!=0){strcpy(tempstr,"+00.00\0");}
       strcat(tempstr,"_");                                                // 1 car
       sprintf((char*)(tempstr+strlen(tempstr)),"%07d",(millis())-dateon); // 7 car

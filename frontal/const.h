@@ -25,6 +25,7 @@
  * 1.1k ajout alarmes th et volts + champs detecteurs du serveur
  *      gestion mots de passe et TO révisée (rémanence password via macMaster)
  *      fichier config sur SD, séparation pages switch dans peritable, multiples révisions des fonctions.
+ *      ajout periPerTemp dans fichiers periphériques pour paramétrage période temp via péritable
  *      
  * à faire :
  *     
@@ -62,11 +63,12 @@
 
 #define NBPERIF 20                           
 #define PERINAMLEN 16+1                      // longueur nom perif
-#define PERIRECLEN 211 // V1.1j              // longueur record périph
+#define PERIRECLEN 213 // V1.1k              // longueur record périph
 
 #define CONFIGRECLEN 591                     // longueur record config 
 
-#define BROWSERPREF 120                      // (sec) période auto-refr browser par défaut
+#define MAXSERVACCESS 120                    // (sec) période maximale accés au serveur par défaut
+#define TEMPERPREF   20                      // (sec) période check température par défaut sur périphérique
 
 #define SDOK 1
 #define SDKO 0 
