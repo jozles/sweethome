@@ -7,6 +7,7 @@ void SwCtlTableHtml(EthernetClient* cli,int nbsw,int nbtypes);
 void intModeTableHtml(EthernetClient* cli,uint16_t* valeur,int nbli,int nbtypes);
 void cliPrintMac(EthernetClient* cli, byte* mac);
 void cbErase();
+void bouTableHtml(EthernetClient* cli,char* nomfonct,char* valfonct,char* lib,uint8_t td,uint8_t br);
 void lnkTableHtml(EthernetClient* cli,char* nomfonct,char* lib);
 void numTableHtml(EthernetClient* cli,char type,void* valfonct,char* nomfonct,int len,uint8_t td,int pol);
 void xradioTableHtml(EthernetClient* cli,byte valeur,char* nomfonct,byte nbval,int nbli,byte type);

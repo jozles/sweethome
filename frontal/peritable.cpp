@@ -33,6 +33,7 @@ extern int       periCur;                    // Numéro du périphérique couran
 
 extern int*      periNum;                      // ptr ds buffer : Numéro du périphérique courant
 extern long*     periPerRefr;                  // ptr ds buffer : période maximale accés au serveur
+extern uint16_t* periPerTemp;                  // ptr ds buffer : période de lecture tempèrature
 extern float*    periPitch;                    // ptr ds buffer : variation minimale de température pour datasave
 extern float*    periLastVal;                  // ptr ds buffer : dernière valeur de température  
 extern float*    periAlim;                     // ptr ds buffer : dernière tension d'alimentation
@@ -118,6 +119,22 @@ void textTableHtml(EthernetClient* cli,char type,float* valfonct,float* valmin,f
   if(td==2 || td==3){cli->println("</td>");}
 }
 
+void bouTableHtml(EthernetClient* cli,char* nomfonct,char* valfonct,char* lib,uint8_t td,uint8_t br)
+{
+    if(td==1 || td==2){cli->print("<td>");}
+    
+    cli->print("<form><p hidden><input type=\"text\" name=\"");
+    cli->print(nomfonct);
+    cli->print("\" value=\"");
+    cli->print(valfonct);
+    cli->print("\" ></p><input type=\"submit\" value=\"");
+    cli->print(lib);
+    cli->print("\">");
+    if(br!=0){cli->print("<br>");}
+    cli->print("</form>");
+
+    if(td==1 || td==3){cli->println("</td>");}
+}
 
 void lnkTableHtml(EthernetClient* cli,char* nomfonct,char* lib)
 {
@@ -241,11 +258,17 @@ void subModePulseTime(EthernetClient* cli,uint8_t sw,uint32_t* pulse,uint32_t* d
 void SwCtlTableHtml(EthernetClient* cli,int nbsw,int nbtypes)
 {
   htmlIntro(nomserver,cli);
-            
-  cli->println("<body><form method=\"get\" >");
-  cli->println(VERSION);cli->print("  ");numTableHtml(cli,'i',&periCur,"peri_t_sw_",2,0,0); // pericur n'est pas modifiable (fixation pericur, periload, cberase)
-  cli->print("-");cli->print(periNamer);cli->println("<br>");
-  char pwd[32]="password__=\0";strcat(pwd,usrpass);lnkTableHtml(cli,pwd,"retour");
+
+  cli->println("<body>");            
+  bouTableHtml(cli,"password__",modpass,"retour",0,0);
+  cli->println("<form method=\"get\" >");
+  cli->print(VERSION);cli->println("  ");
+  cli->print("<p hidden>");
+  numTableHtml(cli,'i',&periCur,"peri_t_sw_",2,0,0); // pericur n'est pas modifiable (fixation pericur, periload, cberase)
+  cli->println("</p>");
+  cli->print(periCur);cli->print("-");cli->print(periNamer);cli->println("<br>");
+
+  //char pwd[32]="password__=\0";strcat(pwd,usrpass);lnkTableHtml(cli,pwd,"retour");
   cli->println(" <input type=\"submit\" value=\"MàJ\"> ");
 
   for(int k=0;k<NBDSRV;k++){subDSn(cli,"peri_dsv__\0",*periDetServEn,k);}cli->println("<br>");
@@ -360,13 +383,13 @@ Serial.print("début péritable ; remote_IP ");serialPrintIp(remote_IP_cur);Seri
           numTableHtml(cli,'i',(uint32_t*)&sdpos,"sd_pos____",9,0,0);cli->print("<input type=\"submit\" value=\"ok\"> détecteurs serveur :");
 
           for(int k=0;k<NBDSRV;k++){subDSn(cli,"mem_dsrv__\0",memDetServ,k);}
-          cli->println("<br>");
+          //cli->println("<br>");
         cli->println("</form>");  
 
           cli->println("<table>");
               cli->println("<tr>");
                 //cli->println(" ON=VRAI=1=HAUT=CLOSE=GPIO2=ROUGE");
-                cli->println("<th></th><th><br>nom_periph</th><th><br>TH</th><th><br>  V </th><th>per<br>pth<br>ofs</th><th>nb<br>sd<br>pg</th><th>nb<br>sw<br>det</th><th><br>_O_I___</th><th></th><th>mac_addr<br>ip_addr</th><th>version DS18x<br>last out<br>last in</th><th></th>"); //<th>det<br>srv<br>en</th>"); //<th>time One<br>time Two</th><th>f<br>r</th><th>e.l _f_H.a<br>n.x _t_L.c</th><th>___det__srv._pul<br></th>");
+                cli->println("<th></th><th><br>nom_periph</th><th><br>TH</th><th><br>  V </th><th>per_t<br>pth<br>ofs</th><th>per_s<br> <br>pg</th><th>nb<br>sw<br>det</th><th><br>_O_I___</th><th></th><th>mac_addr<br>ip_addr</th><th>version DS18x<br>last out<br>last in</th><th></th>"); //<th>det<br>srv<br>en</th>"); //<th>time One<br>time Two</th><th>f<br>r</th><th>e.l _f_H.a<br>n.x _t_L.c</th><th>___det__srv._pul<br></th>");
               cli->println("</tr>");
 
               for(i=1;i<=NBPERIF;i++){
@@ -381,9 +404,11 @@ Serial.print("début péritable ; remote_IP ");serialPrintIp(remote_IP_cur);Seri
                 cli->println("<tr>");
                   cli->println("<form method=\"GET \">");
                       
-                      numTableHtml(cli,'i',&periCur,"peri_cur__",2,1,0);
+                      cli->print("<td>");
+                      cli->println(periCur);
+                      cli->print("<p hidden>");numTableHtml(cli,'i',&periCur,"peri_cur__",2,3,0);cli->println("</p>");
                       cli->print("<td><input type=\"text\" name=\"peri_nom__\" value=\"");
-                         cli->print(periNamer);cli->print("\" size=\"12\" maxlength=\"");cli->print(PERINAMLEN-1);cli->print("\" ></td>");
+                        cli->print(periNamer);cli->print("\" size=\"12\" maxlength=\"");cli->print(PERINAMLEN-1);cli->print("\" ></td>");
                      // boutonHtml(cli,periSwVal,"peri_swb__",0,2);
                       textTableHtml(cli,'f',periLastVal,periThmin,periThmax,1,1);
                       numTableHtml(cli,'f',periThmin,"peri_thmin",5,0,0);cli->print("<br>");
@@ -391,15 +416,16 @@ Serial.print("début péritable ; remote_IP ");serialPrintIp(remote_IP_cur);Seri
                       textTableHtml(cli,'f',periAlim,periVmin,periVmax,1,1);
                       numTableHtml(cli,'f',periVmin,"peri_vmin_",5,0,0);cli->print("<br>");
                       numTableHtml(cli,'f',periVmax,"peri_vmax_",5,3,0);
-                      numTableHtml(cli,'l',(uint32_t*)periPerRefr,"peri_refr_",5,2,0);cli->print("<br>");
+                      numTableHtml(cli,'d',(uint32_t*)periPerTemp,"peri_rtemp",5,2,0);cli->print("<br>");
                       numTableHtml(cli,'f',periPitch,"peri_pitch",5,0,0);cli->print("<br>");
                       numTableHtml(cli,'f',periThOffset,"peri_tofs_",5,3,0);
-                      numTableHtml(cli,'b',periSondeNb,"peri_sonde",2,2,0);cli->print("<br>");
+                      numTableHtml(cli,'l',(uint32_t*)periPerRefr,"peri_refr_",5,2,0);cli->print("<br>");
+                      //numTableHtml(cli,'b',periSondeNb,"peri_sonde",2,2,0);cli->print("<br>");
                       checkboxTableHtml(cli,(uint8_t*)periProg,"peri_prog_",-1,3);
                       numTableHtml(cli,'b',periSwNb,"peri_intnb",1,2,0);cli->print("<br>");
                       numTableHtml(cli,'b',periDetNb,"peri_detnb",1,3,0);
                       cli->println("<td>");
-                      xradioTableHtml(cli,*periSwVal,"peri_intv\0",2,*periSwNb,3);
+                      xradioTableHtml(cli,*periSwVal,"peri_vsw_\0",2,*periSwNb,3);
                       
                       cli->print("<td>");
                       for(uint8_t k=0;k<*periDetNb;k++){char oi[2]={'O','I'};cli->print(oi[(*periDetVal>>(k*2))&DETBITLH_VB]);if(k<*periDetNb-1){cli->print("<br>");}}
@@ -413,12 +439,16 @@ Serial.print("début péritable ; remote_IP ");serialPrintIp(remote_IP_cur);Seri
                       unpackDate(dateascii,periLastDateIn);for(j=0;j<12;j++){cli->print(dateascii[j]);if(j==5){cli->print(" ");}}
                         cli->println("</font></td>");
                       
-                      cli->println("<td><input type=\"submit\" value=\"MàJ\"><br>");
-                      char swf[]="switchs___";swf[LENNOM-1]=periCur+PMFNCHAR;swf[LENNOM]='\0';lnkTableHtml(cli,swf,"switchs");cli->println("</td>");
-                     
+                      cli->println("<td><input type=\"submit\" value=\"   MàJ   \"><br>");
+                      char swf[]="switchs___";swf[LENNOM-1]=periCur+PMFNCHAR;swf[LENNOM]='\0';
+                      
+                      
+                      //lnkTableHtml(cli,swf,"switchs");cli->println("</td>");
+                      //bouTableHtml(cli,"password__",modpass,"retour",3);
                       //SwCtlTableHtml(cli,*periSwNb,4);
 
                   cli->print("</form>");
+                  if(*periSwNb!=0){bouTableHtml(cli,swf,"","Switchs",3,0);}
                 cli->println("</tr>");
               }
           cli->println("</table>");
@@ -430,7 +460,6 @@ void cbErase()      // ******************** effacement des bits checkbox *******
                     // seuls les bits des switchs existants sont effacés pour accélérer la séquence
 {
         uint64_t sh0,sh1,shx;
-        *periProg=0;
 
         /* periSwPulseCtl */                                                                               
         if(*periSwNb!=0){

@@ -170,15 +170,31 @@ void testHtml(EthernetClient* cli)
             Serial.println(" page d'essais");
             htmlIntro(nomserver,cli);
 
+            char pwd[32]="password__=\0";strcat(pwd,usrpass);
             
-            cli->println("<body><form method=\"get\" >");
+            cli->println("<body><form method=\"get\" action=\"page.html\" >");
 
-            cli->print("<a href=page.html?retour: >retourner</a>");
-/*
-            cli->print(" ce que je ne veux plus voir <input type=\"text\" name=\"ma_fonct_1\" value=\"\"><br>");
-            cli->println(" ce que je veux toujour voir <input type=\"text\" name=\"ma_fonct_2\" value=\"\"><br>");
-*/
-            cli->println(" <input type=\"submit\" value=\"MàJ\"><br>");
+            cli->print("<a href=page.html?");cli->print(pwd);cli->print(":>retourner</a><br>");
+            cli->print("<a href=page.html?password__=17515A:>retourner</a><br>");
+
+            //cli->print(" <p hidden> ce que je ne veux plus voir <input type=\"text\" name=\"ma_fonct_1\" value=\"\"><br><p>");
+            //cli->println(" ce que je veux toujour voir <input type=\"text\" name=\"ma_fonct_2\" value=\"\"><br>");
+
+            //cli->print("<img id=\"img1\" alt=\"BOUTON\" fp-style=\"fp-btn: Border Left 1\" fp-title=\"BOUTON\" height=\"20\"  style=\"border: 0\" width=\"100\"> <br>");
+
+            //cli->println(" <input type=\"submit\" value=\"MàJ\"><br>");
+            
+            cli->print("<a href=page.html?");cli->print(pwd);cli->print(":><input type=\"submit\" value=\"retour\"></a><br>");
+            cli->print("<a><input type=\"submit\" formaction=\"page.html?password__=17515A:\" value=\"formaction\"></a><br>");
+
+            bouTableHtml(cli,"password__",usrpass,"retour",2,1);
+            
+            cli->print("<form><p hidden><input type=\"text\" name=\"password__\" value=\"");
+            cli->print(usrpass);
+            cli->print("\" ><p><input type=\"submit\" value=\"submit\"><br></form>");
+            
+            
+            cli->print("<a href=page.html?password__=17515A:><input type=\"submit\" value=\"retour\"></a><br>");
 
             cli->println("</form></body></html>");            
-}            
+}           

@@ -77,7 +77,7 @@ EthernetServer periserv(1790);  // port 1789 service, 1790 devt
                                        // donne l'habilitation pour effectuer des modifs dans peritable
                                        // (sinon renvoi à l'accueil)
   int8_t  numfonct[NBVAL];             // les fonctions trouvées  (au max version 1.1k 23+4*57=251)
-  char*   fonctions="per_temp__macmaster_peri_pass_password__testhtml__done______per_refr__peri_tofs_switchs___reset_____dump_sd___sd_pos____data_save_data_read_peri_swb__peri_cur__peri_refr_peri_nom__peri_mac__accueil___peri_tableperi_prog_peri_sondeperi_pitchperi_pmo__peri_detnbperi_intnbperi_intv0peri_intv1peri_intv2peri_intv3peri_t_sw_peri_otf__peri_imn__peri_imc__peri_pto__peri_ptt__peri_thminperi_thmaxperi_vmin_peri_vmax_peri_dsv__mem_dsrv__ssid______passssid__cfgserv___pwdcfg____modpcfg___peripcfg__maccfg____last_fonc_";  //};
+  char*   fonctions="per_temp__macmaster_peri_pass_password__testhtml__done______per_refr__peri_tofs_switchs___reset_____dump_sd___sd_pos____data_save_data_read_peri_swb__peri_cur__peri_refr_peri_nom__peri_mac__accueil___peri_tableperi_prog_peri_sondeperi_pitchperi_pmo__peri_detnbperi_intnbperi_rtempperi_dispoperi_dispoperi_vsw__peri_t_sw_peri_otf__peri_imn__peri_imc__peri_pto__peri_ptt__peri_thminperi_thmaxperi_vmin_peri_vmax_peri_dsv__mem_dsrv__ssid______passssid__cfgserv___pwdcfg____modpcfg___peripcfg__maccfg____last_fonc_";  //};
                                        // nombre fonctions, valeur pour accueil, data_save_ fonctions multiples etc
   int     nbfonct=0,faccueil=0,fdatasave=0,fperiSwVal=0,fperiDetSs=0,fdone=0,fpericur=0,fperipass=0,fpassword=0,fmacmaster=0;
   char    valeurs[LENVALEURS];         // les valeurs associées à chaque fonction trouvée
@@ -281,9 +281,10 @@ void setup() {                              // =================================
 
   configInit();long configRecLength=(long)configEndOfRecord-(long)configBegOfRecord+1;
   
-  Serial.print("CONFIGRECLEN=");Serial.print(CONFIGRECLEN);Serial.print("/");Serial.println(configRecLength);
+  Serial.print("CONFIGRECLEN=");Serial.print(CONFIGRECLEN);Serial.print("/");Serial.print(configRecLength);
   delay(100);if(configRecLength!=CONFIGRECLEN){ledblink(BCODECONFIGRECLEN);}
-  configPrint();configSave();configLoad();configPrint();
+  Serial.print(" nbfonct=");Serial.println(nbfonct);
+  configSave();configLoad();configPrint();
   
   periInit();long periRecLength=(long)periEndOfRecord-(long)periBegOfRecord+1;
   
@@ -294,8 +295,8 @@ void setup() {                              // =================================
   Serial.print(" free=");Serial.println(freeMemory(), DEC); 
 
 /* >>>>>>  maintenance fichiers peri  <<<<<< */
-
-/*for(i=0;i<50;i++){
+/*
+for(i=0;i<50;i++){
   Serial.print(i);if(i<10){Serial.print(" ");}Serial.print(" ");
   for(j=0;j<10;j++){Serial.print((char)fonctions[i*10+j]);}
   Serial.println();if((strstr(fonctions+i*10,"last")-(fonctions+i*10))==0){i=100;}}
@@ -557,6 +558,7 @@ char* checkStack(char* refstack)
               strcat(strSD," ");strcat(strSD,valf);strcat(strSD,";");strcat(strSD,strSdEnd);}
             else {strSD[strlen(strSD)-strlen(strSdEnd)]='*';}
 
+//Serial.print(i);Serial.print(" numfonct[i]=");Serial.print(numfonct[i]);Serial.print(" valf=");Serial.println(valf);
 
             switch (numfonct[i])      
               {
@@ -601,8 +603,9 @@ char* checkStack(char* refstack)
               case 15: what=4;periCur=0;conv_atob(valf,&periCur);                                           // peri cur  N° périph courant (1ère fonction ligne table)
                        if(periCur>NBPERIF){periCur=NBPERIF;}                                                // fixe periCur et charge la ligne
                        periInitVar();periLoad(periCur);
+                       *periProg=0;
                        break;                                                                        
-              case 16: *periPerRefr=0;conv_atobl(valf,periPerRefr);break;                            // per maxi accès serveur periph courant
+              case 16: *periPerRefr=0;conv_atobl(valf,periPerRefr);break;                            // periode maxi accès serveur periph courant
               case 17: memset(periNamer,0x00,PERINAMLEN-1);                                          // nom periph courant
                        memcpy(periNamer,valf,nvalf[i+1]-nvalf[i]);
                        break;                                                                              
@@ -621,10 +624,20 @@ char* checkStack(char* refstack)
                        }break;
               case 25: *periDetNb=*valf-48;if(*periDetNb>MAXDET){*periDetNb=MAXDET;}break;           // peri det Nb  
               case 26: *periSwNb=*valf-48;if(*periSwNb>MAXSW){*periSwNb=MAXSW;}break;                // peri sw Nb                       
-              case 27: *periSwVal&=0xfd;*periSwVal|=(*valf&0x01)<<1;break;                           // peri Sw Val 0
-              case 28: *periSwVal&=0xf7;*periSwVal|=(*valf&0x01)<<3;break;                           // peri Sw Val 1
-              case 29: *periSwVal&=0xdf;*periSwVal|=(*valf&0x01)<<5;break;                           // peri Sw Val 2
-              case 30: *periSwVal&=0x7f;*periSwVal|=(*valf&0x01)<<7;break;                           // peri Sw Val 3
+              case 27: Serial.print(" periPerTemp=");Serial.print(*periPerTemp);*periPerTemp=0;conv_atob(valf,periPerTemp);Serial.print(" periPerTemp=");Serial.println(*periPerTemp);break;                             // periode check température
+              case 28: break;                                                                        // dispo
+              case 29: break;                                                                        // dispo
+              case 30: {uint8_t sw=*(libfonctions+2*i+1)-48;
+                       //Serial.print(" sw=");Serial.print(sw);Serial.print(" periSwVal=");Serial.println(*periSwVal,HEX);
+                       switch(sw){
+                         case 0:*periSwVal&=0xfd;*periSwVal|=(*valf&0x01)<<1;break;                           // peri Sw Val 0
+                         case 1:*periSwVal&=0xf7;*periSwVal|=(*valf&0x01)<<3;break;                           // peri Sw Val 1
+                         case 2:*periSwVal&=0xdf;*periSwVal|=(*valf&0x01)<<5;break;                           // peri Sw Val 2
+                         case 3:*periSwVal&=0x7f;*periSwVal|=(*valf&0x01)<<7;break;                           // peri Sw Val 3
+                         default:break;
+                       }
+                       Serial.print(" sw=");Serial.print(sw);Serial.print(" periSwVal=");Serial.println(*periSwVal,HEX);
+                       }break;
               case 31: what=5;periCur=0;conv_atob(valf,&periCur);                                    // peri_t_sw_
                        if(periCur>NBPERIF){periCur=NBPERIF;}
                        periInitVar();periLoad(periCur);cbErase();                                    // effacement checkboxs des switchs du periphérique courant
@@ -916,18 +929,23 @@ int analyse(EthernetClient* cli)              // decode la chaine et remplit les
                 nom=FAUX;val=VRAI;
                 nvalf[i+1]=nvalf[i]+1;
                 if(i==0){nvalf[1]=0;}                                       // permet de stocker le tout premier car dans valeurs[0]
-                else {nvalf[i]++;}                                          // skip l'intervalle entre 2 valeurs           
-                numfonct[i]=(strstr(fonctions,noms)-fonctions)/LENNOM;      // acquisition nom terminée récup N° fonction
+                else {nvalf[i]++;}                // skip l'intervalle entre 2 valeurs           
+
+                long numfonc=(strstr(fonctions,noms)-fonctions)/LENNOM;      // acquisition nom terminée récup N° fonction
                 memcpy(libfonctions+2*i,noms+LENNOM-2,2);                   // les 2 derniers car du nom de fonction si nom court
-                if(numfonct[i]<0 || numfonct[i]>=nbfonct){
+
+                if(numfonc<0 || numfonc>=nbfonct){
                   memcpy(nomsc,noms,LENNOM-2);
-                  numfonct[i]=(strstr(fonctions,nomsc)-fonctions)/LENNOM;   // si nom long pas trouvé, recherche nom court (complété par nn)
-                  if(numfonct[i]<0 || numfonct[i]>=nbfonct){numfonct[i]=faccueil;}
+                  numfonc=(strstr(fonctions,nomsc)-fonctions)/LENNOM;   // si nom long pas trouvé, recherche nom court (complété par nn)
+
+                  if(numfonc<0 || numfonc>=nbfonct){numfonc=faccueil;}
+                  else {numfonct[i]=numfonc;}
                 }
+                else {numfonct[i]=numfonc;}
               }
               if (nom==VRAI && c!='?' && c!=':' && c!='&' && c>' '){noms[j]=c;if(j<LENNOM-1){j++;}}              // acquisition nom
               if (val==VRAI && c!='&' && c!=':' && c!='=' && c>' '){
-                valeurs[nvalf[i+1]]=c;if(nvalf[i+1]<=LENVALEURS-1){nvalf[i+1]++;}}                               // contôle decap !
+                valeurs[nvalf[i+1]]=c;if(nvalf[i+1]<=LENVALEURS-1){nvalf[i+1]++;}}                               // contrôle decap !
               if (val==VRAI && (c=='&' || c<=' ')){
                 nom=VRAI;val=FAUX;j=0;Serial.println();
                 if(c==' ' || c<=' '){termine=VRAI;}}                                                             // ' ' interdit dans valeur : indique fin données                                 

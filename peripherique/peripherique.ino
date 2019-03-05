@@ -63,7 +63,8 @@ WiFiClient cliext;              // client externe du serveur local
   uint8_t fonction;      // la dernière fonction reçue
 
   float temp;
-  long  tempTime=-PERTEMP*1000;        // timer température pour mode loop
+  long  tempTime=0;               // (millis) timer température pour mode loop
+  uint16_t tempPeriod=PERTEMP;    // (sec) période courante check température 
   char  ageSeconds[8];     // secondes 9999999s=115 jours
   long  tempAge=1;         // secondes
   bool  tempchg=FAUX;
@@ -132,9 +133,9 @@ void tmarker()
   pinMode(WPIN,OUTPUT);for(int t=0;t<6;t++){digitalWrite(WPIN,LOW);delayMicroseconds(100);digitalWrite(WPIN,HIGH);delayMicroseconds(100);}
 }
 
-void trigTemp(){startto(&tempTime,&cstRec.tempPer,PERTEMP);}
-bool chkTrigTemp(){return ctlto(tempTime,cstRec.tempPer);}
-void forceTrigTemp(){cstRec.tempPer=0;}
+void trigTemp(){startto(&tempTime,&tempPeriod,cstRec.tempPer);}
+bool chkTrigTemp(){return ctlto(tempTime,tempPeriod);}
+void forceTrigTemp(){tempPeriod=0;}
 
 void setup() 
 { 
@@ -427,10 +428,11 @@ void dataTransfer(char* data)           // transfert contenu de set ou ack dans 
         if(memcmp(data+ddata,"00",2)==0){periMess=MESSNUMP;}
         else if(!compMac(mac,fromServerMac)){periMess=MESSMAC;}
         else {
-                             // si ok transfert des données                                    
+                             // si ok transfert des données
             strncpy(cstRec.numPeriph,data+MPOSNUMPER,2);                        // num périph
             int sizeRead;
             cstRec.serverPer=(long)convStrToNum(data+MPOSPERREFR,&sizeRead);    // per refresh server
+            cstRec.tempPer=(uint16_t)convStrToNum(data+MPOSTEMPPER,&sizeRead);  // per check température (invalide/sans effet en PO_MODE)
             cstRec.tempPitch=(long)convStrToNum(data+MPOSPITCH,&sizeRead);      // pitch mesure
             cstRec.swCde='\0';
             for(int i=0;i<MAXSW;i++){                                           // 1 byte état/cdes serveur + 4 bytes par switch (voir const.h du frontal)
@@ -776,9 +778,16 @@ void readTemp()
 {
   if(cstRec.talkStep == 0){     // ne peut se produire qu'en NO_MODE 
                                 // (les autres modes terminent talkServer avec talkStep=0)
-    
+
+#if POWER_MODE==DS_MODE
+uint16_t tempPeriod0=cstRec.tempPer;  // (sec) durée depuis dernier check température
+#endif PM==DS_MODE
+#if POWER_MODE==PO_MODE
+uint16_t tempPeriod0=PERTEMP;  // (sec) durée depuis dernier check température (fixe : resistance 5111)
+#endif PM==PO_MODE
 #if POWER_MODE==NO_MODE
     if(chkTrigTemp()){
+      uint16_t tempPeriod0=(millis()-tempTime)/1000;   // (sec) durée depuis dernier check température
       trigTemp();
       dateon=millis();
 #endif PM==NO_MODE
@@ -811,14 +820,14 @@ void readTemp()
       }
       
 /* avance timer server ------------------- */
-      cstRec.serverTime+=cstRec.tempPer;
+      cstRec.serverTime+=tempPeriod0;
       if(cstRec.serverTime>cstRec.serverPer){
         cstRec.serverTime=0;
         cstRec.talkStep=1;
       }
 
 #if POWER_MODE==NO_MODE
-    }   // test boucle tempTime
+    }   // chkTigTemp
 #endif PM==NO_MODE
   }     // talkStep = 0
 }

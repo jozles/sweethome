@@ -43,7 +43,7 @@ extern int       periCur;                      // Numéro du périphérique cour
 
 extern int16_t*  periNum;                      // ptr ds buffer : Numéro du périphérique courant
 extern int32_t*  periPerRefr;                  // ptr ds buffer : période datasave minimale
-extern uint16_t* periPerTemp;                    // ptr ds buffer : période de lecture tempèrature
+extern uint16_t* periPerTemp;                  // ptr ds buffer : période de lecture tempèrature
 extern float*    periPitch;                    // ptr ds buffer : variation minimale de température pour datasave
 extern float*    periLastVal;                  // ptr ds buffer : dernière valeur de température  
 extern float*    periAlim;                     // ptr ds buffer : dernière tension d'alimentation
@@ -261,7 +261,6 @@ void configPrint()
 
 int configLoad()
 {
-  //Serial.println("load config");
   int i=0;
   char configFile[]="srvconf\0";
   if(sdOpen(FILE_READ,&fconfig,configFile)==SDKO){return SDKO;}
@@ -304,14 +303,13 @@ void periFname(int num,char* fname)
 void  periPrint(int num)
 {
   Serial.print(num);Serial.print("/");Serial.print(*periNum);Serial.print(" ");Serial.print(periNamer);Serial.print(" ");
-  serialPrintMac(periMacr,0);Serial.print(" ");serialPrintIp(periIpAddr);Serial.print(" sw=");Serial.print(*periSwNb);Serial.print(" det=");Serial.print(*periDetNb);Serial.print(" ");Serial.println(periVers);
+  serialPrintMac(periMacr,0);Serial.print(" ");serialPrintIp(periIpAddr);Serial.print(" millis=");Serial.print(millis());Serial.print(" sw=");Serial.print(*periSwNb);Serial.print(" det=");Serial.print(*periDetNb);Serial.print(" ");Serial.println(periVers);
 }
 
 int periLoad(int num)
 {
   int i=0;
   if(periCacheStatus[num]==0){
-    Serial.print("sdload table peri=");Serial.println(num);
     char periFile[7];periFname(num,periFile);
     if(sdOpen(FILE_READ,&fperi,periFile)==SDKO){return SDKO;}
     for(i=0;i<PERIRECLEN;i++){periCache[(num-1)*PERIRECLEN+i]=fperi.read();}              // periRec[i]=fperi.read();}

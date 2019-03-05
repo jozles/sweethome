@@ -65,17 +65,18 @@ Modifier :
       1) timing de base = période de lecture de la sonde thermomètre ; 
             si DS_MODE ou PO_MODE c'est la période d'allumage ,
             sinon PERTEMP est la période par défaut en Sec (PERTEMP doit être chargée avec la période d'allumage si timer externe)
-            cstRec.tempPer la période courante (directement utilisée dans le timer si deep sleep),
+            cstRec.tempPer la période courante chargée depuis le serveur (directement utilisée dans le timer si deep sleep),
+            tempPériod la période locale pour permettre forçage et retrig 
             et cstRec.tempTime le point de départ en millis() si loop.
             Donc, si millis()>temptime+tempPer lecture thermo et +tempPer à serverTime (ci-après)
             Si la valeur lue a plus de cstRec.pitch d'écart avec la valeur précédente -> accés serveur
       2) fréquence d'accés au serveur pour enregistrer une/des valeurs de sondes/détecteurs
-            comptage du timing de base commun à tous les modes
+            comptage du timing de base selon le mode d'alimentation lors du check température
             PERSERV est la période par défaut en secondes
-            cstRec.serverPer la période courante en secondes, mise à jour par le serveur à chaque dataread/save 
+            cstRec.serverPer la période courante en secondes, chargée depuis le serveur (set/ack) 
               prend la valeur PERSERVKO lorsqu'il n'y a pas de connexion WIFI afin de limiter les tentatives de cx pour économiser les batteries
-              prend la valeur PERSERV si la connexion au wifi fonctionne (sera rechargée par le serveur juste après)
-            et cstREc.serverTime le compteur de "timing de base"
+              prend la valeur PERSERV si la connexion au wifi fonctionne (sera rechargée par le serveur lors de l'accès suivant)
+            et cstREc.serverTime le compteur de "timing de base" (remis à 0 à chaque déclenchement)
             Donc, si serverTime>serverPer accès server (talkServer)
             
             Gestion totale dans readTemp().
@@ -134,8 +135,8 @@ Modifier :
 #define THESP01 '1'
 #define THESP12 '2'
 
-#define CARTE VR                      // <------------- modèle carte
-#define POWER_MODE NO_MODE            // <------------- type d'alimentation 
+#define CARTE THESP01                      // <------------- modèle carte
+#define POWER_MODE PO_MODE            // <------------- type d'alimentation 
 
 #if POWER_MODE==NO_MODE
   #define _SERVER_MODE
@@ -267,7 +268,7 @@ typedef struct {
   char      cstVers[LENVERSION];  //  4  
   char      cstModel[LENMODEL];   //  6
   char      numPeriph[2];         //  2
-  uint16_t  serverTime;           //  2   temps écoulé depuis la dernière cx au serveur
+  uint16_t  serverTime;           //  2   (sec) temps écoulé depuis la dernière cx au serveur
   uint16_t  serverPer;            //  2   période (sec) de cx au serveur (PERSERVKO si pas de connexion Wifi)
   uint16_t  tempPer;              //  2   période (sec) de mesure thermomètre (PERTEMP)
   uint8_t   tempPitch;            //  1   seuil de variation de la temp pour cx au serveur
