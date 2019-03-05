@@ -31,7 +31,8 @@
 #define MPOSMAC     MPOSNUMPER+3    // position adr Mac
 #define MPOSDH      MPOSMAC+18      // Date/Heure
 #define MPOSPERREFR MPOSDH+15       // période refr
-#define MPOSPITCH   MPOSPERREFR+6   // pitch
+#define MPOSTEMPPER MPOSPERREFR+6   // période check température
+#define MPOSPITCH   MPOSTEMPPER+6   // pitch
 #define MPOSSWCDE   MPOSPITCH+5     // 4 commandes sw 0/1 (periSwVal)
 #define MPOSINTPAR0 MPOSSWCDE+5     // paramétres sw (4*HH+1sep)*4
 #define MPOSPULSONE MPOSINTPAR0+MAXSW*9 // Timers tOne (4bytes)*4

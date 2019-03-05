@@ -166,45 +166,38 @@ uint8_t rdy(byte modesw,int sw) // pour les 3 sources, check bit enable puis eta
       default: break;
     }
   }
-  return 0;                                                                          // ko 
+  return 0; // disable 
 }
 
-uint8_t swAction()      // poling check cde des switchs
-                        // pour chaque switch, examen si une condition pour off est remplie 
-                        //                puis examen si une condition pour on  est remplie si pas de off
+void swAction()         // poling check cde des switchs
+                        // pour chaque switch, 
+                        //            examen si une condition pour off prioritaire est remplie puis examen si on si pas de off
+                        //         et examen si une condition pour on prioritaire est remplie puis examen si off si pas de on                      
+                        // résultat : si off prioritaire -> off (équiv à inter équipement off)
+                        //            sinon (ou logique) entre les deux
                         // l'examen est effectué par la fonction rdy() qui teste l'état du bit enable et le niveau haut ou bas
                         //              pour chacune des 3 sources (détecteur, switch du serveur, générateur de pulse)
 { 
-  uint8_t swa=0;
+  uint8_t swaoo,swaoi,swaio,swaii;
   
   for(int sw=0;sw<NBSW;sw++){
 
-    // action OFF   --->>>   si demandé L, si (det/server/pulse)==0 retour ok (swa!=0)   si demandé H ... !=0 retour ok
-    swa=rdy(cstRec.offCde[sw],sw);
-    //Serial.print(" swa off=");Serial.println(swa);
-    if(swa!=0){digitalWrite(pinSw[sw],OFF);}
-    else{
+    swaoo=0;swaoi=0;swaio=0;swaii=0;
+    
+    // actions OFF prioritaire  --->>>   si demandé L, si (det/server/pulse)==0 retour ok (swa!=0)   si demandé H ... !=0 retour ok
+    swaoo=rdy(cstRec.offCdeO[sw],sw);
+    if(swaoo==0){                       // examen du reste seulement si swaoo inactif
+      swaoi=rdy(cstRec.onCdeO[sw],sw);      
 
-      // action ON 
-      swa=rdy(cstRec.onCde[sw],sw);
-      //Serial.print(" swa on=");Serial.println(swa);
-      if(swa!=0){digitalWrite(pinSw[sw],ON);swa+=10;}
-      else{
-        
-        /*
-      // action desactivation
-        swa=rdy(cstRec.desCde[w],w);
-        if(swa!=0){swa+=20;}                                               // à traiter
-        else{
-      
-      // action activation  
-          swa=rdy(cstRec.actCde[w],w);if(swa!=0){swa+=30;}                 // à traiter
-        }
-        */
-      }   // pas ON
-    }     // pas OFF
-  }       // switch
-  return swa;
+      // actions ON prioritaire
+      swaii=rdy(cstRec.onCdeI[sw],sw);if(swaii==0){swaio=rdy(cstRec.offCdeI[sw],sw);} 
+    }
+    
+    if (swaoo!=0){digitalWrite(pinSw[sw],OFF);}
+    else if(swaoi!=0 || swaii!=0){digitalWrite(pinSw[sw],ON);}
+    else if(swaio!=0){digitalWrite(pinSw[sw],OFF);}                // l'ordre des 3 conditions est critique !
+    // si rien trouvé, switch onchangé
+  } // switchsuivant
 }
 
 

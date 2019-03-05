@@ -115,10 +115,10 @@ void initConstant()  // inits mise sous tension
   cstRec.tempPitch=0;
   cstRec.talkStep=0;                       // pointeur pour l'automate talkServer()
   cstRec.swCde='\0';                       // cdes inter (4*2bits (periIntVal) ici x0 x=état demandé par le serveur pour le switch)
-  memcpy(cstRec.actCde,"\0\0\0\0",4);      // mode sw
-  memcpy(cstRec.desCde,"\0\0\0\0",4);      // mode sw
-  memcpy(cstRec.onCde,"\0\0\0\0",4);       // mode sw
-  memcpy(cstRec.offCde,"\0\0\0\0",4);      // mode sw  
+  memcpy(cstRec.onCdeI,"\0\0\0\0",4);      // mode sw
+  memcpy(cstRec.offCdeI,"\0\0\0\0",4);      // mode sw
+  memcpy(cstRec.onCdeO,"\0\0\0\0",4);       // mode sw
+  memcpy(cstRec.offCdeO,"\0\0\0\0",4);      // mode sw  
   memset(cstRec.pulseCtl,0x00,DLTABLEN);   // ctle pulse
   for(int i=0;i<MAXSW;i++){
   cstRec.durPulseOne[i]=0;       // durée pulses (MAXSW=4*4)
@@ -163,10 +163,10 @@ void subPC(int i)
   for(nuli=0;nuli<4;nuli++){
     spc(nuli,&cstRec.pulseCtl[i*DLSWLEN]);
     switch(nuli){
-      case 0:subprintConstant(cstRec.actCde[i],'A');break;
-      case 1:subprintConstant(cstRec.desCde[i],'D');break;
-      case 2:subprintConstant(cstRec.onCde[i],'I');break;
-      case 3:subprintConstant(cstRec.offCde[i],'O');break;
+      case 0:subprintConstant(cstRec.onCdeI[i],'A');break;
+      case 1:subprintConstant(cstRec.offCdeI[i],'D');break;
+      case 2:subprintConstant(cstRec.onCdeO[i],'I');break;
+      case 3:subprintConstant(cstRec.offCdeO[i],'O');break;
       default:break;
     }
   }

@@ -15,6 +15,7 @@ void charIp(byte* nipadr,char* aipadr);
 void serialPrintIp(uint8_t* ip);
 void packDate(char* dateout,char* datein);
 void unpackDate(char* dateout,char* datein);
+int  dateCmp(char* olddate,char* newdate,uint32_t offset,uint8_t skip1,uint8_t skip2);
 void serialPrintDate(char* datein);
 void ledblink(uint8_t nbBlk);
 void dumpstr(char* data,uint16_t len);

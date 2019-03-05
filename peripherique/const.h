@@ -31,7 +31,12 @@
  * 1.e moteur pulse, détecteurs en poling, transfert modèle DS18x00
  *     pulse fonctionnel
  * 1.f forçage communication au démarrage suivant si alim bloquée allumée (ne fonctionne que pour PO_MODE) ; 
- *     gestion tconversion selon modèle DS18X
+ *     gestion tconversion selon modèle DS18X ; 
+ *     révision connexion wifi : talkServerWifiConnect() et wifiConnexion
+ *     révision timings : ajout tempTime, cstRec.tempPer, fonctions trigtemp(startTo), chkTrigtemp(ctlTo), forceTrigTemp
+ *     ajout utilisation params descde et actcde : onCde devient onCdeO (Off prioritaire) et offCde offCdeO, 
+ *                                                 actCde onCdeI (On prioritaire) et desCde offCdeI
+ *                                                 swAction corrigé
  * 
 Modifier : 
 
@@ -42,13 +47,13 @@ Modifier :
   (vérifier le délai de setup pour server.begin)
   (étudier le traitement/vidage d'une réception non traitée en mode serveur avant d'effectuer une commande read/save)
   
-  gestion des alarmes avec message au serveur (tension, niveaux th et autres)
+  gestion des alarmes avec message au serveur (tension, niveaux th et autres) ?
   
-  Lorsque l'alim est bloquée allumée, modèles PO_MODE, cstRec.serverTime=cstRec.serverPer+1 et writeconstant() 
-  pour forcer le déclenchement au prochain reboot. enchainer sur une attente de messages usb
+  Lorsque l'alim est bloquée allumée, enchainer sur une attente de messages usb ?
+  
+  commande à créer quiutilise la config du serveur :
   SSID1nnnnn...,SSID2nnnn....,PWD1nnnn....,PWD2nnnn....,SERVIPPxxx.xxx.xxx.xxx/nnnn, (16 car pour SSID et 48 car pour PWD) à stocker séparément des constantes)
-  créer un protocole usb pour charger ssid, password, IP et port du host sans reprogrammer le 8266
-  
+  créer un protocole usb pour charger ssid, password, IP et port du host sans reprogrammer le 8266  
   
 */
 
@@ -274,10 +279,10 @@ typedef struct {
   uint8_t   tempPitch;            //  1   seuil de variation de la temp pour cx au serveur
   int16_t   oldtemp;              //  2
   uint8_t   talkStep;             //  1   pointeur pour l'automate talkServer()
-  byte      actCde[MAXSW];        //  4   cdes d'activation (MAXSW=4 1 mot)
-  byte      desCde[MAXSW];        //  4   cdes désactivation
-  byte      onCde[MAXSW];         //  4   cdes forçage ON
-  byte      offCde[MAXSW];        //  4   cdes forçage OFF
+  byte      onCdeI[MAXSW];        //  4   cdes d'activation (MAXSW=4 1 mot)
+  byte      offCdeI[MAXSW];        //  4   cdes désactivation
+  byte      onCdeO[MAXSW];        //  4   cdes forçage ON
+  byte      offCdeO[MAXSW];       //  4   cdes forçage OFF
   uint32_t  durPulseOne[MAXSW];   // 16   durée pulse 1
   uint32_t  durPulseTwo[MAXSW];   // 16   durée pulse 2
   uint32_t  cntPulseOne[MAXSW];   // 16   temps debut pulse 1

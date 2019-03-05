@@ -22,7 +22,8 @@ extern int cstlen;
 //extern EthernetClient cli;
 
 extern int16_t*  periNum;                      // ptr ds buffer : Numéro du périphérique courant
-extern int32_t*  periPerRefr;                  // ptr ds buffer : période datasave minimale
+extern int32_t*  periPerRefr;                  // ptr ds buffer : période maximale accès serveur
+extern uint16_t* periPerTemp;                  // ptr ds buffer : période de lecture tempèrature
 extern float*    periPitch;                    // ptr ds buffer : variation minimale de température pour datasave
 extern float*    periLastVal;                  // ptr ds buffer : dernière valeur de température
 extern float*    periAlim;                     // ptr ds buffer : dernière tension d'alimentation
@@ -271,6 +272,10 @@ void assySet(char* message,int periCur,char* diag,char* date14)
             if(periCur!=0){                                         // periCur!=0 tfr params
                 v1=*periPerRefr;
                 sprintf((message+strlen(message)),"%05d",v1);       // periPerRefr
+                strcat(message,"_");
+
+                v1=*periPerTemp;
+                sprintf((message+strlen(message)),"%05d",v1);       // periPerTemp
                 strcat(message,"_");
 
                 v1=*periPitch*100;

@@ -140,8 +140,9 @@ float convStrToNum(char* str,int* sizeRead)
   float pd=1;
   int minu=1;
   int i=0;
+#define MAXL 10
 
-  for(i=0;i<8;i++){
+  for(i=0;i<MAXL;i++){
     if(i==0 && str[i]=='+'){i++;}
     if(i==0 && str[i]=='-'){i++;minu=-1;}
     if(str[i]=='.'){if(pd==1){pd=10;}i++;}
@@ -151,12 +152,34 @@ float convStrToNum(char* str,int* sizeRead)
       if(pd==1){v=v*10+v0;}
       else{v+=v0/pd;pd*=10;}
     }
-    else {i=8;}
+    else {i=MAXL;}
   }
   //Serial.print("s>n str,num=");Serial.print(string);Serial.print(" ");Serial.println(v*minus);
   return v*minu;
 }
 
+/*
+float convStrToNum(char* str,int* sizeRead)
+{
+  float   pd=1,v=0;
+  uint8_t i=0,v0=0,minu=1;
+
+  while(str[i]==' '){i++;}
+
+  if(str[i]=='+'){i++;}
+  if(str[i]=='-'){i++;minu=-1;}
+
+  while((str[i]!='_' && str[i]!='\0' && str[i]>='0' && str[i]<='9') || (str[i]=='.')){
+    if(str[i]=='.'){if(pd==1){pd=10;}}
+    else {v0=str[i]-48;
+      if(pd==1){v=v*10+v0;}
+      else{v+=v0/pd;pd*=10;}
+    }
+    i++;
+  }
+  return v*minu;
+}
+*/
 
 boolean compMac(byte* mac1,byte* mac2)
 {
@@ -198,6 +221,38 @@ void unpackDate(char* dateout,char* datein)
     for(int i=0;i<6;i++){
         dateout[i*2]=(datein[i] >> 4)+48; dateout[i*2+1]=(datein[i] & 0x0F)+48;
     }
+}
+
+uint8_t dcb2b(byte val)
+{
+    return (val>>4)&0x0f*10+val&0x0f;
+}
+
+uint32_t cvds(char* d14,uint8_t skip)   // conversion date packée (yyyymmddhhmmss 7 car) en sec
+{
+    uint32_t secDay=24*3600L;
+    uint32_t secYear=365*secDay;
+    uint32_t m28=secDay*28L,m30=m28+secDay+secDay,m31=m30+secDay;
+    uint32_t monthSec[]={0,m31,monthSec[1]+m28,monthSec[2]+m31,monthSec[3]+m30,monthSec[4]+m31,monthSec[5]+m30,monthSec[6]+m31,monthSec[7]+m31,monthSec[8]+m30,monthSec[9]+m31,monthSec[10]+m30,monthSec[11]+m31};
+
+    uint32_t aa=0;if(skip==0){aa=dcb2b(d14[0])*100L;};aa+=dcb2b(d14[1-skip]);
+    uint32_t njb=aa/4L;       // nbre années bisextiles depuis année 0
+    uint8_t  mm=dcb2b(d14[2-skip]);
+                        if(mm>2 && aa%4==0){njb++;}
+    uint32_t bisext=njb*secDay;
+
+    return bisext+aa*secYear+monthSec[(mm-1)]+(dcb2b(d14[3-skip])-1)*secDay
+            +dcb2b(d14[4-skip])*3600L+dcb2b(d14[5-skip])*60L+dcb2b(d14[6-skip]);
+}
+
+int  dateCmp(char* olddate,char* newdate,uint32_t offset,uint8_t skip1,uint8_t skip2)
+{
+
+    uint32_t oldds=cvds(olddate,skip1),newds=cvds(newdate,skip2);
+
+    if((oldds+offset)<newds){return -1;}
+    if((oldds+offset)>newds){return 1;}
+    return 0;
 }
 
 void serialPrintDate(char* datein)

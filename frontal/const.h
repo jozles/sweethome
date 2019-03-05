@@ -26,6 +26,7 @@
  *      gestion mots de passe et TO révisée (rémanence password via macMaster)
  *      fichier config sur SD, séparation pages switch dans peritable, multiples révisions des fonctions.
  *      ajout periPerTemp dans fichiers periphériques pour paramétrage période temp via péritable
+ *      ajout datecmp()
  *      
  * à faire :
  *     

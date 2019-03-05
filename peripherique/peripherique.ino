@@ -438,10 +438,10 @@ void dataTransfer(char* data)           // transfert contenu de set ou ack dans 
             for(int i=0;i<MAXSW;i++){                                           // 1 byte état/cdes serveur + 4 bytes par switch (voir const.h du frontal)
               
               cstRec.swCde |= (*(data+MPOSSWCDE+MAXSW-1-i)-48)<<(2*(i+1)-1);    // bit cde (bits 8,6,4,2)  
-              conv_atoh((data+MPOSINTPAR0+i*9),&cstRec.actCde[i]);
-              conv_atoh((data+MPOSINTPAR0+i*9+2),&cstRec.desCde[i]);
-              conv_atoh((data+MPOSINTPAR0+i*9+4),&cstRec.onCde[i]);
-              conv_atoh((data+MPOSINTPAR0+i*9+6),&cstRec.offCde[i]);
+              conv_atoh((data+MPOSINTPAR0+i*9),&cstRec.onCdeI[i]);
+              conv_atoh((data+MPOSINTPAR0+i*9+2),&cstRec.offCdeI[i]);
+              conv_atoh((data+MPOSINTPAR0+i*9+4),&cstRec.onCdeO[i]);
+              conv_atoh((data+MPOSINTPAR0+i*9+6),&cstRec.offCdeO[i]);
 
               for(int ctl=DLSWLEN-1;ctl>=0;ctl--){
                 conv_atoh((data+MPOSPULSCTL+i*(DLSWLEN*2+1)+ctl*2),&cstRec.pulseCtl[i*DLSWLEN+(DLSWLEN-ctl-1)]);

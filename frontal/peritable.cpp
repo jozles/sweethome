@@ -74,7 +74,13 @@ extern int  chge_pwd; //=FAUX;
 
 extern byte mask[];
 
-  char colour[8];
+#define LENCOLOUR 8
+  char colour[LENCOLOUR+1];
+
+void setColour(EthernetClient* cli,char* textColour)
+{
+  memcpy(colour,textColour,LENCOLOUR);cli->print("<font color=\"");cli->print(colour);cli->print("\"> ");
+}
 
 void cliPrintMac(EthernetClient* cli, byte* mac)
 {
@@ -283,7 +289,7 @@ void SwCtlTableHtml(EthernetClient* cli,int nbsw,int nbtypes)
   char qfonc[]="peri_ptt__\0";            // transporte la valeur pulse time Two
   char rfonc[]="peri_otf__\0";            // transporte les bits freerun et enable pulse de periPulseMode (LENNOM-1= ,'F','O','T')
 
-  char nac[]="ADIO";                      // nom du type d'acttion (activ/désactiv/ON/OFF)
+  char nac[]="IOIO";                      // nom du type d'acttion (activ/désactiv/ON/OFF)
    
     for(int i=0;i<nbsw;i++){                                           // i n° de switch
 
@@ -357,6 +363,7 @@ Serial.print("début péritable ; remote_IP ");serialPrintIp(remote_IP_cur);Seri
 
   
   char bufdate[15];alphaNow(bufdate);
+  char pkdate[7];packDate(pkdate,bufdate+2);
   byte msb=0,lsb=0;                        // pour temp DS3231
   readDS3231temp(&msb,&lsb);
 
@@ -435,8 +442,12 @@ Serial.print("début péritable ; remote_IP ");serialPrintIp(remote_IP_cur);Seri
                       cli->print("<font size=\"2\">");for(j=0;j<4;j++){cli->print(periIpAddr[j]);if(j<3){cli->print(".");}}cli->println("</font></td>");
                       cli->print("<td><font size=\"2\">");for(j=0;j<LENVERSION;j++){cli->print(periVers[j]);}cli->println("<br>");
                       char dateascii[12];
+                      dumpstr(periLastDateOut,7);Serial.print(" ");dumpstr(periLastDateIn,7);Serial.print(" ");dumpstr(pkdate,7);Serial.println(" ");
+                      setColour(cli,"black");if(dateCmp(periLastDateOut,pkdate,*periPerRefr,1,1)<0){setColour(cli,"red");}
                       unpackDate(dateascii,periLastDateOut);for(j=0;j<12;j++){cli->print(dateascii[j]);if(j==5){cli->print(" ");}}cli->println("<br>");
+                      setColour(cli,"black");if(dateCmp(periLastDateIn,pkdate,*periPerRefr,1,1)<0){setColour(cli,"red");}
                       unpackDate(dateascii,periLastDateIn);for(j=0;j<12;j++){cli->print(dateascii[j]);if(j==5){cli->print(" ");}}
+                      setColour(cli,"black");
                         cli->println("</font></td>");
                       
                       cli->println("<td><input type=\"submit\" value=\"   MàJ   \"><br>");
