@@ -43,7 +43,8 @@ void htmlIntro(char* titre,EthernetClient* cli)
   if(perrefr!=0){cli->print("<meta HTTP-EQUIV=\"Refresh\" content=\"");sprintf(buf,"%d",perrefr);cli->print(buf);cli->print("\">");}
   cli->print("\<title>");cli->print(titre);cli->println("</title>");
   
-            cli->println("<style>");
+          cli->println("<style>");
+
             cli->println("table {");
               cli->println("font-family: Courier, sans-serif;");
               cli->println("border-collapse: collapse;");
@@ -62,11 +63,12 @@ void htmlIntro(char* titre,EthernetClient* cli)
             cli->println("#cb1{width:10px; padding:0px; margin:0px; text-align: center};");
             cli->println("#cb2{width:20px; text-align: center};");
 
-            cli->print(".button { background-color: #195B6A; border: none; color: white; padding: 16px 40px;");
+            cli->print(".button {background-color: #195B6A; border: none; color: white; padding: 16px 40px;");
             cli->println("text-decoration: none; font-size: 30px; margin: 2px; cursor: pointer;}");
-            cli->println(".button2 {background-color: #77878A;");
+            cli->println(".button2 {background-color: #77878A;}");
 
           cli->println("</style>");
+  
   cli->println("</head>");
 }
 
@@ -135,7 +137,9 @@ void cfgServerHtml(EthernetClient* cli)
             
             cli->println("<body><form method=\"get\" >");
             cli->println(VERSION);cli->println("<br>");
-            char pwd[32]="password__=\0";strcat(pwd,usrpass);lnkTableHtml(cli,pwd,"retour");cli->println(" <input type=\"submit\" value=\"MàJ\"><br>");
+            //char pwd[32]="password__=\0";strcat(pwd,usrpass);lnkTableHtml(cli,pwd,"retour");cli->println(" <input type=\"submit\" value=\"MàJ\"><br>");
+            bouTableHtml(cli,"password__",modpass,"retour",0,0);  // génère peritable
+            
             cli->print(" password <input type=\"text\" name=\"pwdcfg____\" value=\"");cli->print(usrpass);cli->print("\" size=\"5\" maxlength=\"");cli->print(LPWD);cli->println("\" >");
             cli->print("  modpass <input type=\"text\" name=\"modpcfg___\" value=\"");cli->print(modpass);cli->print("\" size=\"5\" maxlength=\"");cli->print(LPWD);cli->println("\" >");            
             cli->print(" peripass <input type=\"text\" name=\"peripcfg__\" value=\"");cli->print(peripass);cli->print("\" size=\"5\" maxlength=\"");cli->print(LPWD);cli->println("\" >");            
@@ -174,8 +178,8 @@ void testHtml(EthernetClient* cli)
             
             cli->println("<body><form method=\"get\" action=\"page.html\" >");
 
-            cli->print("<a href=page.html?");cli->print(pwd);cli->print(":>retourner</a><br>");
-            cli->print("<a href=page.html?password__=17515A:>retourner</a><br>");
+            cli->println("<a href=page.html?");cli->print(pwd);cli->print(":>retourner</a><br>");
+            cli->println("<a href=page.html?password__=17515A:>retourner</a><br>");
 
             //cli->print(" <p hidden> ce que je ne veux plus voir <input type=\"text\" name=\"ma_fonct_1\" value=\"\"><br><p>");
             //cli->println(" ce que je veux toujour voir <input type=\"text\" name=\"ma_fonct_2\" value=\"\"><br>");
@@ -183,11 +187,13 @@ void testHtml(EthernetClient* cli)
             //cli->print("<img id=\"img1\" alt=\"BOUTON\" fp-style=\"fp-btn: Border Left 1\" fp-title=\"BOUTON\" height=\"20\"  style=\"border: 0\" width=\"100\"> <br>");
 
             //cli->println(" <input type=\"submit\" value=\"MàJ\"><br>");
-            
-            cli->print("<a href=page.html?");cli->print(pwd);cli->print(":><input type=\"submit\" value=\"retour\"></a><br>");
-            cli->print("<a><input type=\"submit\" formaction=\"page.html?password__=17515A:\" value=\"formaction\"></a><br>");
 
-            bouTableHtml(cli,"password__",usrpass,"retour",2,1);
+            cli->println("<a href=\"page.html?password__=17515A:\"><input type=\"button\" value=\"href+input button\"></a><br>"); 
+            
+            cli->println("<a href=page.html?");cli->print(pwd);cli->print(":><input type=\"submit\" value=\"retour\"></a><br>");
+            cli->println("<a><input type=\"submit\" formaction=\"page.html?password__=17515A:\" value=\"formaction\"></a><br>");
+
+            bouTableHtml(cli,"password__",usrpass,"boutable",2,1);
             
             cli->print("<form><p hidden><input type=\"text\" name=\"password__\" value=\"");
             cli->print(usrpass);

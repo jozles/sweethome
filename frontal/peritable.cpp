@@ -128,8 +128,14 @@ void textTableHtml(EthernetClient* cli,char type,float* valfonct,float* valmin,f
 void bouTableHtml(EthernetClient* cli,char* nomfonct,char* valfonct,char* lib,uint8_t td,uint8_t br)
 {
     if(td==1 || td==2){cli->print("<td>");}
+
+    cli->print("<a href=\"page.html?");
+    cli->print(nomfonct);cli->print("=");cli->print(valfonct);
+    cli->print("\"><input type=\"button\" value=\"");
+    cli->print(lib);
+    cli->print("\"></a>");
     
-    cli->print("<form><p hidden><input type=\"text\" name=\"");
+/*    cli->print("<form><p hidden><input type=\"text\" name=\"");
     cli->print(nomfonct);
     cli->print("\" value=\"");
     cli->print(valfonct);
@@ -138,8 +144,11 @@ void bouTableHtml(EthernetClient* cli,char* nomfonct,char* valfonct,char* lib,ui
     cli->print("\">");
     if(br!=0){cli->print("<br>");}
     cli->print("</form>");
+*/
 
-    if(td==1 || td==3){cli->println("</td>");}
+    if(br!=0){cli->print("<br>");}
+    if(td==1 || td==3){cli->print("</td>");}
+    cli->println();
 }
 
 void lnkTableHtml(EthernetClient* cli,char* nomfonct,char* lib)
@@ -266,91 +275,99 @@ void SwCtlTableHtml(EthernetClient* cli,int nbsw,int nbtypes)
   htmlIntro(nomserver,cli);
 
   cli->println("<body>");            
-  bouTableHtml(cli,"password__",modpass,"retour",0,0);
+
   cli->println("<form method=\"get\" >");
-  cli->print(VERSION);cli->println("  ");
-  cli->print("<p hidden>");
-  numTableHtml(cli,'i',&periCur,"peri_t_sw_",2,0,0); // pericur n'est pas modifiable (fixation pericur, periload, cberase)
-  cli->println("</p>");
-  cli->print(periCur);cli->print("-");cli->print(periNamer);cli->println("<br>");
+    cli->print(VERSION);cli->println("  ");
+    cli->print("<p hidden>");
+      numTableHtml(cli,'i',&periCur,"peri_t_sw_",2,0,0); // pericur n'est pas modifiable (fixation pericur, periload, cberase)
+    cli->println("</p>");
+    cli->print(periCur);cli->print("-");cli->print(periNamer);cli->println("<br>");
 
-  //char pwd[32]="password__=\0";strcat(pwd,usrpass);lnkTableHtml(cli,pwd,"retour");
-  cli->println(" <input type=\"submit\" value=\"MàJ\"> ");
+    //char pwd[32]="password__=\0";strcat(pwd,usrpass);lnkTableHtml(cli,pwd,"retour");
+    bouTableHtml(cli,"password__",modpass,"retour",0,0);  // génère peritable
+  
+    cli->println("<input type=\"submit\" value=\"MàJ\">");
+    
+    cli->print(" détecteurs serveur enable ");
+    for(int k=0;k<NBDSRV;k++){subDSn(cli,"peri_dsv__\0",*periDetServEn,k);}
 
-  for(int k=0;k<NBDSRV;k++){subDSn(cli,"peri_dsv__\0",*periDetServEn,k);}cli->println("<br>");
+    cli->print(" état : ");
+    char hl[]={"LH"};
+    for(int k=0;k<NBDSRV;k++){cli->print(hl[(memDetServ>>k)&0x01]);cli->print(" ");}
+    cli->println("<br>");
 
-  cli->println("<table>");
-  cli->println("<tr><th>sw</th><th>time One<br>time Two</th><th>f<br>r</th><th>e.l _f_H.a<br>n.x _t_L.c</th><th>0-3<br>___det__srv._pul</th></tr>");
+    cli->println("<table>");
+      cli->println("<tr><th>sw</th><th>time One<br>time Two</th><th>f<br>r</th><th>e.l _f_H.a<br>n.x _t_L.c</th><th>0-3<br>___det__srv._pul</th></tr>");
   
   
-  char nfonc[]="peri_imn__\0";            // transporte le numéro de detecteur des sources
-  char cfonc[]="peri_imc__\0";            // transporte la valeur des bits des sources
-  char pfonc[]="peri_pto__\0";            // transporte la valeur pulse time One
-  char qfonc[]="peri_ptt__\0";            // transporte la valeur pulse time Two
-  char rfonc[]="peri_otf__\0";            // transporte les bits freerun et enable pulse de periPulseMode (LENNOM-1= ,'F','O','T')
+      char nfonc[]="peri_imn__\0";            // transporte le numéro de detecteur des sources
+      char cfonc[]="peri_imc__\0";            // transporte la valeur des bits des sources
+      char pfonc[]="peri_pto__\0";            // transporte la valeur pulse time One
+      char qfonc[]="peri_ptt__\0";            // transporte la valeur pulse time Two
+      char rfonc[]="peri_otf__\0";            // transporte les bits freerun et enable pulse de periPulseMode (LENNOM-1= ,'F','O','T')
 
-  char nac[]="IOIO";                      // nom du type d'acttion (activ/désactiv/ON/OFF)
+      char nac[]="IOIO";                      // nom du type d'acttion (activ/désactiv/ON/OFF)
    
-    for(int i=0;i<nbsw;i++){                                           // i n° de switch
+      for(int i=0;i<nbsw;i++){                                           // i n° de switch
 
-      cli->print("<tr><td>");cli->print(i);cli->print("</td>");
+        cli->print("<tr><td>");cli->print(i);cli->print("</td>");
 
-      nfonc[LENNOM-2]=(char)(i+48);
-      cfonc[LENNOM-2]=(char)(i+48);
-      rfonc[LENNOM-2]=(char)(i+PMFNCHAR);
-      pfonc[LENNOM-2]=(char)(i+PMFNCHAR);
-      qfonc[LENNOM-2]=(char)(i+PMFNCHAR);
+        nfonc[LENNOM-2]=(char)(i+48);
+        cfonc[LENNOM-2]=(char)(i+48);
+        rfonc[LENNOM-2]=(char)(i+PMFNCHAR);
+        pfonc[LENNOM-2]=(char)(i+PMFNCHAR);
+        qfonc[LENNOM-2]=(char)(i+PMFNCHAR);
       
 // colonne des durées de pulses
 
-      cli->print("<td>");
-      subModePulseTime(cli,i,periSwPulseOne,periSwPulseCurrOne,rfonc,pfonc,'O');          // bit et valeur pulse one
-      cli->print("<br>");
-      subModePulseTime(cli,i,periSwPulseTwo,periSwPulseCurrTwo,rfonc,qfonc,'T');          // bit et valeur pulse two
+        cli->print("<td>");
+        subModePulseTime(cli,i,periSwPulseOne,periSwPulseCurrOne,rfonc,pfonc,'O');          // bit et valeur pulse one
+        cli->print("<br>");
+        subModePulseTime(cli,i,periSwPulseTwo,periSwPulseCurrTwo,rfonc,qfonc,'T');          // bit et valeur pulse two
 
 // colonne freerun
 
-      cli->print("</td><td>");
-      uint64_t pipm;memcpy(&pipm,(char*)(periSwPulseCtl+i*DLSWLEN),DLSWLEN);
-      uint8_t val=((pipm>>PMFRO_PB)&0x01)+PMFNCVAL;rfonc[LENNOM-1]='F';                    // bit freerun
-      checkboxTableHtml(cli,&val,rfonc,-1,0);                    
-      cli->print("<br>");cli->print((char)periSwPulseSta[i]);cli->print("</td>");          // staPulse 
+        cli->print("</td><td>");
+        uint64_t pipm;memcpy(&pipm,(char*)(periSwPulseCtl+i*DLSWLEN),DLSWLEN);
+        uint8_t val=((pipm>>PMFRO_PB)&0x01)+PMFNCVAL;rfonc[LENNOM-1]='F';                    // bit freerun
+        checkboxTableHtml(cli,&val,rfonc,-1,0);                    
+        cli->print("<br>");cli->print((char)periSwPulseSta[i]);cli->print("</td>");          // staPulse 
                                                                  
 // colonne des détecteurs
 
-      cli->print("<td><font size=\"1\">");
-      for(int nd=0;nd<DLNB;nd++){
-        subMPc(cli,i,nd*DLBITLEN+DLENA_PB);          // enable
-        subMPc(cli,i,nd*DLBITLEN+DLEL_PB);           // local/externe
-        subMPn(cli,i,nd*DLBITLEN+DLNLS_PB,DLNULEN);  // numéro det
-        subMPc(cli,i,nd*DLBITLEN+DLMFE_PB);          // flanc/trans
-        subMPc(cli,i,nd*DLBITLEN+DLMHL_PB);          // H/L
-        subMPn(cli,i,nd*DLBITLEN+DLACLS_PB,DLACLEN); // numéro action
-        if(nd<DLNB-1){cli->print("<br>");}                           
-      }
-      cli->print("</font></td>");
+        cli->print("<td><font size=\"1\">");
+        for(int nd=0;nd<DLNB;nd++){
+          subMPc(cli,i,nd*DLBITLEN+DLENA_PB);          // enable
+          subMPc(cli,i,nd*DLBITLEN+DLEL_PB);           // local/externe
+          subMPn(cli,i,nd*DLBITLEN+DLNLS_PB,DLNULEN);  // numéro det
+          subMPc(cli,i,nd*DLBITLEN+DLMFE_PB);          // flanc/trans
+          subMPc(cli,i,nd*DLBITLEN+DLMHL_PB);          // H/L
+          subMPn(cli,i,nd*DLBITLEN+DLACLS_PB,DLACLEN); // numéro action
+          if(nd<DLNB-1){cli->print("<br>");}                           
+        }
+        cli->print("</font></td>");
       
 // colonne des actionneurs des switchs
 
-      cli->print("<td>");                                               // colonne des types d'action  
-      for(int k=0;k<nbtypes;k++){                                       // k n° de type d'action (act/des/ON/OFF) (1 ligne par type)
-        nfonc[LENNOM-1]=(char)(k*16+64);
-        uint8_t val=(*(periSwMode+i*MAXTAC+k)>>SWMDLNULS_PB);           // 4 bytes par sw ; 2 bits gauche n° détecteur + 3*2 bits (enable - H/L)
-        cli->print("<font size=\"2\">");cli->print(nac[k]);cli->print("</font>");
-        numTableHtml(cli,'b',(uint32_t*)&val,nfonc,1,0,2);              // affichage-saisie n°détec
+        cli->print("<td>");                                               // colonne des types d'action  
+        for(int k=0;k<nbtypes;k++){                                       // k n° de type d'action (act/des/ON/OFF) (1 ligne par type)
+          nfonc[LENNOM-1]=(char)(k*16+64);
+          uint8_t val=(*(periSwMode+i*MAXTAC+k)>>SWMDLNULS_PB);           // 4 bytes par sw ; 2 bits gauche n° détecteur + 3*2 bits (enable - H/L)
+          cli->print("<font size=\"2\">");cli->print(nac[k]);cli->print("</font>");
+          numTableHtml(cli,'b',(uint32_t*)&val,nfonc,1,0,2);              // affichage-saisie n°détec
         
-        for(int j=5;j>=0;j--){                                          // 3*2 checkbox enable+on/off pour les 3 sources d'un des 4 types de déclenchement du switch 
-          cfonc[LENNOM-1]=(char)(k*16+j+64);                            // codage nom de fonction aaaaaaasb ; s n° de switch (0-3) ; b=01tt0bbb tt type ; bbb n° bit (0x40+0x30+0x07)
-          uint8_t valb=((*(periSwMode+i*MAXTAC+k)>>j) & 0x01);                        
-          //Serial.print("     *chk* ");Serial.print(cfonc);Serial.print(" ");Serial.println(valb,HEX);
-          checkboxTableHtml(cli,&valb,cfonc,-1,0);
+          for(int j=5;j>=0;j--){                                          // 3*2 checkbox enable+on/off pour les 3 sources d'un des 4 types de déclenchement du switch 
+            cfonc[LENNOM-1]=(char)(k*16+j+64);                            // codage nom de fonction aaaaaaasb ; s n° de switch (0-3) ; b=01tt0bbb tt type ; bbb n° bit (0x40+0x30+0x07)
+            uint8_t valb=((*(periSwMode+i*MAXTAC+k)>>j) & 0x01);                        
+            //Serial.print("     *chk* ");Serial.print(cfonc);Serial.print(" ");Serial.println(valb,HEX);
+            checkboxTableHtml(cli,&valb,cfonc,-1,0);
+          }
+          if(k<nbtypes-1){cli->print("<br>");}                            // fin ligne types
         }
-        if(k<nbtypes-1){cli->print("<br>");}                            // fin ligne types
-      }
-      cli->println("<br></td>");                                          // fin colonne types
-    cli->print("</tr>"); 
-    } // switch suivant
-   cli->print("</form></body></html>");
+        cli->println("<br></td>");                                          // fin colonne types
+        cli->print("</tr>"); 
+      } // switch suivant
+  cli->print("</table></form></body></html>");
 }
 
 void periTableHtml(EthernetClient* cli)
@@ -363,7 +380,7 @@ Serial.print("début péritable ; remote_IP ");serialPrintIp(remote_IP_cur);Seri
 
   
   char bufdate[15];alphaNow(bufdate);
-  char pkdate[7];packDate(pkdate,bufdate+2);
+  char pkdate[7];packDate(pkdate,bufdate+2); // skip siècle
   byte msb=0,lsb=0;                        // pour temp DS3231
   readDS3231temp(&msb,&lsb);
 
@@ -379,18 +396,25 @@ Serial.print("début péritable ; remote_IP ");serialPrintIp(remote_IP_cur);Seri
           cli->print(msb);cli->print(".");cli->print(lsb);cli->println("°C<br>");
 
           cli->print("<input type=\"password\" name=\"macmaster_\" value=\"\" size=\"6\" maxlength=\"8\" > ");
-          lnkTableHtml(cli,"reset_____","reset");
-          char pwd[32]="password__=\0";strcat(pwd,modpass);lnkTableHtml(cli,pwd,"refresh");
-          lnkTableHtml(cli,"cfgserv___","config");
+          bouTableHtml(cli,"reset_____","","reset",0,0);
+          //lnkTableHtml(cli,"reset_____","reset");
+          //char pwd[32]="password__=\0";strcat(pwd,modpass);lnkTableHtml(cli,pwd,"refresh");
+          bouTableHtml(cli,"password__",modpass,"refresh",0,0);
+          bouTableHtml(cli,"cfgserv___","","config",0,0);
+          //lnkTableHtml(cli,"cfgserv___","config");
 
           numTableHtml(cli,'d',&perrefr,"per_refr__",4,0,0);cli->println("<input type=\"submit\" value=\"ok\">");
-          lnkTableHtml(cli,"testhtml__","test_html");
-          lnkTableHtml(cli,"dump_sd___","dump SDcard");
+          bouTableHtml(cli,"testhtml__","","test_html",0,0);
+          //lnkTableHtml(cli,"testhtml__","test_html");
+          bouTableHtml(cli,"dump_sd___","","dump SDcard",0,0);
+          //lnkTableHtml(cli,"dump_sd___","dump SDcard");
           cli->print("(");long sdsiz=fhisto.size();cli->print(sdsiz);cli->println(") ");
-          numTableHtml(cli,'i',(uint32_t*)&sdpos,"sd_pos____",9,0,0);cli->print("<input type=\"submit\" value=\"ok\"> détecteurs serveur :");
+          numTableHtml(cli,'i',(uint32_t*)&sdpos,"sd_pos____",9,0,0);cli->print("<input type=\"submit\" value=\"ok\">");
 
+          cli->print(" détecteurs serveur :");
           for(int k=0;k<NBDSRV;k++){subDSn(cli,"mem_dsrv__\0",memDetServ,k);}
-          //cli->println("<br>");
+          cli->println(" <br>");
+        
         cli->println("</form>");  
 
           cli->println("<table>");
@@ -441,25 +465,23 @@ Serial.print("début péritable ; remote_IP ");serialPrintIp(remote_IP_cur);Seri
                         cli->println("\" size=\"11\" maxlength=\"12\" ><br><br>");
                       cli->print("<font size=\"2\">");for(j=0;j<4;j++){cli->print(periIpAddr[j]);if(j<3){cli->print(".");}}cli->println("</font></td>");
                       cli->print("<td><font size=\"2\">");for(j=0;j<LENVERSION;j++){cli->print(periVers[j]);}cli->println("<br>");
+                      
                       char dateascii[12];
-                      dumpstr(periLastDateOut,7);Serial.print(" ");dumpstr(periLastDateIn,7);Serial.print(" ");dumpstr(pkdate,7);Serial.println(" ");
                       setColour(cli,"black");if(dateCmp(periLastDateOut,pkdate,*periPerRefr,1,1)<0){setColour(cli,"red");}
                       unpackDate(dateascii,periLastDateOut);for(j=0;j<12;j++){cli->print(dateascii[j]);if(j==5){cli->print(" ");}}cli->println("<br>");
                       setColour(cli,"black");if(dateCmp(periLastDateIn,pkdate,*periPerRefr,1,1)<0){setColour(cli,"red");}
                       unpackDate(dateascii,periLastDateIn);for(j=0;j<12;j++){cli->print(dateascii[j]);if(j==5){cli->print(" ");}}
                       setColour(cli,"black");
+                      
                         cli->println("</font></td>");
                       
                       cli->println("<td><input type=\"submit\" value=\"   MàJ   \"><br>");
-                      char swf[]="switchs___";swf[LENNOM-1]=periCur+PMFNCHAR;swf[LENNOM]='\0';
-                      
-                      
-                      //lnkTableHtml(cli,swf,"switchs");cli->println("</td>");
-                      //bouTableHtml(cli,"password__",modpass,"retour",3);
-                      //SwCtlTableHtml(cli,*periSwNb,4);
+ 
+                      if(*periSwNb!=0){
+                        char swf[]="switchs___";swf[LENNOM-1]=periCur+PMFNCHAR;swf[LENNOM]='\0';
+                        bouTableHtml(cli,swf,"","Switchs",3,0);}
 
                   cli->print("</form>");
-                  if(*periSwNb!=0){bouTableHtml(cli,swf,"","Switchs",3,0);}
                 cli->println("</tr>");
               }
           cli->println("</table>");
