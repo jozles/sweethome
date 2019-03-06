@@ -225,7 +225,7 @@ void unpackDate(char* dateout,char* datein)
 
 uint8_t dcb2b(byte val)
 {
-    return (val>>4)&0x0f*10+val&0x0f;
+    return ((val>>4)&0x0f)*10+(val&0x0f);
 }
 
 uint32_t cvds(char* d14,uint8_t skip)   // conversion date packée (yyyymmddhhmmss 7 car) en sec
@@ -260,7 +260,6 @@ void serialPrintDate(char* datein)
     for(int i=0;i<6;i++){
         Serial.print((char)((datein[i] >> 4)+48));Serial.print ((char)((datein[i] & 0x0F)+48));}
         Serial.println();
-
 }
 
 
