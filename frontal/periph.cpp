@@ -84,6 +84,8 @@ extern byte      periMacBuf[6];
 
 extern byte      lastIpAddr[4];
 
+extern swRemoteTable remoteT;                        // remoteT[i].pernum, remoteT[i].persw, remoteT[i].nam, remoteT[i].enable... etc
+
 extern char strdate[33];
 extern char temp[3],temp0[3],humid[3];
 
@@ -139,24 +141,26 @@ Ymdhms now()
   return ndt;
 }
 
-void readDS3231temp(byte* msb,byte* lsb)
+void readDS3231temp(float* th)
 {
   Wire.beginTransmission(DS3231_I2C_ADDRESS);
   Wire.write(17); // set DS3231 register pointer to 11h
   Wire.endTransmission();
   Wire.requestFrom(DS3231_I2C_ADDRESS, 2);
   // request two bytes of data from DS3231 starting from register 11h
-  *msb = Wire.read();
-  *lsb = Wire.read();
+
+  byte msb = Wire.read();
+  byte lsb = Wire.read();
   //Serial.print(*msb);Serial.print(":");Serial.println(*lsb);
-  switch(*lsb)
+  switch(lsb)
   {
     case 0:break;
-    case 64: *lsb=25;break;
-    case 128:*lsb=50;break;
-    case 192:*lsb=75;break;
-    default: *lsb=1;break; // error 
+    case 64: lsb=25;break;
+    case 128:lsb=50;break;
+    case 192:lsb=75;break;
+    default: msb=99,lsb=99;break; // error 
   }
+  *th=(float)msb+(float)lsb/100;
 }
 
 void getdate(uint32_t* hms2,uint32_t* amj2,byte* js)
@@ -677,5 +681,15 @@ Serial.print(" save ");
     }
   }
 */
+}
+
+void remotePrint(uint8_t num)   // remoteT[i].pernum, remoteT[i].persw, remoteT[i].nam, remoteT[i].enable... etc
+{
+  periLoad(remoteT[num].pernum);
+  Serial.print(num);Serial.print(" ");Serial.print(remoteT[num].pernum);Serial.print(" ");Serial.print(remoteT[num].persw);Serial.print(" ");
+  Serial.print(remoteT[num].nam);Serial.print(" ");
+  Serial.print(remoteT[num].enable);Serial.print(" ");
+  Serial.print((*periSwVal>>(2*remoteT[num].persw+1))&0x01);
+  Serial.println();
 }
 

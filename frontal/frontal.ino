@@ -95,10 +95,9 @@ EthernetServer periserv(1790);  // port 1789 service, 1790 devt
 
   char bufServer[LBUFSERVER];          // buffer entrée/sortie dataread/save
 
-  byte      msb=0,lsb=0;                   // pour temp DS3231
-  float     tempf;
-  long      curtemp=0;                     // mémo last millis() pour temp
-#define PTEMP 120                          // sec
+  float     oldth=0;                       // pour prev temp DS3231
+  long      temptime=0;                    // mémo last millis() pour temp
+#define PTEMP 120                         
   uint32_t  pertemp=PTEMP;                 // période ech temp sur le serveur
   uint16_t  perrefr=0;                     // periode rafraichissement de l'affichage
   
@@ -160,6 +159,8 @@ EthernetServer periserv(1790);  // port 1789 service, 1790 devt
   byte*     periEndOfRecord;
 
   byte      lastIpAddr[4]; 
+
+swRemoteTable remoteT;                        // remoteT[i].pernum, remoteT[i].persw, remoteT[i].nam, remoteT[i].enable... etc
 
 /* alimentation DS3231 */
 
@@ -728,14 +729,17 @@ char* checkStack(char* refstack)
           
 // *** maj température  
 
-      if((millis()-curtemp)>pertemp*1000){
-        curtemp=millis();
-        char buf[]={0,0,'.',0,0,0};
-        readDS3231temp(&msb,&lsb);
-        sprintf(buf,"%02u",msb);sprintf(buf+3,"%02u",lsb);
+    if((millis()-temptime)>pertemp*1000){
+      temptime=millis();
+      char buf[]={0,0,'.',0,0,0};
+      float th;
+      readDS3231temp(&th);
+      if(fabs(th-oldth)>MINTHCHGE){
+        oldth=th;sprintf(buf,"%02.02f",th);
+ //       Serial.print(th);Serial.print(" ");dumpstr(buf,6);
         sdstore_textdh(&fhisto,"T=",buf,"<br>\n");
       }
-        
+    }       
 } // loop
 
 

@@ -70,20 +70,24 @@
 
 #define MAXSERVACCESS 120                    // (sec) période maximale accés au serveur par défaut
 #define TEMPERPREF   20                      // (sec) période check température par défaut sur périphérique
+#define MINTHCHGE    0.25                    // changement minimal th pour save
 
 #define SDOK 1
 #define SDKO 0 
 
 //enum {FAUX,VRAI};
 
-#define AFF_getdate  1
-#define AFF_getnv    2
-#define AFF_temp_hum 4
-#define AFF_dumpSD   8
-#define AFF_SDstore  16
-#define AFF_SDerr    32
-#define AFF_SDhtml   64
-#define AFF_Ether   128
+#define LENREMNAM 16    // remote name length
+#define NBSWREMOTE 8    // remote number
+
+typedef struct {
+  uint8_t pernum;         // periph number
+  uint8_t persw;          // periph sw
+  char    nam[LENREMNAM]; // remote name
+  bool    enable;         // remote enable
+} swRemote;
+
+typedef swRemote swRemoteTable[NBSWREMOTE];
 
 
 /* codes fonctions

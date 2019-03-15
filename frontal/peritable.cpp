@@ -19,13 +19,13 @@ extern char*     nomserver;
 extern byte      memDetServ;  // image mémoire NBDSRV détecteurs (8)
 extern uint16_t  perrefr;
 
-extern char* usrpass;             // mot de passe browser
-extern char* modpass;             // mot de passe modif
-extern char* peripass;            // mot de passe périphériques
+extern char*     usrpass;             // mot de passe browser
+extern char*     modpass;             // mot de passe modif
+extern char*     peripass;            // mot de passe périphériques
 
-extern char* chexa;
+extern char*     chexa;
 
-extern uint8_t remote_IP[4],remote_IP_cur[4];
+extern uint8_t   remote_IP[4],remote_IP_cur[4];
 
 extern char      periRec[PERIRECLEN];        // 1er buffer de l'enregistrement de périphérique
   
@@ -199,7 +199,7 @@ void xradioTableHtml(EthernetClient* cli,byte valeur,char* nomfonct,byte nbval,i
 void checkboxTableHtml(EthernetClient* cli,uint8_t* val,char* nomfonct,int etat,uint8_t td)
 {
   if(td==1 || td==2){cli->print("<td>");}
-  cli->print("\n<input type=\"checkbox\" name=\"");cli->print(nomfonct);cli->print("\" id=\"cb1\" value=\"1\"");
+  cli->print("<input type=\"checkbox\" name=\"");cli->print(nomfonct);cli->print("\" id=\"cb1\" value=\"1\"");
   if((*val & 0x01)!=0){cli->print(" checked");}
   cli->print(">");
   if(etat>=0 && !(*val & 0x01)){etat=2;}
@@ -381,8 +381,8 @@ Serial.print("début péritable ; remote_IP ");serialPrintIp(remote_IP_cur);Seri
   
   char bufdate[15];alphaNow(bufdate);
   char pkdate[7];packDate(pkdate,bufdate+2); // skip siècle
-  byte msb=0,lsb=0;                        // pour temp DS3231
-  readDS3231temp(&msb,&lsb);
+  float th;                                 // pour temp DS3231
+  readDS3231temp(&th);
 
         cli->println("<body>");
         cli->println("<form method=\"GET \">");
@@ -393,33 +393,26 @@ Serial.print("début péritable ; remote_IP ");serialPrintIp(remote_IP_cur);Seri
           #endif _MODE_DEVT
           for(int zz=0;zz<14;zz++){cli->print(bufdate[zz]);if(zz==7){cli->print("-");}}
           cli->println(" GMT ; local IP ");cli->print(Ethernet.localIP());cli->println(" ");
-          cli->print(msb);cli->print(".");cli->print(lsb);cli->println("°C<br>");
+          cli->print(th);cli->println("°C<br>");
 
-          cli->print("<input type=\"password\" name=\"macmaster_\" value=\"\" size=\"6\" maxlength=\"8\" > ");
-          bouTableHtml(cli,"reset_____","","reset",0,0);
-          //lnkTableHtml(cli,"reset_____","reset");
-          //char pwd[32]="password__=\0";strcat(pwd,modpass);lnkTableHtml(cli,pwd,"refresh");
+          cli->print("<input type=\"password\" name=\"macmaster_\" value=\"\" size=\"6\" maxlength=\"8\" > ");cli->println("<input type=\"submit\" value=\"ok\">");
           bouTableHtml(cli,"password__",modpass,"refresh",0,0);
+          numTableHtml(cli,'d',&perrefr,"per_refr__",4,0,0);cli->println("<input type=\"submit\" value=\"ok\">");          
+          bouTableHtml(cli,"reset_____","","reset",0,0);
           bouTableHtml(cli,"cfgserv___","","config",0,0);
-          //lnkTableHtml(cli,"cfgserv___","config");
-
-          numTableHtml(cli,'d',&perrefr,"per_refr__",4,0,0);cli->println("<input type=\"submit\" value=\"ok\">");
           bouTableHtml(cli,"testhtml__","","test_html",0,0);
-          //lnkTableHtml(cli,"testhtml__","test_html");
-          bouTableHtml(cli,"dump_sd___","","dump SDcard",0,0);
-          //lnkTableHtml(cli,"dump_sd___","dump SDcard");
-          cli->print("(");long sdsiz=fhisto.size();cli->print(sdsiz);cli->println(") ");
-          numTableHtml(cli,'i',(uint32_t*)&sdpos,"sd_pos____",9,0,0);cli->print("<input type=\"submit\" value=\"ok\">");
 
-          cli->print(" détecteurs serveur :");
+          cli->print("(");long sdsiz=fhisto.size();cli->print(sdsiz);cli->println(") ");
+          numTableHtml(cli,'i',(uint32_t*)&sdpos,"sd_pos____",9,0,0);cli->print("<input type=\"submit\" value=\"ok\"> ");
+          bouTableHtml(cli,"dump_sd___","","dump SDcard",0,0);
+          
+          cli->println(" détecteurs serveur :");
           for(int k=0;k<NBDSRV;k++){subDSn(cli,"mem_dsrv__\0",memDetServ,k);}
-          cli->println(" <br>");
         
         cli->println("</form>");  
 
           cli->println("<table>");
               cli->println("<tr>");
-                //cli->println(" ON=VRAI=1=HAUT=CLOSE=GPIO2=ROUGE");
                 cli->println("<th></th><th><br>nom_periph</th><th><br>TH</th><th><br>  V </th><th>per_t<br>pth<br>ofs</th><th>per_s<br> <br>pg</th><th>nb<br>sw<br>det</th><th><br>_O_I___</th><th></th><th>mac_addr<br>ip_addr</th><th>version DS18x<br>last out<br>last in</th><th></th>"); //<th>det<br>srv<br>en</th>"); //<th>time One<br>time Two</th><th>f<br>r</th><th>e.l _f_H.a<br>n.x _t_L.c</th><th>___det__srv._pul<br></th>");
               cli->println("</tr>");
 
@@ -439,21 +432,19 @@ Serial.print("début péritable ; remote_IP ");serialPrintIp(remote_IP_cur);Seri
                       cli->println(periCur);
                       cli->print("<p hidden>");numTableHtml(cli,'i',&periCur,"peri_cur__",2,3,0);cli->println("</p>");
                       cli->print("<td><input type=\"text\" name=\"peri_nom__\" value=\"");
-                        cli->print(periNamer);cli->print("\" size=\"12\" maxlength=\"");cli->print(PERINAMLEN-1);cli->print("\" ></td>");
-                     // boutonHtml(cli,periSwVal,"peri_swb__",0,2);
+                        cli->print(periNamer);cli->print("\" size=\"12\" maxlength=\"");cli->print(PERINAMLEN-1);cli->println("\" ></td>");
                       textTableHtml(cli,'f',periLastVal,periThmin,periThmax,1,1);
-                      numTableHtml(cli,'f',periThmin,"peri_thmin",5,0,0);cli->print("<br>");
+                      numTableHtml(cli,'f',periThmin,"peri_thmin",5,0,0);cli->println("<br>");
                       numTableHtml(cli,'f',periThmax,"peri_thmax",5,3,0);
                       textTableHtml(cli,'f',periAlim,periVmin,periVmax,1,1);
-                      numTableHtml(cli,'f',periVmin,"peri_vmin_",5,0,0);cli->print("<br>");
+                      numTableHtml(cli,'f',periVmin,"peri_vmin_",5,0,0);cli->println("<br>");
                       numTableHtml(cli,'f',periVmax,"peri_vmax_",5,3,0);
-                      numTableHtml(cli,'d',(uint32_t*)periPerTemp,"peri_rtemp",5,2,0);cli->print("<br>");
+                      numTableHtml(cli,'d',(uint32_t*)periPerTemp,"peri_rtemp",5,2,0);cli->println("<br>");
                       numTableHtml(cli,'f',periPitch,"peri_pitch",5,0,0);cli->print("<br>");
                       numTableHtml(cli,'f',periThOffset,"peri_tofs_",5,3,0);
-                      numTableHtml(cli,'l',(uint32_t*)periPerRefr,"peri_refr_",5,2,0);cli->print("<br>");
-                      //numTableHtml(cli,'b',periSondeNb,"peri_sonde",2,2,0);cli->print("<br>");
+                      numTableHtml(cli,'l',(uint32_t*)periPerRefr,"peri_refr_",5,2,0);cli->println("<br>");
                       checkboxTableHtml(cli,(uint8_t*)periProg,"peri_prog_",-1,3);
-                      numTableHtml(cli,'b',periSwNb,"peri_intnb",1,2,0);cli->print("<br>");
+                      numTableHtml(cli,'b',periSwNb,"peri_intnb",1,2,0);cli->println("<br>");
                       numTableHtml(cli,'b',periDetNb,"peri_detnb",1,3,0);
                       cli->println("<td>");
                       xradioTableHtml(cli,*periSwVal,"peri_vsw_\0",2,*periSwNb,3);
@@ -466,14 +457,13 @@ Serial.print("début péritable ; remote_IP ");serialPrintIp(remote_IP_cur);Seri
                       cli->print("<font size=\"2\">");for(j=0;j<4;j++){cli->print(periIpAddr[j]);if(j<3){cli->print(".");}}cli->println("</font></td>");
                       cli->print("<td><font size=\"2\">");for(j=0;j<LENVERSION;j++){cli->print(periVers[j]);}cli->println("<br>");
                       
-                      char dateascii[12];
-                      setColour(cli,"black");if(dateCmp(periLastDateOut,pkdate,*periPerRefr,1,1)<0){setColour(cli,"red");}
+                      char dateascii[12],colourbr[6];
+                      memcpy(colourbr,"black\0",6);if(dateCmp(periLastDateOut,pkdate,*periPerRefr,1,1)<0){memcpy(colourbr,"red\0",4);}setColour(cli,colourbr);
                       unpackDate(dateascii,periLastDateOut);for(j=0;j<12;j++){cli->print(dateascii[j]);if(j==5){cli->print(" ");}}cli->println("<br>");
-                      setColour(cli,"black");if(dateCmp(periLastDateIn,pkdate,*periPerRefr,1,1)<0){setColour(cli,"red");}
-                      unpackDate(dateascii,periLastDateIn);for(j=0;j<12;j++){cli->print(dateascii[j]);if(j==5){cli->print(" ");}}
+                      memcpy(colourbr,"black\0",6);if(dateCmp(periLastDateIn,pkdate,*periPerRefr,1,1)<0){memcpy(colourbr,"red\0",4);}setColour(cli,colourbr);
+                      unpackDate(dateascii,periLastDateIn);for(j=0;j<12;j++){cli->print(dateascii[j]);if(j==5){cli->print(" ");}}cli->println("<br>");
                       setColour(cli,"black");
-                      
-                        cli->println("</font></td>");
+                      cli->println("</font></td>");
                       
                       cli->println("<td><input type=\"submit\" value=\"   MàJ   \"><br>");
  

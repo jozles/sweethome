@@ -17,14 +17,11 @@ struct Ymdhms
 Ymdhms now();
 
 void alphaNow(char* buff);  // charge 15 car YYYYMMDDHHMMSS\0
-
 void setDS3231time(byte second, byte minute, byte hour, 
     byte dayOfWeek,byte dayOfMonth, byte month, byte year);
-
 void readDS3231time(byte *second,byte *minute,byte *hour,
     byte *dayOfWeek,byte *dayOfMonth,byte *month,byte *year);
-
-void readDS3231temp(byte *msb,byte *lsb);
+void readDS3231temp(float* th);
 
 //int  temphydro(char* temp,char* temp0,char*humid);
 
@@ -48,5 +45,7 @@ int   configSave();
 void  configInit();
 void  configInitVar(); 
 void  configPrint();
+
+void remotePrint(uint8_t num);
 
 #endif // _PERIPH_

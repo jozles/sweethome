@@ -82,29 +82,33 @@ int dumpsd(EthernetClient* cli)                 // liste le fichier de la carte 
   long pos=fhisto.position();
   fhisto.seek(sdpos);
   
-  Serial.print("histoSD ");Serial.println(sdsiz);
+  Serial.print("histoSD ");Serial.print(sdpos);Serial.print("/");Serial.print(sdsiz);
 
   htmlIntro(nomserver,cli);cli->println("<body>");
+  cli->print("histoSD ");cli->print(sdpos);cli->print("/");cli->print(sdsiz);cli->println("<br>");
 
-  cli->print("histoSD ");cli->print(sdsiz);cli->print(" ");cli->print(pos);cli->print("/");cli->print(sdpos);cli->print("<br>\n");
+  long ptr=sdpos;
   
+  while(ptr<sdsiz){
+    inch=fhisto.read();ptr++;
+    cli->print(inch);
+  }
+  cli->println("</body>");
+  return sdOpen(FILE_WRITE,&fhisto,"fdhisto.txt");
+}
+/* 
   int cnt=0,strSDpt=0;
-  int ignore=VRAI; // ignore until next line
+  bool ignore=FAUX; // ignore until next line
   long ptr=sdpos;
   while (ptr<sdsiz || inch==-1)
     {
     inch=fhisto.read();ptr++;
-#ifndef WEMOS
-//    cnt++;if(cnt>5000){wdt_reset();cnt=0;}  
-#endif ndef WEMOS
     if(!ignore)
-      {
-        
+      {        
       strSD[strSDpt]=inch;strSDpt++;strSD[strSDpt]='\0';
       if((strSDpt>=(RECCHAR-1)) || (strSD[strSDpt-2]=='\r' && strSD[strSDpt-1]=='\n')){
         cli->println(strSD);                                                                                                                                                                                                        
         memset(strSD,'\0',RECCHAR);strSDpt=0;
-        Serial.print(inch);
         }
       }
       else if (inch==10){ignore=FAUX;}
@@ -114,8 +118,8 @@ int dumpsd(EthernetClient* cli)                 // liste le fichier de la carte 
   cli->println("</body>");
 
   return sdOpen(FILE_WRITE,&fhisto,"fdhisto.txt");
-  return SDOK;
 }
+*/
 
 void accueilHtml(EthernetClient* cli)
 {
@@ -166,8 +170,6 @@ void cfgServerHtml(EthernetClient* cli)
             cli->println("</table>");            
             cli->println("</form></body></html>");
 }
-
-
 
 void testHtml(EthernetClient* cli)
 {
