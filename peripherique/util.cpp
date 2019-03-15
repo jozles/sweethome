@@ -24,14 +24,15 @@ extern const char* host;
 extern const int   port;
 extern char bufServer[LBUFSERVER];
 
-extern byte mac[6];
-extern byte staPulse[MAXSW];            // état clock pulses
+extern byte    mac[6];
+extern byte    staPulse[MAXSW];            // état clock pulses
 extern uint8_t pinSw[MAXSW];
 extern uint8_t pinDet[MAXDET];
-extern long  detTime[MAXDET+MAXDSP+MAXDEX];
+extern long    detTime[MAXDET+MAXDSP+MAXDEX];
 
 extern constantValues cstRec;
 extern char* cstRecA;
+extern long  dateon;
 
 extern float voltage;
 
@@ -82,6 +83,7 @@ return 0;
 void writeConstant()
 {
 memcpy(cstRec.cstVers,VERSION,LENVERSION);
+cstRec.cxDurat=millis()-dateon;
 cstRec.cstcrc=calcCrc(cstRecA,(uint8_t)cstRec.cstlen-1); 
   
 #if CONSTANT==RTCSAVED
@@ -132,6 +134,7 @@ void initConstant()  // inits mise sous tension
   memcpy(cstRec.cstModel,model,LENMODEL);
   cstRec.extDetEn=0;
   cstRec.extDetLev=0;
+  cstRec.cxDurat=0;
   Serial.println("Init Constant done");
   writeConstant();
 }
@@ -179,9 +182,9 @@ void printConstant()
   Serial.print("\nnumPeriph=");Serial.print(buf);Serial.print(" IpLocal=");Serial.print(IPAddress(cstRec.IpLocal));
   Serial.print(" serverTime=");Serial.print(cstRec.serverTime);Serial.print(" serverPer=");Serial.println(cstRec.serverPer);
   Serial.print("oldtemp=");Serial.print(cstRec.oldtemp);Serial.print(" tempPer=");Serial.print(cstRec.tempPer);
-  Serial.print(" tempPitch=");Serial.println(cstRec.tempPitch);
+  Serial.print(" tempPitch=");Serial.print(cstRec.tempPitch);Serial.print("  last durat=");Serial.println(cstRec.cxDurat);
   Serial.print("swCde=");for(int sc=3;sc>=0;sc--){Serial.print((cstRec.swCde>>(sc*2+1))&01);Serial.print((cstRec.swCde>>(sc*2))&01);Serial.print("(");Serial.print(digitalRead(pinSw[sc]));Serial.print(")");
-  Serial.print(" ");}Serial.println();
+  Serial.print(" ");}Serial.println(" 3/2/1/0 cde/état(pin)");
   Serial.print("staPulse=");for(int s=0;s<MAXSW;s++){Serial.print(s);Serial.print("-");Serial.print(staPulse[s],HEX);
   Serial.print(" ");}Serial.println("  C=DIS 0=IDLE 5=RUN1 7=RUN2 4=END1 6=END2");
   Serial.print("memDetec=");for(int s=0;s<(MAXDET+MAXDSP+MAXDEX);s++){Serial.print(s);Serial.print("-");

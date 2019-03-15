@@ -137,11 +137,12 @@ Modifier :
 /* >>> CARTES <<< */
 
 #define VR      'V'
+#define RELAY   
 #define THESP01 '1'
 #define THESP12 '2'
 
-#define CARTE THESP01                      // <------------- modèle carte
-#define POWER_MODE PO_MODE            // <------------- type d'alimentation 
+#define CARTE VR                      // <------------- modèle carte
+#define POWER_MODE NO_MODE            // <------------- type d'alimentation 
 
 #if POWER_MODE==NO_MODE
   #define _SERVER_MODE
@@ -171,15 +172,26 @@ Modifier :
 #define MODEL_B 0x28
 
 #if CARTE==VR
+
+#ifndef RELAY
+#define PINXB 5
+#define PINXDT 13
+#endif ndef RELAY
+
+#ifdef  RELAY
+#define PINXB 13
+#define PINXDT 5
+#endif  def RELAY
+
 #define WPIN   4       // 1 wire ds1820
 #define NBSW   2       // nbre switchs
 #define PINSWA 2       // pin sortie switch A
 #define CLOSA  LOW     // triac ON
 #define OPENA  HIGH    // triac off
-#define PINSWB 5       // pin sortie switch B (interrupteur)
+#define PINSWB PINXB   // pin sortie switch B (interrupteur)
 #define CLOSB  HIGH    // triac ON sortie haute
 #define OPENB  LOW     // triac OFF
-#define PINSWC 5       // pin sortie switch C
+#define PINSWC PINSWB  // pin sortie switch C
 #define CLOSC  CLOSA    
 #define OPENC  OPENA
 #define PINSWD 2       // pin sortie switch D
@@ -188,11 +200,11 @@ Modifier :
 #define NBDET  4
 #define PINDTA 12   // pin entrée détect bit 0 
 #define PINDTB 14   // pin entrée détect bit 1 
-#define PINDTC 13   // pin entrée détect bit 2  sur carte VR 3 entrées donc bit 2 et 3
-#define PINDTD 13   // pin entrée détect bit 3  sur la même entrée.
+#define PINDTC PINXDT   // pin entrée détect bit 2  sur carte VR 3 entrées donc bit 2 et 3
+#define PINDTD PINXDT   // pin entrée détect bit 3  sur la même entrée.
 #define PININTA 12  // in interupt
 #define PININTB 14  // in interupt
-#define PININTC 13  // in interupt
+#define PININTC PINXDT  // in interupt
 #define MEMDINIT 0x1111 // bits enable
 #define PINPOFF 3   // power off TPL5111 (RX ESP01)
 #define PERTEMP 20  // secondes période par défaut lecture temp (en PO_MODE fixé par la résistance du 511x)
@@ -260,7 +272,7 @@ Modifier :
 #define PERSERVKO 7200/PERTEMP    // secondes période par défaut accès serveur si connexion wifi ko
 #define PERSERV   3600/PERTEMP    // secondes période max entre 2 accès server
 #define TOINCHCLI         4000    // msec max attente car server
-#define WIFI_TO_CONNEXION 5000    // msec
+#define WIFI_TO_CONNEXION 8000    // msec
 #define WIFINBRETRY          2    // wifiConnexion
 #define TSERIALBEGIN       100
 #define TDEBOUNCE           50    // msec
@@ -280,7 +292,7 @@ typedef struct {
   int16_t   oldtemp;              //  2
   uint8_t   talkStep;             //  1   pointeur pour l'automate talkServer()
   byte      onCdeI[MAXSW];        //  4   cdes d'activation (MAXSW=4 1 mot)
-  byte      offCdeI[MAXSW];        //  4   cdes désactivation
+  byte      offCdeI[MAXSW];       //  4   cdes désactivation
   byte      onCdeO[MAXSW];        //  4   cdes forçage ON
   byte      offCdeO[MAXSW];       //  4   cdes forçage OFF
   uint32_t  durPulseOne[MAXSW];   // 16   durée pulse 1
@@ -291,8 +303,9 @@ typedef struct {
   byte      memDetec[MAXDET+MAXDSP+MAXDEX];  //  8  image mem des détecteurs (1 byte par détecteur ; det physiques + spéciaux+externes)
   byte      extDetEn;             //  1   1 bit enable par det externe   
   byte      extDetLev;            //  1   1 bit level  par det externe
-  IPAddress IpLocal;              //  4  
-  byte      filler[79];           //  
+  IPAddress IpLocal;              //  4
+  uint32_t  cxDurat;              //  4   durée last connexion  
+  byte      filler[75];           //  
   uint8_t   cstcrc;               //  1   doit toujours être le dernier : utilisé pour calculer sa position
              // total 240 = 60 mots ; reste 256 dispo (sizeof(constantValues)=size(membres)+4)
 } constantValues;

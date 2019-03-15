@@ -140,6 +140,12 @@ void forceTrigTemp(){tempPeriod=0;}
 void setup() 
 { 
 
+/*#if POWER_MODE!=NO_MODE
+WiFi.disconnect();
+WiFi.forceSleepBegin();
+delay(1);
+#endif PM!=NO_MODE
+*/
 /* >>>>>> pins Init <<<<<< */
 
 #if POWER_MODE==PO_MODE
@@ -189,7 +195,7 @@ void setup()
 
 /* >>>>>> debut <<<<<< */
 
-  Serial.begin(115200);delay(10);
+  Serial.begin(115200);delay(20);
 
 #ifdef _MODE_DEVT
   Serial.print("\nSlave 8266 _MODE_DEVT");
@@ -206,6 +212,8 @@ void setup()
  int v=ds1820.setDs(WPIN,setds,readds);if(v==1){Serial.print(" DS1820 version=0x");Serial.println(readds[0],HEX);}
  else {Serial.print(" DS1820 error ");Serial.println(v);}
   tconversion=TCONVERSIONB;if(readds[0]==0X10){tconversion=TCONVERSIONS;}
+
+  
 #if POWER_MODE==NO_MODE
   ds1820.convertDs(WPIN);
   delay(tconversion);
@@ -249,7 +257,7 @@ void setup()
   Serial.print("CONSTANT=");Serial.print(CONSTANT);Serial.print(" time=");Serial.print(millis()-debTime);Serial.println(" ready !");
   yield();
   printConstant();
-delay(2000);
+delay(100);
 
 #if POWER_MODE==NO_MODE
 
@@ -330,6 +338,9 @@ delay(2000);
 #if POWER_MODE!=NO_MODE
 
   readTemp();
+
+  Serial.print("durée (no comm)=");Serial.print(millis());Serial.print(" - ");
+  Serial.print(dateon);Serial.print(" = ");Serial.println(millis()-dateon);
   
   while(cstRec.talkStep!=0){
     Serial.print("   talkStep=");Serial.println(cstRec.talkStep);
@@ -466,7 +477,6 @@ bool talkServerWifiConnect()
       while((retry<=WIFINBRETRY)){
         retry++;
         if(wifiConnexion(ssid,password)){break;}
-        else {delay(1000);}
       }
       return (retry<=WIFINBRETRY);
 }
@@ -482,13 +492,13 @@ infos(" talkServer","",cstRec.talkStep);
 
 switch(cstRec.talkStep){
   case 1:
-      ssid=ssid1;password=password1;
+      ssid=ssid2;password=password2;
       if(talkServerWifiConnect()){cstRec.talkStep=4;}
       else {cstRec.talkStep=2;}
       break;
       
   case 2:
-      ssid=ssid2;password=password2; // tentative sur ssid bis
+      ssid=ssid1;password=password1; // tentative sur ssid bis
       if(talkServerWifiConnect()){cstRec.talkStep=4;}
       else {cstRec.talkStep=98;}
       break;
@@ -498,7 +508,10 @@ switch(cstRec.talkStep){
       
   case 4:         // connecté au wifi
                   // si le numéro de périphérique est 00 ---> récup (dataread), ctle réponse et maj params
-
+                  
+  Serial.print("durée (talstep=4)=");Serial.print(millis());Serial.print(" - ");
+  Serial.print(dateon);Serial.print(" = ");Serial.println(millis()-dateon);
+  
       if(memcmp(cstRec.numPeriph,"00",2)==0){
         v=dataRead();infos("  dataRead","",v);
         if(v==MESSOK){cstRec.talkStep=5;}
@@ -701,7 +714,13 @@ int dataSave()
       sprintf(tempstr,"%+02.2f",temp/100);                                // 6 car
       if(strstr(tempstr,"nan")!=0){strcpy(tempstr,"+00.00\0");}
       strcat(tempstr,"_");                                                // 1 car
-      sprintf((char*)(tempstr+strlen(tempstr)),"%07d",(millis())-dateon); // 7 car
+      sprintf((char*)(tempstr+strlen(tempstr)),"%07d",(cstRec.cxDurat/
+#if POWER_MODE!=NO_MODE       
+      1));  // 7 car (ms soit 10000 sec)
+#endif PM!=NO_MODE
+#if POWER_MODE==NO_MODE       
+      10000));  // 7 car (dizaines de sec soit 38 mois)
+#endif PM==NO_MODE       
       strcat(tempstr,"\0");                                               // 1 car
       
       buildReadSave("data_save_",tempstr);
@@ -712,25 +731,39 @@ int dataRead()
       buildReadSave("data_read_","_");
 }
 
+void wifiStatusValues()
+{
+  Serial.print(WL_CONNECTED);Serial.println(" WL_CONNECTED ");
+  Serial.print(WL_CONNECT_FAILED);Serial.println(" WL_CONNECT_FAILED ");
+  Serial.print(WL_DISCONNECTED);Serial.println(" WL_DISCONNECTED ");
+  Serial.print(WL_IDLE_STATUS);Serial.println(" WL_IDLE_STATUS ");
+  Serial.print(WL_NO_SSID_AVAIL);Serial.println(" WL_NO_SSID_AVAIL ");
+}
+
+int printWifiStatus()
+{
+  char* wifiSta="WL_IDLE_STATUS   \0WL_NO_SSID_AVAIL \0WL_UKN           \0WL_CONNECTED     \0WL_CONNECT_FAILED\0WL_UKN           \0WL_DISCONNECTED  \0";
+  int ws=WiFi.status();
+  Serial.print(ws);Serial.print(" WiFiStatus=");Serial.println((char*)(wifiSta+18*ws));
+  return ws;
+}
 
 bool wifiConnexion(const char* ssid,const char* password)
 {
+
   int i=0;
   long beg=millis();
   bool cxstatus=VRAI;
 
     ledblink(BCODEONBLINK);
 
-    //WiFi.forceSleepWake(); //WiFi.forceSleepEnd();       // réveil modem
+    //WiFi.forceSleepWake();delay(1);
+    
+    //WiFi.forceSleepEnd();       // réveil modem
 
-    int wifistatus=WiFi.status();
-    Serial.print("WiFiStatus=");Serial.println(WiFi.status());
-    if(wifistatus!=WL_CONNECTED){                              // && wifistatus!=WL_DISCONNECTED ){
+    int wifistatus=printWifiStatus();
+    if(wifistatus!=WL_CONNECTED){           
 
-      //WiFi.disconnect();
-      //delay(1000);
-      WiFi.begin(ssid,password);
-      delay(500);
 /*
       if(cstRec.IpLocal!=IPAddress(0,0,0,0)){
       IPAddress dns(192,168,0,254);
@@ -746,10 +779,13 @@ bool wifiConnexion(const char* ssid,const char* password)
       WL_DISCONNECTED if module is not configured in station mode
 */
   
-      Serial.print(" WIFI connecting to ");Serial.print(ssid);Serial.print("...");
-      while(WiFi.status()!=WL_CONNECTED){
-        delay(500);Serial.print(".");
+      Serial.print(" WIFI connecting to ");Serial.println(ssid);
+      WiFi.begin(ssid,password);
+      delay(1000);
+      wifistatus=printWifiStatus();
+      while(wifistatus!=WL_CONNECTED){
         if((millis()-beg)>WIFI_TO_CONNEXION){cxstatus=FAUX;break;}
+        delay(500);wifistatus=printWifiStatus();
       }
     }
     if(cxstatus){
@@ -789,7 +825,7 @@ uint16_t tempPeriod0=PERTEMP;  // (sec) durée depuis dernier check température
     if(chkTrigTemp()){
       uint16_t tempPeriod0=(millis()-tempTime)/1000;   // (sec) durée depuis dernier check température
       trigTemp();
-      dateon=millis();
+//      dateon=millis();
 #endif PM==NO_MODE
 
 #if POWER_MODE==PO_MODE
