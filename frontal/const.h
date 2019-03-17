@@ -68,6 +68,8 @@
 
 #define CONFIGRECLEN 591                     // longueur record config 
 
+#define MAXIMGLEN   4000                     // longueur maxi pour fichiers image
+
 #define MAXSERVACCESS 120                    // (sec) période maximale accés au serveur par défaut
 #define TEMPERPREF   20                      // (sec) période check température par défaut sur périphérique
 #define MINTHCHGE    0.25                    // changement minimal th pour save

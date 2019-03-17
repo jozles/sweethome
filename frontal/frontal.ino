@@ -975,15 +975,16 @@ int getnv(EthernetClient* cli)        // décode commande, chaine et remplit les
       if(ncde==0){return -1;}  
       
       c=' ';
-      while (cli->available() && c!='?'){      // attente '?'
+      while (cli->available() && c!='?' && c!='.'){      // attente '?' ou '.'
         c=cli->read();Serial.print(c);
         bufli[pbli]=c;if(pbli<LBUFLI-1){pbli++;bufli[pbli]='\0';}
       }Serial.println();          
 
         switch(ncde){
           case 1:           // GET
+            if(strstr(bufli,"favicon")>0){htmlFavicon(cli);}
             if(bufli[0]=='?' || strstr(bufli,"page.html?")>0 || strstr(bufli,"cx?")>0){return analyse(cli);}
-            break;    
+            break;
           case 2:           // POST
             if(c=='\n' && cr>=3){return analyse(cli);}
             else if(c=='\n' || c=='\r'){cr++;}

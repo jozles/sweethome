@@ -20,8 +20,10 @@ extern uint16_t perrefr;
 extern File     fhisto;           // fichier histo sd card
 extern long     sdpos;
 extern char     strSD[RECCHAR];
-extern char*    ssid;   
+extern char*    ssid;
 extern char*    passssid;
+
+File fimg;     // fichier image
 
 
 void htmlIntro0(EthernetClient* cli)    // suffisant pour commande péripheriques
@@ -32,6 +34,50 @@ void htmlIntro0(EthernetClient* cli)    // suffisant pour commande péripherique
   cli->println("CONTENT-Type: text/html; charset=UTF-8");
   cli->println("Connection: close\n");
   cli->println("<!DOCTYPE HTML ><html>");
+}
+
+
+int htmlImg(EthernetClient* cli,char* fimgname)    // suffisant pour commande péripheriques
+{
+        Serial.print(fimgname);
+        File fimg; // = SD.open(fimgname,FILE_READ);
+        if(sdOpen(FILE_READ,&fimg,fimgname)==SDKO){return SDKO;}
+        else {
+  
+          cli->println("HTTP/1.1 200 OK");
+          cli->println("CONTENT-Type: image/jpg");
+          //cli->println("<link rel="icon" type="image/png" href="favicon.png\" sizes=\"64x64\">");
+          cli->println();
+
+          long fimgSiz=fimg.size();
+          byte c;
+          Serial.print(" size=");Serial.print(fimgSiz);
+          while (fimgSiz>0){c=fimg.read();cli->write(&c,1);fimgSiz--;}
+          /*
+          if(fimgSiz>MAXIMGLEN){Serial.print(" trop grand");return SDKO;}
+          else{
+            long ptr=0;
+            char clibuf[fimgSiz];
+
+            while(fimg.available())
+            {
+                clibuf[ptr]=fimg.read();
+                ptr++;
+            }
+            cli->write(clibuf,ptr);
+          }
+          */
+          fimg.close();
+          delay(1);   
+        }
+        Serial.println(" terminé");
+        cli->stop();
+        return SDOK;
+}
+
+void htmlFavicon(EthernetClient* cli)
+{
+  htmlImg(cli,"sweeth.png");
 }
 
 void htmlIntro(char* titre,EthernetClient* cli)
@@ -174,6 +220,11 @@ void cfgServerHtml(EthernetClient* cli)
 void testHtml(EthernetClient* cli)
 {
             Serial.println(" page d'essais");
+ htmlImg(cli,"sweeth.jpg");
+            
+            
+/*            
+            
             htmlIntro(nomserver,cli);
 
             char pwd[32]="password__=\0";strcat(pwd,usrpass);
@@ -205,4 +256,5 @@ void testHtml(EthernetClient* cli)
             cli->print("<a href=page.html?password__=17515A:><input type=\"submit\" value=\"retour\"></a><br>");
 
             cli->println("</form></body></html>");            
+*/
 }           

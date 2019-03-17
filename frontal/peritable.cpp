@@ -129,7 +129,7 @@ void bouTableHtml(EthernetClient* cli,char* nomfonct,char* valfonct,char* lib,ui
 {
     if(td==1 || td==2){cli->print("<td>");}
 
-    cli->print("<a href=\"page.html?");
+    cli->print("<a href=\"?");
     cli->print(nomfonct);cli->print("=");cli->print(valfonct);
     cli->print("\"><input type=\"button\" value=\"");
     cli->print(lib);
@@ -153,7 +153,7 @@ void bouTableHtml(EthernetClient* cli,char* nomfonct,char* valfonct,char* lib,ui
 
 void lnkTableHtml(EthernetClient* cli,char* nomfonct,char* lib)
 {
-  cli->print("<a href=page.html?");cli->print(nomfonct);cli->print(": target=_self>");
+  cli->print("<a href=?");cli->print(nomfonct);cli->print(": target=_self>");
   cli->print(lib);cli->println("</a>");
 }
 
