@@ -84,7 +84,13 @@ extern byte      periMacBuf[6];
 
 extern byte      lastIpAddr[4];
 
-extern swRemoteTable remoteT;                        // remoteT[i].pernum, remoteT[i].persw, remoteT[i].nam, remoteT[i].enable... etc
+extern struct swRemote remoteT[MAXREMLI];
+extern char*  remoteTA;
+extern long   remoteTlen;
+extern struct Remote remoteN[NBREMOTE];
+extern char*  remoteNA;
+extern long   remoteNlen;
+File fremote;     // fichier remotes
 
 extern char strdate[33];
 extern char temp[3],temp0[3],humid[3];
@@ -683,13 +689,99 @@ Serial.print(" save ");
 */
 }
 
-void remotePrint(uint8_t num)   // remoteT[i].pernum, remoteT[i].persw, remoteT[i].nam, remoteT[i].enable... etc
+void remPrint(int num)
 {
   periLoad(remoteT[num].pernum);
-  Serial.print(num);Serial.print(" ");Serial.print(remoteT[num].pernum);Serial.print(" ");Serial.print(remoteT[num].persw);Serial.print(" ");
-  Serial.print(remoteT[num].nam);Serial.print(" ");
+  Serial.print("   ");Serial.print(num);Serial.print("/");Serial.print(remoteT[num].remnum);Serial.print(" ");
+  Serial.print(remoteT[num].pernum);Serial.print(" ");Serial.print(remoteT[num].persw);Serial.print(" ");
   Serial.print(remoteT[num].enable);Serial.print(" ");
-  Serial.print((*periSwVal>>(2*remoteT[num].persw+1))&0x01);
+  int v=remoteT[num].persw;
+  Serial.print((*periSwVal>>(2*(v+1)))&0x01);
   Serial.println();
+}
+
+void remotePrint()
+{
+  for(uint8_t num=0;num<NBREMOTE;num++){
+    Serial.print(num);Serial.print(" ");Serial.print(remoteN[num].nam);Serial.print(" ");
+    for(uint8_t numswr=0;numswr<MAXREMLI;numswr++){
+      if(remoteT[numswr].remnum==num+1){
+        remPrint(numswr);  
+      }
+    }
+  }
+  Serial.println();
+}
+
+int remLoad(char* remF,uint16_t remL,char* remA)
+{
+    Serial.print("Load ");Serial.print(remF);
+    if(sdOpen(FILE_READ,&fremote,remF)==SDKO){Serial.println(" KO");return SDKO;}
+    for(uint16_t i=0;i<remL;i++){*(remA+i)=fremote.read();}              
+    fremote.close();Serial.println(" OK");
+    return SDOK;
+}
+
+int remSave(char* remF,uint16_t remL,char* remA)
+{
+    Serial.print("Save ");Serial.print(remF);
+    if(sdOpen(FILE_WRITE,&fremote,remF)==SDKO){Serial.println(" KO");return SDKO;}
+    fremote.seek(0);
+    for(uint16_t i=0;i<remL;i++){fremote.write(*(remA+i));}             
+    fremote.close();Serial.println(" OK");
+    return SDOK;
+}
+
+int remoteNLoad()
+{
+    char remoteFile[]=REMOTENFNAME;
+    if(sdOpen(FILE_READ,&fremote,remoteFile)==SDKO){return SDKO;}
+    fremote.seek(0);    
+    for(uint16_t i=0;i<remoteNlen;i++){*(remoteNA+i)=fremote.read();}           
+    fremote.close();
+    return SDOK;
+}
+
+int remoteNSave()
+{
+    char remoteFile[]=REMOTENFNAME;
+    if(sdOpen(FILE_WRITE,&fremote,remoteFile)==SDKO){return SDKO;}
+    for(uint16_t i=0;i<remoteNlen;i++){fremote.write(*(remoteNA+i));}             
+    fremote.close();
+    return SDOK;
+}
+
+int remoteTLoad()
+{
+    char remoteFile[]=REMOTETFNAME;Serial.print(remoteFile);
+    if(sdOpen(FILE_READ,&fremote,remoteFile)==SDKO){Serial.println("KO");return SDKO;}
+    for(uint16_t i=0;i<remoteTlen;i++){*(remoteTA+i)=fremote.read();}              
+    fremote.close();Serial.println("OK");
+    return SDOK;
+}
+
+int remoteTSave()
+{
+    char remoteFile[]=REMOTETFNAME;
+    if(sdOpen(FILE_WRITE,&fremote,remoteFile)==SDKO){return SDKO;}
+    for(uint16_t i=0;i<remoteTlen;i++){fremote.write(*(remoteTA+i));}              
+    fremote.close();
+    return SDOK;
+}
+
+void remoteLoad()
+{
+  remLoad(REMOTETFNAME,remoteTlen,remoteTA);
+  remLoad(REMOTENFNAME,remoteNlen,remoteNA);
+  //remoteTLoad();remoteNLoad();
+  remotePrint();
+}
+
+void remoteSave()
+{
+  remSave(REMOTETFNAME,remoteTlen,remoteTA);
+  remSave(REMOTENFNAME,remoteNlen,remoteNA);
+  //remoteTSave();remoteNSave();
+  remotePrint();
 }
 

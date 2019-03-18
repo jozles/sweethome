@@ -77,7 +77,7 @@ EthernetServer periserv(1790);  // port 1789 service, 1790 devt
                                        // donne l'habilitation pour effectuer des modifs dans peritable
                                        // (sinon renvoi à l'accueil)
   int8_t  numfonct[NBVAL];             // les fonctions trouvées  (au max version 1.1k 23+4*57=251)
-  char*   fonctions="per_temp__macmaster_peri_pass_password__testhtml__done______per_refr__peri_tofs_switchs___reset_____dump_sd___sd_pos____data_save_data_read_peri_swb__peri_cur__peri_refr_peri_nom__peri_mac__accueil___peri_tableperi_prog_peri_sondeperi_pitchperi_pmo__peri_detnbperi_intnbperi_rtempperi_dispoperi_dispoperi_vsw__peri_t_sw_peri_otf__peri_imn__peri_imc__peri_pto__peri_ptt__peri_thminperi_thmaxperi_vmin_peri_vmax_peri_dsv__mem_dsrv__ssid______passssid__cfgserv___pwdcfg____modpcfg___peripcfg__maccfg____last_fonc_";  //};
+  char*   fonctions="per_temp__macmaster_peri_pass_password__testhtml__done______per_refr__peri_tofs_switchs___reset_____dump_sd___sd_pos____data_save_data_read_peri_swb__peri_cur__peri_refr_peri_nom__peri_mac__accueil___peri_tableperi_prog_peri_sondeperi_pitchperi_pmo__peri_detnbperi_intnbperi_rtempremote____peri_dispoperi_vsw__peri_t_sw_peri_otf__peri_imn__peri_imc__peri_pto__peri_ptt__peri_thminperi_thmaxperi_vmin_peri_vmax_peri_dsv__mem_dsrv__ssid______passssid__cfgserv___pwdcfg____modpcfg___peripcfg__maccfg____remote_nomremote_en_remote_un_remote_pn_remote_sw_remote_xe_last_fonc_";  //};
                                        // nombre fonctions, valeur pour accueil, data_save_ fonctions multiples etc
   int     nbfonct=0,faccueil=0,fdatasave=0,fperiSwVal=0,fperiDetSs=0,fdone=0,fpericur=0,fperipass=0,fpassword=0,fmacmaster=0;
   char    valeurs[LENVALEURS];         // les valeurs associées à chaque fonction trouvée
@@ -160,7 +160,21 @@ EthernetServer periserv(1790);  // port 1789 service, 1790 devt
 
   byte      lastIpAddr[4]; 
 
-swRemoteTable remoteT;                        // remoteT[i].pernum, remoteT[i].persw, remoteT[i].nam, remoteT[i].enable... etc
+struct swRemote remoteT[MAXREMLI];
+char*  remoteTA=(char*)&remoteT;
+long   remoteTlen=(sizeof(swRemote))*MAXREMLI;
+struct Remote remoteN[NBREMOTE];
+char*  remoteNA=(char*)&remoteN;
+long   remoteNlen=(sizeof(Remote))*NBREMOTE;
+/*
+remoteTable remoteT;
+remoteNames remoteN;
+*/
+/*
+swRemote remoteT[MAXREMLI];
+Remote   remoteN[NBREMOTE];
+*/
+
 
 /* alimentation DS3231 */
 
@@ -372,6 +386,8 @@ while(1){}
   }
   
   sdstore_textdh(&fhisto,".3","RE","<br>\n ");
+
+  remoteLoad();
 
   Serial.println("fin setup");
 }
@@ -626,7 +642,7 @@ char* checkStack(char* refstack)
               case 25: *periDetNb=*valf-48;if(*periDetNb>MAXDET){*periDetNb=MAXDET;}break;           // peri det Nb  
               case 26: *periSwNb=*valf-48;if(*periSwNb>MAXSW){*periSwNb=MAXSW;}break;                // peri sw Nb                       
               case 27: Serial.print(" periPerTemp=");Serial.print(*periPerTemp);*periPerTemp=0;conv_atob(valf,periPerTemp);Serial.print(" periPerTemp=");Serial.println(*periPerTemp);break;                             // periode check température
-              case 28: break;                                                                        // dispo
+              case 28: cfgRemoteHtml(&cli_a);remotePrint();break;                                    // remote
               case 29: break;                                                                        // dispo
               case 30: {uint8_t sw=*(libfonctions+2*i+1)-48;
                        //Serial.print(" sw=");Serial.print(sw);Serial.print(" periSwVal=");Serial.println(*periSwVal,HEX);
@@ -678,12 +694,32 @@ char* checkStack(char* refstack)
               case 44: {int nb=*(libfonctions+2*i+1)-PMFNCHAR;                                       // passssid[libf+1]
                        memset(passssid+nb*(LPWSSID+1),0x00,LENSSID+1);memcpy(passssid+nb*(LPWSSID+1),valf,nvalf[i+1]-nvalf[i]);
                        }break;
-              case 45: cfgServerHtml(&cli_a);configPrint();break;break;                              // config
+              case 45: cfgServerHtml(&cli_a);configPrint();break;                                    // config
               case 46: what=6;                                                                       // 1ère fonction 
                        memset(usrpass,0x00,LPWD);memcpy(usrpass,valf,nvalf[i+1]-nvalf[i]);break;     // pwdcfg____
               case 47: memset(modpass,0x00,LPWD);memcpy(modpass,valf,nvalf[i+1]-nvalf[i]);break;     // modpcfg___
               case 48: memset(peripass,0x00,LPWD);memcpy(peripass,valf,nvalf[i+1]-nvalf[i]);break;   // peripcfg__
               case 49: for(j=0;j<6;j++){conv_atoh(valf+j*2,(mac+j));}break;                          // Mac config
+              case 50: what=8;                                                                       // remote_no_ nom remote courante
+                       {int nb=*(libfonctions+2*i+1)-PMFNCHAR; 
+                        memset(remoteN[nb].nam,0x00,LENREMNAM);                                      
+                        memcpy(remoteN[nb].nam,valf,nvalf[i+1]-nvalf[i]);
+                        remoteN[nb].enable=0;}break;
+              case 51: {int nb=*(libfonctions+2*i+1)-PMFNCHAR;                                        // remote_en_ enable remote courante
+                        remoteN[nb].enable=*valf-48;}break;
+              case 52: {int nb=*(libfonctions+2*i+1)-PMFNCHAR;                                        // remote_un_ N° remote table sw
+                        remoteT[nb].remnum=*valf-48;}break;
+              case 53: {int nb=*(libfonctions+2*i+1)-PMFNCHAR;                                        // remote_pn_ N° periph table sw
+                        remoteT[nb].pernum=0;
+                        conv_atob(valf,&remoteT[nb].pernum);
+                        if(remoteT[nb].pernum>NBPERIF){remoteT[nb].pernum=NBPERIF;}
+                        }break;
+              case 54: {int nb=*(libfonctions+2*i+1)-PMFNCHAR;                                        // remote_sw_ N° sw table sw
+                        remoteT[nb].persw=*valf-48;
+                        if(remoteT[nb].persw>MAXSW){remoteT[nb].persw=MAXSW;}
+                        }break;
+              case 55: {int nb=*(libfonctions+2*i+1)-PMFNCHAR;                                        // remote_xe_ enable table sw
+                        remoteT[nb].enable=*valf-48;}break;
                               
               default:break;
               }
@@ -713,6 +749,7 @@ char* checkStack(char* refstack)
           case 5:periSend();periTableHtml(&cli_a);break;        // périphériques serveurs            commande get /set ... (fait periParamsHtml)
           case 6:configSave();periTableHtml(&cli_a);break;      // config        
           case 7:periSend();SwCtlTableHtml(&cli_a,*periSwNb,4);break; // config switchs - smise à jour des périphériques (fait periParamsHtml)
+          case 8:remoteSave();periTableHtml(&cli_a);break;      // fonctions de cfgRemote
           default:accueilHtml(&cli_a);break;
           }
 

@@ -25,6 +25,9 @@ extern char*    passssid;
 
 File fimg;     // fichier image
 
+extern struct swRemote remoteT[MAXREMLI];
+extern struct Remote remoteN[NBREMOTE];
+
 
 void htmlIntro0(EthernetClient* cli)    // suffisant pour commande péripheriques
 {
@@ -182,13 +185,12 @@ void cfgServerHtml(EthernetClient* cli)
 {
             Serial.println(" config serveur");
             htmlIntro(nomserver,cli);
-
-//configPrint();
             
             cli->println("<body><form method=\"get\" >");
             cli->println(VERSION);cli->println("<br>");
-            //char pwd[32]="password__=\0";strcat(pwd,usrpass);lnkTableHtml(cli,pwd,"retour");cli->println(" <input type=\"submit\" value=\"MàJ\"><br>");
+            //char pwd[32]="password__=\0";strcat(pwd,usrpass);lnkTableHtml(cli,pwd,"retour");
             bouTableHtml(cli,"password__",modpass,"retour",0,0);  // génère peritable
+            cli->println(" <input type=\"submit\" value=\"MàJ\"><br>");
             
             cli->print(" password <input type=\"text\" name=\"pwdcfg____\" value=\"");cli->print(usrpass);cli->print("\" size=\"5\" maxlength=\"");cli->print(LPWD);cli->println("\" >");
             cli->print("  modpass <input type=\"text\" name=\"modpcfg___\" value=\"");cli->print(modpass);cli->print("\" size=\"5\" maxlength=\"");cli->print(LPWD);cli->println("\" >");            
@@ -213,6 +215,66 @@ void cfgServerHtml(EthernetClient* cli)
                       
                 cli->println("</tr>");
               }
+            cli->println("</table>");            
+            cli->println("</form></body></html>");
+}
+
+void cfgRemoteHtml(EthernetClient* cli)
+{
+  char nf[LENNOM+1];nf[LENNOM]='\0';
+  
+            Serial.println(" config remote");
+            htmlIntro(nomserver,cli);
+            
+            cli->println("<body><form method=\"get\" >");
+            cli->println(VERSION);cli->println("<br>");
+            
+            bouTableHtml(cli,"password__",modpass,"retour",0,0);  // génère peritable
+            cli->println(" <input type=\"submit\" value=\"MàJ\"><br>");
+
+/* table remotes */
+
+              cli->println("<table>");
+              cli->println("<tr>");
+              cli->println("<th>   </th><th>      Nom      </th><th>   </th>");
+              cli->println("</tr>");
+
+              for(int nb=0;nb<NBREMOTE;nb++){
+                cli->println("<tr>");
+                cli->print("<td>");cli->print(nb+1);cli->print("</td>");
+                cli->print("<td><input type=\"text\" name=\"remote_no");cli->print((char)(nb+PMFNCHAR));cli->print("\" value=\"");
+                        cli->print(remoteN[nb].nam);cli->print("\" size=\"12\" maxlength=\"");cli->print(LENREMNAM-1);cli->println("\" ></td>");
+                memcpy(nf,"remote_en_",LENNOM);nf[LENNOM-1]=(char)(nb+PMFNCHAR);
+                uint8_t ren=(uint8_t)remoteN[nb].enable;
+                checkboxTableHtml(cli,&ren,nf,-1,1);         
+                
+                cli->println("</tr>");
+              }
+            cli->println("</table><br>");
+
+/* table switchs */
+
+            cli->println("<table>");
+              cli->println("<tr>");
+              cli->println("<th>  </th><th> rem </th><th> per </th><th> sw </th><th>   </th>");
+              cli->println("</tr>");
+              
+              for(int nb=0;nb<MAXREMLI;nb++){
+                cli->println("<tr>");
+                cli->print("<td>");cli->print(nb+1);cli->print("</td>");
+                memcpy(nf,"remote_un_",LENNOM);nf[LENNOM-1]=(char)(nb+PMFNCHAR);
+                numTableHtml(cli,'b',&remoteT[nb].remnum,nf,1,1,0);
+                memcpy(nf,"remote_pn_",LENNOM);nf[LENNOM-1]=(char)(nb+PMFNCHAR);
+                numTableHtml(cli,'b',&remoteT[nb].pernum,nf,2,1,0);
+                memcpy(nf,"remote_sw_",LENNOM);nf[LENNOM-1]=(char)(nb+PMFNCHAR);
+                numTableHtml(cli,'b',&remoteT[nb].persw,nf,1,1,0);
+                memcpy(nf,"remote_xe_",LENNOM);nf[LENNOM-1]=(char)(nb+PMFNCHAR);
+                uint8_t ren=(uint8_t)remoteT[nb].enable;
+                checkboxTableHtml(cli,&ren,nf,-1,1);         
+                
+                cli->println("</tr>");
+              }
+              
             cli->println("</table>");            
             cli->println("</form></body></html>");
 }

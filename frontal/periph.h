@@ -46,6 +46,8 @@ void  configInit();
 void  configInitVar(); 
 void  configPrint();
 
-void remotePrint(uint8_t num);
+void remotePrint();
+void remoteLoad();
+void remoteSave();
 
 #endif // _PERIPH_

@@ -80,16 +80,27 @@
 //enum {FAUX,VRAI};
 
 #define LENREMNAM 16    // remote name length
-#define NBSWREMOTE 8    // remote number
+#define NBREMOTE 8      // remote entrys
+#define MAXREMLI 16     // sw items total
+#define REMOTENFNAME "noms_rem"
+#define REMOTETFNAME "tablerem"
 
-typedef struct {
-  uint8_t pernum;         // periph number
-  uint8_t persw;          // periph sw
+struct swRemote
+{
+  uint8_t  remnum;        // remote number
+  uint16_t pernum;        // periph number
+  uint8_t  persw;         // periph sw
+  bool     enable;        // remote enable
+};
+
+struct Remote
+{
+  uint8_t remnum;         // remote number
   char    nam[LENREMNAM]; // remote name
   bool    enable;         // remote enable
-} swRemote;
+};
 
-typedef swRemote swRemoteTable[NBSWREMOTE];
+
 
 
 /* codes fonctions

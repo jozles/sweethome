@@ -400,6 +400,7 @@ Serial.print("début péritable ; remote_IP ");serialPrintIp(remote_IP_cur);Seri
           numTableHtml(cli,'d',&perrefr,"per_refr__",4,0,0);cli->println("<input type=\"submit\" value=\"ok\">");          
           bouTableHtml(cli,"reset_____","","reset",0,0);
           bouTableHtml(cli,"cfgserv___","","config",0,0);
+          bouTableHtml(cli,"remote____","","remote",0,0);
           bouTableHtml(cli,"testhtml__","","test_html",0,0);
 
           cli->print("(");long sdsiz=fhisto.size();cli->print(sdsiz);cli->println(") ");
