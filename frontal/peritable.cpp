@@ -7,6 +7,7 @@
 #include "const.h"
 #include "periph.h"
 #include "utilether.h"
+#include "utilhtml.h"
 #include "pageshtml.h"
 
 #ifndef WEMOS
@@ -22,6 +23,7 @@ extern uint16_t  perrefr;
 extern char*     usrpass;             // mot de passe browser
 extern char*     modpass;             // mot de passe modif
 extern char*     peripass;            // mot de passe périphériques
+
 
 extern char*     chexa;
 
@@ -74,144 +76,6 @@ extern int  chge_pwd; //=FAUX;
 
 extern byte mask[];
 
-#define LENCOLOUR 8
-  char colour[LENCOLOUR+1];
-
-void setColour(EthernetClient* cli,char* textColour)
-{
-  memcpy(colour,textColour,LENCOLOUR);cli->print("<font color=\"");cli->print(colour);cli->print("\"> ");
-}
-
-void cliPrintMac(EthernetClient* cli, byte* mac)
-{
-  char macBuff[18];
-  unpackMac(macBuff,mac);
-  cli->print(macBuff);
-}
-
-void boutonHtml(EthernetClient* cli,byte* valfonct,char* nomfonct,uint8_t sw,uint8_t td)      
-{
-  char tonoff[]={'O','F','F','\0'};
-
-  nomfonct[LENNOM-2]=(char)(PMFNCHAR+sw);
-  nomfonct[LENNOM-1]='1';
-
-  if(td==1 || td==2){cli->print("<td>");}
-  if ((*valfonct>>(sw*2))&0x01==0) {nomfonct[LENNOM-1]='0';memcpy(tonoff,"ON \0",4);}
-  cli->print("<a href=\"");cli->print(nomfonct);cli->print("\"><button class=\"button\">");cli->print(tonoff);cli->println("</button></a>");
-//  cli->print("<input type=\"button\" name=\"");cli->print(nomfonct);cli->print("\" <button class=\"button\">");cli->print(tonoff);cli->println("</button></a>");
-  if(td==2 || td==3){cli->println("</td>");}
-//              cli->println("<p><a href=\"/B/off\"><button class=\"button button2\">OFF</button></a></p>");
-
-}
-
-void textTableHtml(EthernetClient* cli,char type,float* valfonct,float* valmin,float* valmax,uint8_t br,uint8_t td)
-{
-  memcpy(colour,"black\0",6);if(*valfonct<*valmin || *valfonct>*valmax){memcpy(colour,"red\0",4);}
-  if(td==1 || td==2){cli->print("<td>");}
-    cli->print("<font color=\"");cli->print(colour);cli->print("\"> ");
-/*    switch (type){
-      case 'b':cli->print(*(byte*)valfonct);break;
-      case 'd':cli->print(*(uint16_t*)valfonct);break;
-      case 'i':cli->print(*(int*)valfonct);break;
-      case 'l':cli->print(*(long*)valfonct);break;
-      case 'f':cli->print(*(float*)valfonct);break;
-      case 'g':cli->print(*(uint32_t*)valfonct);break;    
-      default:break;}
-*/
-  cli->print(*valfonct);  
-  cli->print("</font>");
-  if(br==1){cli->print("<br>");}
-  if(td==2 || td==3){cli->println("</td>");}
-}
-
-void bouTableHtml(EthernetClient* cli,char* nomfonct,char* valfonct,char* lib,uint8_t td,uint8_t br)
-{
-    if(td==1 || td==2){cli->print("<td>");}
-
-    cli->print("<a href=\"?");
-    cli->print(nomfonct);cli->print("=");cli->print(valfonct);
-    cli->print("\"><input type=\"button\" value=\"");
-    cli->print(lib);
-    cli->print("\"></a>");
-    
-/*    cli->print("<form><p hidden><input type=\"text\" name=\"");
-    cli->print(nomfonct);
-    cli->print("\" value=\"");
-    cli->print(valfonct);
-    cli->print("\" ></p><input type=\"submit\" value=\"");
-    cli->print(lib);
-    cli->print("\">");
-    if(br!=0){cli->print("<br>");}
-    cli->print("</form>");
-*/
-
-    if(br!=0){cli->print("<br>");}
-    if(td==1 || td==3){cli->print("</td>");}
-    cli->println();
-}
-
-void lnkTableHtml(EthernetClient* cli,char* nomfonct,char* lib)
-{
-  cli->print("<a href=?");cli->print(nomfonct);cli->print(": target=_self>");
-  cli->print(lib);cli->println("</a>");
-}
-
-void numTableHtml(EthernetClient* cli,char type,void* valfonct,char* nomfonct,int len,uint8_t td,int pol)
-{                          
-  if(td==1 || td==2){cli->print("<td>");}
-  if(pol!=0){cli->print("<font size=\"");cli->print(pol);cli->println("\">");}
-  cli->print("<input type=\"text\" name=\"");cli->print(nomfonct);
-  if(len<=2){cli->print("\" id=\"nt");cli->print(len);}
-  cli->print("\" value=\"");
-  switch (type){
-    case 'b':cli->print(*(byte*)valfonct);break;
-    case 'd':cli->print(*(uint16_t*)valfonct);break;
-    case 'i':cli->print(*(int*)valfonct);break;
-    case 'l':cli->print(*(long*)valfonct);break;
-    case 'f':cli->print(*(float*)valfonct);break;
-    case 'g':cli->print(*(uint32_t*)valfonct);break;    
-    default:break;
-  }
-  int sizeHtml=1;if(len>=3){sizeHtml=2;}if(len>=6){sizeHtml=4;}if(len>=9){sizeHtml=6;}
-  cli->print("\" size=\"");cli->print(sizeHtml);cli->print("\" maxlength=\"");cli->print(len);cli->print("\" >");
-  if(pol!=0){cli->print("</font>");}
-  if(td==1 || td==3){cli->println("</td>");}
-}
-
-void xradioTableHtml(EthernetClient* cli,byte valeur,char* nomfonct,byte nbval,int nbli,byte type)
-{
-    for(int i=0;i<nbli;i++){
-      char oi[]="OI";
-      byte b,a=valeur; a=a >> i*2 ;b=a&0x01;a&=0x02;a=a>>1;          // mode periSwVal        a bit poids fort commande ; b bit poids faible état
-      //Serial.print("swVal=");Serial.println(*periSwVal,HEX);
-      for(int j=0;j<nbval;j++){
-        if(type&0x02!=0){
-          cli->print("<input type=\"radio\" name=\"");cli->print(nomfonct);cli->print((char)(i+48));cli->print("\" value=\"");cli->print((char)(PMFNCVAL+j));cli->print("\"");
-          if(a==j){cli->print(" checked");}cli->print("/>");
-        }
-      }
-      if(type&0x01!=0){cli->print(" ");cli->print(oi[b]);}
-      cli->println("<br>");
-    }
-}
-
-void checkboxTableHtml(EthernetClient* cli,uint8_t* val,char* nomfonct,int etat,uint8_t td)
-{
-  if(td==1 || td==2){cli->print("<td>");}
-  cli->print("<input type=\"checkbox\" name=\"");cli->print(nomfonct);cli->print("\" id=\"cb1\" value=\"1\"");
-  if((*val & 0x01)!=0){cli->print(" checked");}
-  cli->print(">");
-  if(etat>=0 && !(*val & 0x01)){etat=2;}
-      switch(etat){
-        case 2 :cli->print("___");break;
-        case 1 :cli->print("_ON");break;
-        case 0 :cli->print("OFF");break;
-        default:break;
-      }
-  if(td==1 || td==3){cli->print("</td>");}
-  cli->println();
-}
 
 void subDSn(EthernetClient* cli,char* fnc,uint8_t val,uint8_t num) // checkbox transportant 1 bit 
                                                                    // num le numéro du bit dans le byte
@@ -224,6 +88,7 @@ void subDSn(EthernetClient* cli,char* fnc,uint8_t val,uint8_t num) // checkbox t
   val=(val>>num)&0x01;
   checkboxTableHtml(cli,&val,fonc,-1,0);
 }
+
 
 void subMPn(EthernetClient* cli,uint8_t sw,uint8_t num,uint8_t nb)   // numbox transportant une valeur avec fonction peri_pmo__
                                                                      // nb est le nombre de bits de la valeur
@@ -404,7 +269,7 @@ Serial.print("début péritable ; remote_IP ");serialPrintIp(remote_IP_cur);Seri
           bouTableHtml(cli,"testhtml__","","test_html",0,0);
 
           cli->print("(");long sdsiz=fhisto.size();cli->print(sdsiz);cli->println(") ");
-          numTableHtml(cli,'i',(uint32_t*)&sdpos,"sd_pos____",9,0,0);cli->print("<input type=\"submit\" value=\"ok\"> ");
+          numTableHtml(cli,'i',(uint32_t*)&sdpos,"sd_pos____",9,0,0);cli->println("<input type=\"submit\" value=\"ok\"> ");
           bouTableHtml(cli,"dump_sd___","","dump SDcard",0,0);
           
           cli->println(" détecteurs serveur :");

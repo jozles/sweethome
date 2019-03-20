@@ -9,7 +9,7 @@ void cfgRemoteHtml(EthernetClient* cli);
 void accueilHtml(EthernetClient* cli);
 void testHtml(EthernetClient* cli);
 void htmlFavicon(EthernetClient* cli);
-int htmlImg(EthernetClient* cli,char* fimgname);
+int  htmlImg(EthernetClient* cli,char* fimgname);
 
 
 #endif // _PAGESHTML_H_

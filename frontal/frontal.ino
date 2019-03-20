@@ -36,8 +36,8 @@ extern "C" {
  #include "utility/w5100.h"
 }
 
-  EthernetClient cli_a;             // client du serveur periph  local
-//  EthernetClient cli_b;           // client du serveur browser local  
+  EthernetClient cli_a;             // client du serveur periphériques et browser configuration
+  EthernetClient cli_b;             // client du serveur pilotage
   EthernetClient cliext;            // client de serveur externe  
 
 /* >>>> config server <<<<<< */
@@ -58,7 +58,8 @@ char configRec[CONFIGRECLEN];
   byte* configBegOfRecord;
   byte* configEndOfRecord;
 
-EthernetServer periserv(1790);  // port 1789 service, 1790 devt
+EthernetServer periserv(1790);    // port 1789 service, 1790 devt
+EthernetServer piloteserv(1791);  // serveur pilotage
 
   uint8_t remote_IP[4]={0,0,0,0},remote_IP_cur[4]={0,0,0,0},remote_IP_Mac[4]={0,0,0,0};
   byte    remote_MAC[6]={0,0,0,0,0,0};
@@ -442,7 +443,7 @@ char* checkStack(char* refstack)
         getremote_IP(&cli_a,remote_IP,remote_MAC);
 
       Serial.print("\n **** loop  IP_cur=");serialPrintIp(remote_IP_cur);Serial.print(" IP_Mac=");serialPrintIp(remote_IP_Mac);Serial.print(" new=");serialPrintIp(remote_IP);
-      Serial.print(" MAC=");serialPrintMac(remote_MAC,0);Serial.print("  ");serialPrintMac(macMaster,1);
+      Serial.print(" MAC=");serialPrintMac(remote_MAC,0);Serial.print("  master=");serialPrintMac(macMaster,1);
       
       if (cli_a.connected()) 
         {nbreparams=getnv(&cli_a);Serial.print("\n---- nbreparams ");Serial.println(nbreparams);

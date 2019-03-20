@@ -3,10 +3,11 @@
 #include "const.h"
 #include <Wire.h>
 #include "utilether.h"
+#include "utilhtml.h"
 #include "shconst.h"
 #include "shutil.h"
 #include "periph.h"
-#include "peritable.h"
+//#include "peritable.h"
 
 extern char* nomserver;
 extern byte* mac;              // adresse server
@@ -28,16 +29,9 @@ File fimg;     // fichier image
 extern struct swRemote remoteT[MAXREMLI];
 extern struct Remote remoteN[NBREMOTE];
 
+extern char*     periNamer;                    // ptr ds buffer : description périphérique
 
-void htmlIntro0(EthernetClient* cli)    // suffisant pour commande péripheriques
-{
-  cli->println("HTTP/1.1 200 OK");
-  //cli->println("Location: http://82.64.32.56:1789/");
-  //cli->println("Cache-Control: private");
-  cli->println("CONTENT-Type: text/html; charset=UTF-8");
-  cli->println("Connection: close\n");
-  cli->println("<!DOCTYPE HTML ><html>");
-}
+
 
 
 int htmlImg(EthernetClient* cli,char* fimgname)    // suffisant pour commande péripheriques
@@ -56,20 +50,6 @@ int htmlImg(EthernetClient* cli,char* fimgname)    // suffisant pour commande p�
           byte c;
           Serial.print(" size=");Serial.print(fimgSiz);
           while (fimgSiz>0){c=fimg.read();cli->write(&c,1);fimgSiz--;}
-          /*
-          if(fimgSiz>MAXIMGLEN){Serial.print(" trop grand");return SDKO;}
-          else{
-            long ptr=0;
-            char clibuf[fimgSiz];
-
-            while(fimg.available())
-            {
-                clibuf[ptr]=fimg.read();
-                ptr++;
-            }
-            cli->write(clibuf,ptr);
-          }
-          */
           fimg.close();
           delay(1);   
         }
@@ -81,44 +61,6 @@ int htmlImg(EthernetClient* cli,char* fimgname)    // suffisant pour commande p�
 void htmlFavicon(EthernetClient* cli)
 {
   htmlImg(cli,"sweeth.png");
-}
-
-void htmlIntro(char* titre,EthernetClient* cli)
-{
-  htmlIntro0(cli);
-
-  cli->println("<head>");
-  char buf[10]={0};
-  if(perrefr!=0){cli->print("<meta HTTP-EQUIV=\"Refresh\" content=\"");sprintf(buf,"%d",perrefr);cli->print(buf);cli->print("\">");}
-  cli->print("\<title>");cli->print(titre);cli->println("</title>");
-  
-          cli->println("<style>");
-
-            cli->println("table {");
-              cli->println("font-family: Courier, sans-serif;");
-              cli->println("border-collapse: collapse;");
-              cli->println("width: 100%;");
-              cli->println("overflow: auto;");
-              cli->println("white-space:nowrap;"); 
-            cli->println("}");
-
-            cli->println("td, th {");
-              cli->println("border: 1px solid #dddddd;");
-              cli->println("text-align: left;"); 
-            cli->println("}");
-
-            cli->println("#nt1{width:10px;}");
-            cli->println("#nt2{width:18px;}");
-            cli->println("#cb1{width:10px; padding:0px; margin:0px; text-align: center};");
-            cli->println("#cb2{width:20px; text-align: center};");
-
-            cli->print(".button {background-color: #195B6A; border: none; color: white; padding: 16px 40px;");
-            cli->println("text-decoration: none; font-size: 30px; margin: 2px; cursor: pointer;}");
-            cli->println(".button2 {background-color: #77878A;}");
-
-          cli->println("</style>");
-  
-  cli->println("</head>");
 }
 
 int dumpsd(EthernetClient* cli)                 // liste le fichier de la carte sd
@@ -236,17 +178,27 @@ void cfgRemoteHtml(EthernetClient* cli)
 
               cli->println("<table>");
               cli->println("<tr>");
-              cli->println("<th>   </th><th>      Nom      </th><th>   </th>");
+              cli->println("<th>   </th><th>      Nom      </th><th> en </th>");
               cli->println("</tr>");
 
               for(int nb=0;nb<NBREMOTE;nb++){
                 cli->println("<tr>");
+                
                 cli->print("<td>");cli->print(nb+1);cli->print("</td>");
                 cli->print("<td><input type=\"text\" name=\"remote_no");cli->print((char)(nb+PMFNCHAR));cli->print("\" value=\"");
                         cli->print(remoteN[nb].nam);cli->print("\" size=\"12\" maxlength=\"");cli->print(LENREMNAM-1);cli->println("\" ></td>");
-                memcpy(nf,"remote_en_",LENNOM);nf[LENNOM-1]=(char)(nb+PMFNCHAR);
+
+                sliderHtml(cli,(uint8_t*)(&remoteN[nb].enable),"remote_en_",nb,0,1);
+                
+                /*memcpy(nf,"remote_en_",LENNOM);nf[LENNOM-1]=(char)(nb+PMFNCHAR);
+                cli->print("<td><label class=\"switch\"><input type=\"checkbox\" name=\"");cli->print(nf);cli->print("\" value=\"1\"");
+                if(remoteN[nb].enable!=0){cli->print(" checked");}
+                cli->print(" ><span class=\"slider round\"></span></label></td>");
+                */
+                /*
                 uint8_t ren=(uint8_t)remoteN[nb].enable;
                 checkboxTableHtml(cli,&ren,nf,-1,1);         
+                */
                 
                 cli->println("</tr>");
               }
@@ -256,17 +208,23 @@ void cfgRemoteHtml(EthernetClient* cli)
 
             cli->println("<table>");
               cli->println("<tr>");
-              cli->println("<th>  </th><th> rem </th><th> per </th><th> sw </th><th>   </th>");
+              cli->println("<th>  </th><th> rem </th><th>  </th><th> per </th><th>  </th><th> sw </th><th>   </th>");
               cli->println("</tr>");
               
               for(int nb=0;nb<MAXREMLI;nb++){
                 cli->println("<tr>");
                 cli->print("<td>");cli->print(nb+1);cli->print("</td>");
+                
                 memcpy(nf,"remote_un_",LENNOM);nf[LENNOM-1]=(char)(nb+PMFNCHAR);
                 numTableHtml(cli,'b',&remoteT[nb].remnum,nf,1,1,0);
+                
+                cli->print("<td>");if(remoteT[nb].remnum!=0){cli->print(remoteN[remoteT[nb].remnum-1].nam);}else {cli->print(" ");}cli->print("</td>");
                 memcpy(nf,"remote_pn_",LENNOM);nf[LENNOM-1]=(char)(nb+PMFNCHAR);
                 numTableHtml(cli,'b',&remoteT[nb].pernum,nf,2,1,0);
+                
+                cli->print("<td>");if(remoteT[nb].pernum!=0){periLoad(remoteT[nb].pernum);cli->print(periNamer);}else {cli->print(" ");}cli->print("</td>");
                 memcpy(nf,"remote_sw_",LENNOM);nf[LENNOM-1]=(char)(nb+PMFNCHAR);
+
                 numTableHtml(cli,'b',&remoteT[nb].persw,nf,1,1,0);
                 memcpy(nf,"remote_xe_",LENNOM);nf[LENNOM-1]=(char)(nb+PMFNCHAR);
                 uint8_t ren=(uint8_t)remoteT[nb].enable;

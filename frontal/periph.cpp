@@ -732,48 +732,10 @@ int remSave(char* remF,uint16_t remL,char* remA)
     return SDOK;
 }
 
-int remoteNLoad()
-{
-    char remoteFile[]=REMOTENFNAME;
-    if(sdOpen(FILE_READ,&fremote,remoteFile)==SDKO){return SDKO;}
-    fremote.seek(0);    
-    for(uint16_t i=0;i<remoteNlen;i++){*(remoteNA+i)=fremote.read();}           
-    fremote.close();
-    return SDOK;
-}
-
-int remoteNSave()
-{
-    char remoteFile[]=REMOTENFNAME;
-    if(sdOpen(FILE_WRITE,&fremote,remoteFile)==SDKO){return SDKO;}
-    for(uint16_t i=0;i<remoteNlen;i++){fremote.write(*(remoteNA+i));}             
-    fremote.close();
-    return SDOK;
-}
-
-int remoteTLoad()
-{
-    char remoteFile[]=REMOTETFNAME;Serial.print(remoteFile);
-    if(sdOpen(FILE_READ,&fremote,remoteFile)==SDKO){Serial.println("KO");return SDKO;}
-    for(uint16_t i=0;i<remoteTlen;i++){*(remoteTA+i)=fremote.read();}              
-    fremote.close();Serial.println("OK");
-    return SDOK;
-}
-
-int remoteTSave()
-{
-    char remoteFile[]=REMOTETFNAME;
-    if(sdOpen(FILE_WRITE,&fremote,remoteFile)==SDKO){return SDKO;}
-    for(uint16_t i=0;i<remoteTlen;i++){fremote.write(*(remoteTA+i));}              
-    fremote.close();
-    return SDOK;
-}
-
 void remoteLoad()
 {
   remLoad(REMOTETFNAME,remoteTlen,remoteTA);
   remLoad(REMOTENFNAME,remoteNlen,remoteNA);
-  //remoteTLoad();remoteNLoad();
   remotePrint();
 }
 
@@ -781,7 +743,6 @@ void remoteSave()
 {
   remSave(REMOTETFNAME,remoteTlen,remoteTA);
   remSave(REMOTENFNAME,remoteNlen,remoteNA);
-  //remoteTSave();remoteNSave();
   remotePrint();
 }
 
