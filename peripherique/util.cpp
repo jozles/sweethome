@@ -21,7 +21,7 @@ extern WiFiClient cliext;              // client externe du serveur local
 extern char model[LENMODEL];
 
 extern const char* host;
-extern const int   port;
+//extern const int   port;
 extern char bufServer[LBUFSERVER];
 
 extern byte    mac[6];

@@ -37,6 +37,7 @@
  *     ajout utilisation params descde et actcde : onCde devient onCdeO (Off prioritaire) et offCde offCdeO, 
  *                                                 actCde onCdeI (On prioritaire) et desCde offCdeI
  *                                                 swAction corrigé
+ *     extinction des PO_MODE et DS_MODE si alim insuffisante
  * 
 Modifier : 
 
@@ -49,7 +50,9 @@ Modifier :
   
   gestion des alarmes avec message au serveur (tension, niveaux th et autres) ?
   
-  Lorsque l'alim est bloquée allumée, enchainer sur une attente de messages usb ?
+  Lorsque l'alim est bloquée allumée, enchainer sur une communication série : 
+    toutes les 2 sec envoi RDY et attente réponse au format des messages http (avec longueur,fonctions,params et crc)
+    sur le serveur : vidage réception série, attente 1 seconde, si vide attente RDY puis envoi, sinon vider et recommencer
   
   commande à créer quiutilise la config du serveur :
   SSID1nnnnn...,SSID2nnnn....,PWD1nnnn....,PWD2nnnn....,SERVIPPxxx.xxx.xxx.xxx/nnnn, (16 car pour SSID et 48 car pour PWD) à stocker séparément des constantes)
@@ -141,8 +144,8 @@ Modifier :
 #define THESP01 '1'
 #define THESP12 '2'
 
-#define CARTE VR                      // <------------- modèle carte
-#define POWER_MODE NO_MODE            // <------------- type d'alimentation 
+#define CARTE THESP01                      // <------------- modèle carte
+#define POWER_MODE PO_MODE            // <------------- type d'alimentation 
 
 #if POWER_MODE==NO_MODE
   #define _SERVER_MODE
@@ -268,7 +271,7 @@ Modifier :
 
 #define TCONVERSIONB       400    // millis délai conversion temp
 #define TCONVERSIONS       500    // millis délai conversion temp
-//#define PERTEMP             60    // secondes période par défaut lecture temp (en PO_MODE fixé par la résistance du 511x)
+
 #define PERSERVKO 7200/PERTEMP    // secondes période par défaut accès serveur si connexion wifi ko
 #define PERSERV   3600/PERTEMP    // secondes période max entre 2 accès server
 #define TOINCHCLI         4000    // msec max attente car server

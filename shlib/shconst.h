@@ -9,7 +9,11 @@
 #define SIZEPULSE   4  // uint32_t
 #define LENPERIDATE 6
 
-#define PORTSERVPERI 1791
+#define PORTPERISERVER  1790    // port du serveur pour périphériques et maintenance
+#define PORTSERVPERI    1791    // port des périphériqes en mode serveur
+#define PORTPILOTSERVER 1792    // port du serveur de remote
+
+#define HOSTIPADDR "192.168.0.35"
 
 #ifdef PERIF
 #define PINLED 0                    //  0 = ESP-12  ; 2 = ESP-01

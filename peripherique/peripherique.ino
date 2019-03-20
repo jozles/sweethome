@@ -34,14 +34,9 @@ extern byte dsmodel;
   const char* password1 = "cain ne dormant pas songeait au pied des monts";
   const char* ssid2= "devolo-5d3";
   const char* password2= "JNCJTRONJMGZEEQL";
-#ifndef _MODE_DEVT
-  const char* host = "192.168.0.34";
-  const int   port = 1789;
-#endif ndef_MODE_DEVT
-#ifdef _MODE_DEVT
-  const char* host = "192.168.0.35";
-  const int   port = 1790;
-#endif def_MODE_DEVT
+
+  const char* host = HOSTIPADDR;
+  const int   port = PORTPERISERVER; 
 
 WiFiClient cli;                 // client local du serveur externe (utilisé pour dataread/save)
 WiFiServer server(PORTSERVPERI);
@@ -492,13 +487,13 @@ infos(" talkServer","",cstRec.talkStep);
 
 switch(cstRec.talkStep){
   case 1:
-      ssid=ssid2;password=password2;
+      ssid=ssid1;password=password1;
       if(talkServerWifiConnect()){cstRec.talkStep=4;}
       else {cstRec.talkStep=2;}
       break;
       
   case 2:
-      ssid=ssid1;password=password1; // tentative sur ssid bis
+      ssid=ssid2;password=password2; // tentative sur ssid bis
       if(talkServerWifiConnect()){cstRec.talkStep=4;}
       else {cstRec.talkStep=98;}
       break;
