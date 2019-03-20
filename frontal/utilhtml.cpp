@@ -56,6 +56,7 @@ extern byte*     periDetServEn;                // ptr ds buffer : 1 byte 8*enabl
 extern int8_t    periMess;                     // code diag réception message (voir MESSxxx shconst.h)
 extern byte      periMacBuf[6]; 
 
+extern uint16_t  perrefr;
 
 extern int  chge_pwd; //=FAUX;
 
@@ -110,15 +111,15 @@ void htmlIntro(char* titre,EthernetClient* cli)
             cli->println(".button2 {background-color: #77878A;}");
 
             /* sliders */
-            cli->println(".switch {position: relative;display: inline-block;width: 60px;height: 34px;}");
+            cli->println(".switch {position: relative;display: inline-block;width: 120px;height: 68px;}");
             cli->println(".switch input {opacity: 0;width: 0;hight: 0;}");
             cli->print(".slider {position: absolute;cursor: pointer;");
             cli->println("  top: 0;left: 0;right: 0;bottom: 0;background-color: #ccc;-webkit-transition: .4s;transition: .4s;}");
             cli->print(".slider:before {position: absolute;content: \"\";");
-            cli->println("  height: 26px;width: 26px;left: 4px;bottom: 4px;background-color: white;-webkit-transition: .4s;transition: .4s;}");
+            cli->println("  height: 52px;width: 52px;left: 8px;bottom: 8px;background-color: white;-webkit-transition: .4s;transition: .4s;}");
             cli->println("input:checked + .slider {background-color: #2196F3;}");
             cli->println("input:focus + .slider {box-shadow: 0 0 1px #2196F3;}");
-            cli->println("input:checked + .slider:before {-webkit-transform: translateX(26px);-ms-transform: translateX(26px);transform: translateX(26px);}");
+            cli->println("input:checked + .slider:before {-webkit-transform: translateX(52px);-ms-transform: translateX(26px);transform: translateX(52px);}");
             /* Rounded sliders */
             cli->println(".slider.round {border-radius: 34px;}");
             cli->println(".slider.round:before {border-radius: 50%;}");

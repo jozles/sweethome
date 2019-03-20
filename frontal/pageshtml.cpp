@@ -237,6 +237,54 @@ void cfgRemoteHtml(EthernetClient* cli)
             cli->println("</form></body></html>");
 }
 
+
+void remoteHtml(EthernetClient* cli)
+{
+  char nf[LENNOM+1];nf[LENNOM]='\0';
+  
+            Serial.println("remote table");
+            htmlIntro(nomserver,cli);
+            
+            cli->println("<body><form method=\"get\" >");
+            cli->println(VERSION);cli->println(" ");
+            
+            bouTableHtml(cli,"password__",modpass,"retour",0,0);  // génère peritable
+            cli->println("<br>");
+            //cli->println(" <input type=\"submit\" value=\"MàJ\"><br>");
+
+/* table remotes */
+
+              cli->println("<table>");
+              //cli->println("<tr>");
+              //cli->println("<th>   </th><th>      Nom      </th><th> en </th>");
+              //cli->println("</tr>");
+
+              for(int nb=0;nb<NBREMOTE;nb++){
+                cli->println("<tr>");
+                
+                cli->print("<td>");cli->print(nb+1);cli->print("</td>");
+                cli->print("<td><input type=\"text\" name=\"remote_no");cli->print((char)(nb+PMFNCHAR));cli->print("\" value=\"");
+                        cli->print(remoteN[nb].nam);cli->print("\" size=\"12\" maxlength=\"");cli->print(LENREMNAM-1);cli->println("\" ></td>");
+
+                sliderHtml(cli,(uint8_t*)(&remoteN[nb].enable),"remote_en_",nb,0,1);
+                
+                /*memcpy(nf,"remote_en_",LENNOM);nf[LENNOM-1]=(char)(nb+PMFNCHAR);
+                cli->print("<td><label class=\"switch\"><input type=\"checkbox\" name=\"");cli->print(nf);cli->print("\" value=\"1\"");
+                if(remoteN[nb].enable!=0){cli->print(" checked");}
+                cli->print(" ><span class=\"slider round\"></span></label></td>");
+                */
+                /*
+                uint8_t ren=(uint8_t)remoteN[nb].enable;
+                checkboxTableHtml(cli,&ren,nf,-1,1);         
+                */
+                
+                cli->println("</tr>");
+              }
+            cli->println("</table>");            
+            cli->println("</form></body></html>");
+}
+
+
 void testHtml(EthernetClient* cli)
 {
             Serial.println(" page d'essais");

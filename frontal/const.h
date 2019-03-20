@@ -3,7 +3,7 @@
 
 //#define WEMOS
 
-#define VERSION "1.1k"
+#define VERSION "1.2"
 /* 1.1 ajout voltage dans données data_read_ ; modif unpackMac
  * 1.1a ajout volts et version dans table
  * 1.1b suppression dht ; ajout periDetVal et periSwVal avec affichage/saisie dans la table ; gestion serveur dev
@@ -26,11 +26,17 @@
  *      gestion mots de passe et TO révisée (rémanence password via macMaster)
  *      fichier config sur SD, séparation pages switch dans peritable, multiples révisions des fonctions.
  *      ajout periPerTemp dans fichiers periphériques pour paramétrage période temp via péritable
- *      ajout datecmp()
+ *      ajout datecmp();ShowMemory();fichier remote et fonctions associées cfgremote,load,save,print;sliderhtml() 
+ *      
+ * 1.2  utilhtml regroupe les fonctions utiles aux pages html 
+ *      ajout serveur pilote (pilotserv()) et traitement dans pilotserver()       -> client cli_b
+ *      l'acquisition/traitement des fonctions de periserv() devient periserver() -> client cli_a
+ *      remoteHtml() traitement des requêtes sur pilotserv
  *      
  * à faire :
  *     
- *     
+ *    ajouter les adresses IP et les ports dans la config  
+ *    
  *    ajouter alarmes dans peritable : alim+/- temp+/- detecteurs temps non communication
  *    mettre en sub tout le traitement des fonctions (depuis cli.connected jusqu'après what) et ajouter connexion/server spécial browser
  *     
@@ -52,7 +58,9 @@
 
 #ifndef _MODE_DEVT
 #define MACADDR "\x90\xA2\xDA\x0F\xDF\xAB"    //adresse mac carte ethernet AB service ; AC devt
+#define MACADDRREM "\x90\xA2\xDA\x0F\xDF\xAD"
 #define LOCALSERVERIP {192,168,0,34}                   //adresse IP    ---- 34 service, 35 devt
+#define REMOTESERVERIP {192,168,0,36}
 #define PORTSERVER 1789
 #define NOMSERV "sweet home\0"
 #define LNSERV  17
