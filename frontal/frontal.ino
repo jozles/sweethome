@@ -48,12 +48,15 @@ char configRec[CONFIGRECLEN];
   byte* localIp;          // adresse server
   int*  portserver;       //
   char* nomserver;        //
-  char* usrpass;          // mot de passe browser
+  char* userpass;         // mot de passe browser
   char* modpass;          // mot de passe modif
   char* peripass;         // mot de passe périphériques
   char* ssid;             // MAXSSID ssid
   char* passssid;         // MAXSSID password SSID
   int*  nbssid;           // inutilisé
+  char* usrnames;         // usernames
+  char* usrpass;          // userpass
+  long* usrtime;          // user cx time
 
   byte* configBegOfRecord;
   byte* configEndOfRecord;
@@ -71,19 +74,20 @@ EthernetServer pilotserv(PORTPILOTSERVER);   // serveur pilotage
   byte    remote_MAC[6]={0,0,0,0,0,0};      // periserver
   byte    remote_MACb[6]={0,0,0,0,0,0};     // pilotserver
 
-#define TO_PASSWORD 600      // sec
-  uint16_t toPassword=0;     // rémanence du mot de passe browser (sec)
-  long     timePassword=0;          
-  bool     periPassOk=FAUX;  // contrôle du mot de passe des périphériques
+#define TO_PASSWORD 600     // sec
+  uint16_t toPassword=0;    // rémanence du mot de passe browser (sec)
+  long    timePassword=0;          
+  bool    periPassOk=FAUX;  // contrôle du mot de passe des périphériques
+  int     usernum=-1;       // numéro(0-n) de l'utilisateur connecté (un seul à la fois)   
 
-  byte    macMaster[6]={0,0,0,0,0,0};  // adresse mac d'un browser chargée lors de la saisie du mot de passe dans peritable
+//  byte    macMaster[6]={0,0,0,0,0,0};  // adresse mac d'un browser chargée lors de la saisie du mot de passe dans peritable
                                        // permet d'identifier le browser pour ne pas avoir à re-saisir le mot de passe 
                                        // donne l'habilitation pour effectuer des modifs dans peritable
                                        // (sinon renvoi à l'accueil)
   int8_t  numfonct[NBVAL];             // les fonctions trouvées  (au max version 1.1k 23+4*57=251)
-  char*   fonctions="per_temp__macmaster_peri_pass_password__testhtml__done______per_refr__peri_tofs_switchs___reset_____dump_sd___sd_pos____data_save_data_read_peri_swb__peri_cur__peri_refr_peri_nom__peri_mac__accueil___peri_tableperi_prog_peri_sondeperi_pitchperi_pmo__peri_detnbperi_intnbperi_rtempremote____peri_dispoperi_vsw__peri_t_sw_peri_otf__peri_imn__peri_imc__peri_pto__peri_ptt__peri_thminperi_thmaxperi_vmin_peri_vmax_peri_dsv__mem_dsrv__ssid______passssid__cfgserv___pwdcfg____modpcfg___peripcfg__maccfg____remote_nomremote_en_remote_un_remote_pn_remote_sw_remote_xe_last_fonc_";  //};
-                                       // nombre fonctions, valeur pour accueil, data_save_ fonctions multiples etc
-  int     nbfonct=0,faccueil=0,fdatasave=0,fperiSwVal=0,fperiDetSs=0,fdone=0,fpericur=0,fperipass=0,fpassword=0,fmacmaster=0;
+  char*   fonctions="per_temp__peri_pass_username__password__user_ref__admin_____per_refr__peri_tofs_switchs___reset_____dump_sd___sd_pos____data_save_data_read_peri_swb__peri_cur__peri_refr_peri_nom__peri_mac__accueil___peri_tableperi_prog_peri_sondeperi_pitchperi_pmo__peri_detnbperi_intnbperi_rtempremote____testhtml__peri_vsw__peri_t_sw_peri_otf__peri_imn__peri_imc__peri_pto__peri_ptt__peri_thminperi_thmaxperi_vmin_peri_vmax_peri_dsv__mem_dsrv__ssid______passssid__cfgserv___pwdcfg____modpcfg___peripcfg__maccfg____remotecf__done______last_fonc_";  //};
+  /*  nombre fonctions, valeur pour accueil, data_save_ fonctions multiples etc */
+  int     nbfonct=0,faccueil=0,fdatasave=0,fperiSwVal=0,fperiDetSs=0,fdone=0,fpericur=0,fperipass=0,fpassword=0,fusername=0,fuserref=0;
   char    valeurs[LENVALEURS];         // les valeurs associées à chaque fonction trouvée
   uint16_t nvalf[NBVAL];               // offset dans valeurs[] des valeurs trouvées (séparées par '\0')
   char*   valf;                        // pointeur dans valeurs en cours de décodage
@@ -265,6 +269,9 @@ void packVal2(byte* value,byte* val);
 void frecupptr(char* nomfonct,uint8_t* v,uint8_t* b,uint8_t lenpersw);
 void bitvSwCtl(byte* data,uint8_t sw,uint8_t datalen,uint8_t shift,byte msk);
 void test2Switchs();
+void periserver();
+void pilotserver();
+
 
 
 void setup() {                              // ====================================
@@ -284,7 +291,8 @@ void setup() {                              // =================================
   fpericur=(strstr(fonctions,"peri_cur__")-fonctions)/LENNOM;
   fperipass=(strstr(fonctions,"peri_pass_")-fonctions)/LENNOM;
   fpassword=(strstr(fonctions,"password__")-fonctions)/LENNOM;
-  fmacmaster=(strstr(fonctions,"macmaster_")-fonctions)/LENNOM;
+  fusername=(strstr(fonctions,"username__")-fonctions)/LENNOM;
+  fuserref=(strstr(fonctions,"user_ref__")-fonctions)/LENNOM;
   
 /* >>>>>>     config     <<<<<< */  
   
@@ -392,6 +400,7 @@ while(1){}
   
   sdstore_textdh(&fhisto,".3","RE","<br>\n ");
 
+  //SD.remove(REMOTENFNAME);remInit();remSave(REMOTENFNAME,remoteNlen,remoteNA);
   remoteLoad();
 
   Serial.println("fin setup");
@@ -782,25 +791,25 @@ void testSwitch(char* command,char* perihost,int periport)
             delay(1);
 }
 
-void periserver()
+
+void commonserver(EthernetClient cli)
 {
-      if(cli_a = periserv.available())      // attente d'un client
-        {
-
 /*
-    Si le client est un périphérique, la fonction peripass doit précéder dataread/datasave et le mot de passe est systématiquement contrôlé
-    Si le client est un browser (la première fonction n'est pas peripass) et macMaster==ptremote_MAC 
-      alors pas de contrôle de mot de passe si le time out du dernier accés n'est pas atteint
-*/
-        periPassOk=FAUX;
-        
-        getremote_IP(&cli_a,remote_IP,remote_MAC);
+    
+    Une connexion est valide sur le serveur courant (clixx=xxxserv.available() a fonctionné)
 
-      Serial.print("\n **** loop  IP_cur=");serialPrintIp(remote_IP_cur);Serial.print(" IP_Mac=");serialPrintIp(remote_IP_Mac);Serial.print(" new=");serialPrintIp(remote_IP);
-      Serial.print(" MAC=");serialPrintMac(remote_MAC,0);Serial.print("  master=");serialPrintMac(macMaster,1);
+    Si le client est un périphérique, la fonction peripass doit précéder dataread/datasave et le mot de passe est systématiquement contrôlé
+    Si le client est un browser (la première fonction n'est pas peripass) les 2 premières fonctions doivent être : 
+      soit username__ et password__ en cas de login.
+      soit usr_ref___ la référence fournie en première zone (hidden) de la page (num user en libfonction+2xi+1) et millis() comme valeur;
+*/
+        
+      getremote_IP(&cli,remote_IP,remote_MAC);
+
+      Serial.print("\n *** serveur actif  IP=");serialPrintIp(remote_IP);Serial.print(" MAC=");serialPrintMac(remote_MAC,1);
       
-      if (cli_a.connected()) 
-        {nbreparams=getnv(&cli_a);Serial.print("\n---- nbreparams ");Serial.println(nbreparams);
+      if (cli.connected()) 
+        {nbreparams=getnv(&cli);Serial.print("\n---- nbreparams ");Serial.println(nbreparams);
         
 /*  getnv() décode la chaine GET ou POST ; le reste est ignoré
     forme ?nom1:valeur1&nom2:valeur2&... etc (NBVAL max)
@@ -843,7 +852,7 @@ void periserver()
     c'est que l'adresse mac du périph ne correspond pas à celle de la table ou n'existe pas. Le périph remet son numéro
     à 0 et refait une procédure d'initialisation (en principe, data_read_).
 
-    En cas d'anomalie de transmission le périphérique met son numléro à 0.
+    En cas d'anomalie de transmission le périphérique met son numéro à 0.
     Au reset, le numéro de périph est 0.
     
     Le symbole "_" sert de séparateur de champ et n'est pas autorisé dans les data.
@@ -865,9 +874,9 @@ void periserver()
 
 /*      
     Un formulaire (<form>....</form>) contient des champs de saisie dont le nom et la valeur sont transmis dans l'ordre d'arrivée 
-    quand submit incluse dans le formulaire est déclenchée (<input type="submit" value="MàJ">)
+    quand la fonction submit incluse dans le formulaire est déclenchée (<input type="submit" value="MàJ">)
 
-    La première fonction du formulaire doit fixer les paramètres communs à toutes les autres du formulaire :
+    La première fonction du formulaire (après le mot de passe) doit fixer les paramètres communs à toutes les autres du formulaire :
       pour chaque ligne de periTable ou table de switchs, le traitement à effectuer après que toutes les fonctions 
       soient traitées, le numéro de périphérique, le chargement du périphérique, d'éventuels autres traitements communs préalables.
     premières fonctions de formulaires : pericur (lignes de péritable), peri_t_sw_)
@@ -886,30 +895,23 @@ void periserver()
           par une fonction qui précède les fonctions modifiant des variables du formulaire concerné (peri_cur__, peri_t_sw_) 
 
     si la première fonction est fperipass, c'est un périphérique, sinon un browser 
-    si c'est un browser : 
-      (première fonction==(fpassword ou fmacmaster)      ... page d'accueil ou peritable et saisie macmaster
-      ou (macMaster==remote_MAC et pas TO))              ... macmaster et TO ok
-      sinon accueil
+    si c'est un browser : username__ puis password__ en cas de login, sinon user_ref__ et contrôle du TO
+       si ok et pas de TO, retrig et la suite est exécutée sinon page d'accueil
     
     fonctionnement de la rémanence de password_ :
-    
+    millis() est échantillonnée à chaque accès de l'utilisateur s'il n'est pas en TO (sinon accueil)
+
+    /////// ancien systeme /////////
     toPassword=0 annule la rémanence de password_                        - disTrigPwd()
     toPassword=TO_PASSWORD établit la rémanence
-    ctlto(passwordTime,toPassword) retourne vrai si le temps est dépassé - chkTrigPad()
+    ctlto(passwordTime,toPassword) retourne vrai si le temps est dépassé - chkTrigPwd()
     startto(passwordTime,toPassword,TO_PASSWORD) retrig la rémanence     - trigPwd()
-     
-    lorsque macMaster!=remote_MAC la rémanence n'est pas armée par password_ car password_ ne sert que pour afficher peritable ou valider une fonction à suivre (future use)
-    lorsque macMaster==remote_MAC password_ est une action qui retrigger
 */     
 
       if(numfonct[0]!=fperipass){
-        if(numfonct[0]!=fpassword && numfonct[0]!=fmacmaster){
-          if(memcmp(macMaster,remote_MAC,6)!=0 || chkTrigPwd()){
-            what=-1;nbreparams=-1;i=0;numfonct[i]=faccueil;memset(macMaster,0x00,6);disTrigPwd();
-          }
-        }
+        if((numfonct[0]!=fusername || numfonct[1]!=fpassword) && numfonct[0]!=fuserref){
+          what=-1;nbreparams=-1;i=0;numfonct[i]=faccueil;disTrigPwd();}    // -->> accueil en cas d'anomalie
       }
-
 /*
     boucle des fonctions accumulées par getnv
 */   
@@ -935,34 +937,42 @@ void periserver()
             switch (numfonct[i])      
               {
               case 0:  pertemp=0;conv_atobl(valf,&pertemp);break;                                           // pertemp serveur
-              case 1:  if((memcmp(macMaster,remote_MAC,6)==0 && memcmp(remote_IP_Mac,remote_IP,4)==0 && !chkTrigPwd()) || ctlpass(valf,modpass)){
+              /*case 1:  if((memcmp(macMaster,remote_MAC,6)==0 && memcmp(remote_IP_Mac,remote_IP,4)==0 && !chkTrigPwd()) || ctlpass(valf,modpass)){
                          trigPwd();memcpy(macMaster,remote_MAC,6);memcpy(remote_IP_Mac,remote_IP,4);}       // macmaster_
                        else {disTrigPwd();memset(macMaster,0x00,6);memset(remote_IP_Mac,0x00,4);what=-1;nbreparams=0;}
                        memDetServ=0;                                    // raz checkbit det serv effectué par la première fonction de l'en-tête
-                       break;
-              case 2:  if(checkData(valf)==MESSOK){                                                         // peri_pass_
+                       break;*/
+              case 1:  if(checkData(valf)==MESSOK){                                                         // peri_pass_
                          periPassOk=ctlpass(valf+5,peripass);                                               // skip len
                          if(periPassOk==FAUX){memset(remote_IP_cur,0x00,4);sdstore_textdh(&fhisto,"pp","ko",strSD);}
                          else {memcpy(remote_IP_cur,remote_IP,4);}
                        }break;
-              case 3:  if(!ctlpass(valf,usrpass)){                                                          // password_
-                         disTrigPwd;memset(macMaster,0x00,6);memset(remote_IP_Mac,0x00,4);what=-1;nbreparams=0;
-                         sdstore_textdh(&fhisto,"pw","ko",strSD);break;}                                    // si faux accueil (what=-1)
-                       else if(nbreparams==0){                                                              // si vrai et pas de params...
-                         if(memcmp(macMaster,remote_MAC,6)==0){trigPwd();}                                     // ... si macMaster ok -> retrig
-                         periTableHtml(&cli_a);what=0;}                                                     // ... peritable
-                       break;                                                                               // sinon param suivant (future use)
-              case 4:  testHtml(&cli_a);break;                                                       // testhtml__
-              case 5:  break;                                                                        // done
+              case 2:  usernum=searchusr(valf);if(usernum<0){
+                          what=-1;nbreparams=-1;i=0;numfonct[i]=faccueil;}
+                       Serial.print("usernum=");Serial.println(usernum);
+                       break;
+              case 3:  if(!ctlpass(valf,usrpass+usernum*LENUSRPASS)){                                // password__
+                         what=-1;nbreparams=-1;i=0;numfonct[i]=faccueil;usrtime[usernum]=0;          // si faux accueil (what=-1)
+                         sdstore_textdh(&fhisto,"pw","ko",strSD);}                                   
+                       else {Serial.println("password ok");usrtime[usernum]=millis();if(nbreparams==1){what=2;}}
+                       break;                                                                        
+              case 4:  {int nb=*(libfonctions+2*i+1)-PMFNCHAR;                                       // user_ref__
+                        long cxtime=0;conv_atobl(valf,(uint32_t*)&cxtime);
+                        Serial.print(nb);Serial.print(" millis()/1000=");Serial.print(millis()/1000);Serial.print(" cxtime=");Serial.print(cxtime);Serial.print(" usrtime[nb]=");Serial.println(usrtime[nb]);
+                        if(usrtime[nb]!=cxtime || (millis()-usrtime[nb])>(TO_PASSWORD*1000)){
+                          what=-1;nbreparams=-1;i=0;numfonct[i]=faccueil;usrtime[nb]=0;}
+                        else {Serial.println("user ok");usrtime[usernum]=millis();if(nbreparams==0){what=2;}}
+                        }break;                                                                        
+              case 5:  break;                                                                        // admin
               case 6:  what=2;perrefr=0;conv_atob(valf,&perrefr);                                           // periode refresh browser
                        break;                                                                               
               case 7:  *periThOffset=0;*periThOffset=convStrToNum(valf,&j);break;                    // Th Offset
               case 8:  periCur=*(libfonctions+2*i+1)-PMFNCHAR;                                       // switchs___ 
                        periInitVar();periLoad(periCur);
-                       SwCtlTableHtml(&cli_a,*periSwNb,4);
+                       SwCtlTableHtml(&cli,*periSwNb,4);
                        break;                                                                               
               case 9:  autoreset=VRAI;break;                                                         // reset
-              case 10: dumpsd(&cli_a);break;                                                         // dump_sd
+              case 10: dumpsd(&cli);break;                                                           // dump_sd
               case 11: what=2;sdpos=0;conv_atobl(valf,&sdpos);break;                                        // SD pos
               case 12: if(periPassOk==VRAI){what=1;periDataRead();periPassOk==FAUX;}break;           // data_save
               case 13: if(periPassOk==VRAI){what=3;periDataRead();periPassOk==FAUX;}break;           // data_read
@@ -982,8 +992,8 @@ void periserver()
                        memcpy(periNamer,valf,nvalf[i+1]-nvalf[i]);
                        break;                                                                              
               case 18: for(j=0;j<6;j++){conv_atoh(valf+j*2,(periMacr+j));}break;                     // Mac periph courant
-              case 19: accueilHtml(&cli_a);break;                                                    // accueil
-              case 20: periTableHtml(&cli_a);break;                                                  // peri table
+              case 19: accueilHtml(&cli);break;                                                      // accueil
+              case 20: periTableHtml(&cli);break;                                                    // peri table
               case 21: *periProg=*valf-48;break;                                                     // peri prog
               case 22: *periSondeNb=*valf-48;if(*periSondeNb>MAXSDE){*periSondeNb=MAXSDE;}break;     // peri sonde
               case 23: *periPitch=0;*periPitch=convStrToNum(valf,&j);break;                          // peri pitch
@@ -997,8 +1007,8 @@ void periserver()
               case 25: *periDetNb=*valf-48;if(*periDetNb>MAXDET){*periDetNb=MAXDET;}break;           // peri det Nb  
               case 26: *periSwNb=*valf-48;if(*periSwNb>MAXSW){*periSwNb=MAXSW;}break;                // peri sw Nb                       
               case 27: Serial.print(" periPerTemp=");Serial.print(*periPerTemp);*periPerTemp=0;conv_atob(valf,periPerTemp);Serial.print(" periPerTemp=");Serial.println(*periPerTemp);break;                             // periode check température
-              case 28: cfgRemoteHtml(&cli_a);remotePrint();break;                                    // remote
-              case 29: break;                                                                        // dispo
+              case 28: cfgRemoteHtml(&cli);remotePrint();break;                                      // remotecfg_
+              case 29: testHtml(&cli);break;                                                         // testhtml
               case 30: {uint8_t sw=*(libfonctions+2*i+1)-48;
                        //Serial.print(" sw=");Serial.print(sw);Serial.print(" periSwVal=");Serial.println(*periSwVal,HEX);
                        switch(sw){
@@ -1049,37 +1059,36 @@ void periserver()
               case 44: {int nb=*(libfonctions+2*i+1)-PMFNCHAR;                                       // passssid[libf+1]
                        memset(passssid+nb*(LPWSSID+1),0x00,LENSSID+1);memcpy(passssid+nb*(LPWSSID+1),valf,nvalf[i+1]-nvalf[i]);
                        }break;
-              case 45: cfgServerHtml(&cli_a);configPrint();break;                                    // config
+              case 45: cfgServerHtml(&cli);configPrint();break;                                      // config
               case 46: what=6;                                                                       // 1ère fonction 
-                       memset(usrpass,0x00,LPWD);memcpy(usrpass,valf,nvalf[i+1]-nvalf[i]);break;     // pwdcfg____
+                       memset(userpass,0x00,LPWD);memcpy(userpass,valf,nvalf[i+1]-nvalf[i]);break;   // pwdcfg____
               case 47: memset(modpass,0x00,LPWD);memcpy(modpass,valf,nvalf[i+1]-nvalf[i]);break;     // modpcfg___
               case 48: memset(peripass,0x00,LPWD);memcpy(peripass,valf,nvalf[i+1]-nvalf[i]);break;   // peripcfg__
               case 49: for(j=0;j<6;j++){conv_atoh(valf+j*2,(mac+j));}break;                          // Mac config
-              case 50: what=8;                                                                       // remote_no_ nom remote courante
+              case 50: what=8;                                                                       // remote__
                        {int nb=*(libfonctions+2*i+1)-PMFNCHAR; 
-                        memset(remoteN[nb].nam,0x00,LENREMNAM);                                      
-                        memcpy(remoteN[nb].nam,valf,nvalf[i+1]-nvalf[i]);
-                        remoteN[nb].enable=0;}break;
-              case 51: {int nb=*(libfonctions+2*i+1)-PMFNCHAR;                                        // remote_en_ enable remote courante
-                        remoteN[nb].enable=*valf-48;}break;
-              case 52: {int nb=*(libfonctions+2*i+1)-PMFNCHAR;                                        // remote_un_ N° remote table sw
-                        remoteT[nb].remnum=*valf-48;}break;
-              case 53: {int nb=*(libfonctions+2*i+1)-PMFNCHAR;                                        // remote_pn_ N° periph table sw
-                        remoteT[nb].pernum=0;
-                        conv_atob(valf,&remoteT[nb].pernum);
-                        if(remoteT[nb].pernum>NBPERIF){remoteT[nb].pernum=NBPERIF;}
-                        }break;
-              case 54: {int nb=*(libfonctions+2*i+1)-PMFNCHAR;                                        // remote_sw_ N° sw table sw
-                        remoteT[nb].persw=*valf-48;
-                        if(remoteT[nb].persw>MAXSW){remoteT[nb].persw=MAXSW;}
-                        }break;
-              case 55: {int nb=*(libfonctions+2*i+1)-PMFNCHAR;                                        // remote_xe_ enable table sw
-                        remoteT[nb].enable=*valf-48;}break;
+                          switch(*(libfonctions+2*i)){                                               // no nom remote courante
+                            case 'n': memset(remoteN[nb].nam,0x00,LENREMNAM);                                      
+                                      memcpy(remoteN[nb].nam,valf,nvalf[i+1]-nvalf[i]);
+                                      remoteN[nb].enable=0;remoteN[nb].onoff=0;break;
+                            case 'e': remoteN[nb].enable=*valf-48;break;                              // en enable remote courante
+                            case 'o': remoteN[nb].onoff=*valf-48;break;                               // on on/off remote courante
+                            case 'u': remoteT[nb].num=*valf-48;break;                                 // un N° remote table sw
+                            case 'p': remoteT[nb].pernum=0;                                           // pn N° periph table sw
+                                      conv_atob(valf,&remoteT[nb].pernum);
+                                      if(remoteT[nb].pernum>NBPERIF){remoteT[nb].pernum=NBPERIF;}break;
+                            case 's': remoteT[nb].persw=*valf-48;
+                                      if(remoteT[nb].persw>MAXSW){remoteT[nb].persw=MAXSW;}break;     // sw N° sw table sw
+                            case 'x': remoteT[nb].enable=*valf-48;break;                              // xe enable table sw
+                            default:break;
+                          }
+                       }break;
+               case 51: break;                                                                        // done                        
                               
               default:break;
               }
               
-            }     // i<NBVAL   
+            }     // i<NBVAL 
           }       // fin boucle nbre params
           
           if(nbreparams>=0){
@@ -1087,35 +1096,39 @@ void periserver()
             sdstore_textdh(&fhisto,"ip","CX",strSD);  // utilise getdate() et place date et heure dans l'enregistrement
           }                                           // 1 ligne par commande GET
 
-        //configPrint();
-        //periCheck(8,"what");
-
 /*
    periParamsHtml (fait perisave) effectue une réponse ack ou set ou envoie une commande get /set si applelé par perisend
 */
-        if(what==4 && *periProg){what=5;}                       // si périphérique serveur -> perisend                           
+        if(what==4 && *periProg){what=5;}                     // si périphérique serveur -> perisend                           
        
         switch(what){                                           
-          case 0:break;                                         // fonctions ponctuelles du serveur
-          case 1:periParamsHtml(&cli_a," ",0);break;            // data_save
-          case 2:periTableHtml(&cli_a);break;                   // saisies de l'en-tête de peritable
-          case 3:periParamsHtml(&cli_a," ",0);break;            // data_read
-          case 4:periSave(periCur);periTableHtml(&cli_a);break; // periphériques non serveurs pas de commande get /set ...
-          case 5:periSend();periTableHtml(&cli_a);break;        // périphériques serveurs            commande get /set ... (fait periParamsHtml)
-          case 6:configSave();periTableHtml(&cli_a);break;      // config        
-          case 7:periSend();SwCtlTableHtml(&cli_a,*periSwNb,4);break; // config switchs - smise à jour des périphériques (fait periParamsHtml)
-          case 8:remoteSave();periTableHtml(&cli_a);break;      // fonctions de cfgRemote
-          default:accueilHtml(&cli_a);break;
-          }
+          case 0:break;                                       // fonctions ponctuelles du serveur
+          case 1:periParamsHtml(&cli," ",0);break;            // data_save
+          case 2:periTableHtml(&cli);break;                   // saisies de l'en-tête de peritable
+          case 3:periParamsHtml(&cli," ",0);break;            // data_read
+          case 4:periSave(periCur);periTableHtml(&cli);break; // periphériques non serveurs pas de commande get /set ...
+          case 5:periSend();periTableHtml(&cli);break;        // périphériques serveurs            commande get /set ... (fait periParamsHtml)
+          case 6:configSave();periTableHtml(&cli);break;      // config        
+          case 7:periSend();SwCtlTableHtml(&cli,*periSwNb,4);break; // config switchs - smise à jour des périphériques (fait periParamsHtml)
+          case 8:remoteSave();periTableHtml(&cli);break;      // fonctions de cfgRemote
+          default:accueilHtml(&cli);break;
+        }
 
-          valeurs[0]='\0';
-          cli_a.stop();
-          delay(1);
-          Serial.println("---- cli stopped"); 
-        }   // cli.connected
-      }     // server.available  
+        valeurs[0]='\0';
+        cli.stop();
+        delay(1);
+        Serial.println("---- cli stopped"); 
+
+    } // cli.connected
 }
 
+void periserver()
+{
+      if(cli_a = periserv.available())      // attente d'un client
+      {
+        commonserver(cli_a);
+      }
+}
 
 void pilotserver()
 {

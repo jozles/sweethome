@@ -19,12 +19,15 @@ extern byte* mac;
 extern byte* localIp;
 extern int*  portserver;
 extern char* nomserver;
-extern char* usrpass;
+extern char* userpass;
 extern char* modpass;
 extern char* peripass;
 extern char* ssid;   
 extern char* passssid;
 extern int*  nbssid;
+extern char* usrnames;  
+extern char* usrpass;     
+extern long* usrtime;
 
 extern byte* configBegOfRecord;
 extern byte* configEndOfRecord;
@@ -212,7 +215,7 @@ byte* temp=(byte*)configRec;
   temp+=sizeof(int);
   nomserver=(char*)temp;
   temp+=LNSERV;
-  usrpass=(char*)temp;
+  userpass=(char*)temp;
   temp+=(LPWD+1);
   modpass=(char*)temp;  
   temp+=(LPWD+1);  
@@ -224,6 +227,12 @@ byte* temp=(byte*)configRec;
   temp+=(MAXSSID*(LPWSSID+1));
   nbssid=(int*)temp;
   temp+=sizeof(int);
+  usrnames=(char*)temp;
+  temp+=NBUSR*LENUSRNAME;
+  usrpass=(char*)temp;
+  temp+=NBUSR*LENUSRPASS;
+  usrtime=(long*)temp;
+  temp+=NBUSR*sizeof(long);
 
   configEndOfRecord=(byte*)temp;      // doit être le dernier !!!
   temp ++;
@@ -239,7 +248,7 @@ memcpy(mac,MACADDR,6);
 memcpy(localIp,lip,4);
 *portserver = PORTSERVER;
 memset(nomserver,0x00,LNSERV);memcpy(nomserver,NOMSERV,strlen(NOMSERV));
-memset(usrpass,0x00,LPWD+1);memcpy(usrpass,USRPASS,strlen(SRVPASS));
+memset(userpass,0x00,LPWD+1);memcpy(userpass,USRPASS,strlen(SRVPASS));
 memset(modpass,0x00,LPWD+1);memcpy(modpass,MODPASS,strlen(MODPASS));
 memset(peripass,0x00,LPWD+1);memcpy(peripass,SRVPASS,strlen(PERIPASS));
 //Serial.print(" strlen(SRVPASS)=");Serial.print(strlen(SRVPASS));Serial.print(" peripass=");for(int pp=0;pp<(LPWD+1);pp++){Serial.print(peripass[pp],HEX);Serial.print(" ");}Serial.println();
@@ -249,6 +258,25 @@ memcpy(ssid,SSID1,strlen(SSID1));memcpy(ssid+LENSSID+1,SSID2,strlen(SSID2));
 memset(passssid,0x00,MAXSSID*(LPWSSID+1));
 memcpy(passssid,PWDSSID1,strlen(PWDSSID1));memcpy(passssid+LPWSSID+1,PWDSSID2,strlen(PWDSSID2));
 *nbssid = MAXSSID;
+memset(usrnames,0x00,NBUSR*LENUSRNAME);memset(usrpass,0x00,NBUSR*LENUSRPASS);
+memcpy(usrnames,"admin",5);memcpy(usrpass,"17515A\0\0",8);
+memset(usrtime,0x00,NBUSR*sizeof(long));
+}
+
+void subcprint(char* str1,char* str2,uint8_t nbl,uint8_t len1,uint8_t len2,long* cxtime)
+{
+  #define LBUFCPRINT LENSSID+1+LPWSSID+1+3+4
+  char bufcprint[LBUFCPRINT];
+  for(int nb=0;nb<nbl;nb++){
+    if(*(str1+(nb*(len1+1)))!='\0'){
+        memset(bufcprint,0x00,LBUFCPRINT);bufcprint[0]=0x20;sprintf(bufcprint+1,"%1u",nb);strcat(bufcprint," ");
+        strcat(bufcprint,str1+(nb*(len1+1)));strcat(bufcprint," ");
+        int lsp=(len1-strlen(str1+nb*(len1+1)));for(int ns=0;ns<lsp;ns++){strcat(bufcprint," ");}
+        strcat(bufcprint,str2+(nb*(len2+1)));
+        lsp=(len2-strlen(str2+nb*(len2+1)));for(int ns=0;ns<lsp;ns++){strcat(bufcprint," ");}
+        Serial.print(bufcprint);if(cxtime[nbl]!=0){Serial.print(cxtime[nbl]);}Serial.println();
+    }
+  }
 }
 
 void configPrint()
@@ -256,17 +284,26 @@ void configPrint()
   Serial.print("Mac=");serialPrintMac(mac,0);
   Serial.print(" ");Serial.print(nomserver);
   Serial.print(" localIp=");for(int pp=0;pp<4;pp++){Serial.print((uint8_t)localIp[pp]);if(pp<3){Serial.print(".");}}Serial.print("/");Serial.println(*portserver);
-  Serial.print("password=");Serial.print(usrpass);Serial.print(" modpass=");Serial.print(modpass);Serial.print(" peripass=");Serial.println(peripass);
-  char bufssid[74];
+  Serial.print("password=");Serial.print(userpass);Serial.print(" modpass=");Serial.print(modpass);Serial.print(" peripass=");Serial.println(peripass);
+  Serial.println("table ssid ");subcprint(ssid,passssid,MAXSSID,LENSSID,LPWSSID,0);
+  Serial.println("table user ");subcprint(usrnames,usrpass,NBUSR,LENUSRNAME,LENUSRPASS,usrtime);
+/*  #define LBUFCPRINT LENSSID+1+LPWSSID+1+3+3
+  char bufcprint[LENSSID+LPWSSID];
   for(int nb=0;nb<MAXSSID;nb++){
     if(*(ssid+(nb*(LENSSID+1)))!='\0'){
-        memset(bufssid,0x00,74);bufssid[0]=0x20;sprintf(bufssid+1,"%1u",nb);strcat(bufssid," ");
-        strcat(bufssid,ssid+(nb*(LENSSID+1)));strcat(bufssid," ");
-        int lsp=(LENSSID-strlen(ssid+nb*(LENSSID+1)));for(int ns=0;ns<lsp;ns++){strcat(bufssid," ");}
-        strcat(bufssid,passssid+(nb*(LPWSSID+1)));
-        Serial.println(bufssid);
-    }
-  }
+        memset(bufcprint,0x00,LBUFCPRINT);bufcprint[0]=0x20;sprintf(bufcprint+1,"%1u",nb);strcat(bufcprint," ");
+        strcat(bufcprint,ssid+(nb*(LENSSID+1)));strcat(bufcprint," ");
+        int lsp=(LENSSID-strlen(ssid+nb*(LENSSID+1)));for(int ns=0;ns<lsp;ns++){strcat(bufcprint," ");}
+        strcat(bufcprint,passssid+(nb*(LPWSSID+1)));
+        Serial.println(bufcprint);}}
+  for(int nb=0;nb<NBUSR;nb++){
+    if(*(usrnames+(nb*(LENUSRNAME+1)))!='\0'){
+        memset(bufcprint,0x00,LBUFCPRINT);bufcprint[0]=0x20;sprintf(bufcprint+1,"%1u",nb);strcat(bufcprint," ");
+        strcat(bufcprint,usrnames+(nb*(LENUSRNAME+1)));strcat(bufcprint," ");
+        int lsp=(LENUSRNAME-strlen(usrnames+nb*(LENUSRNAMES+1)));for(int ns=0;ns<lsp;ns++){strcat(bufcprint," ");}
+        strcat(bufcprint,usrpass+(nb*(LENUSRPASS+1)));
+        Serial.println(bufcprint);}}        
+*/        
 }
 
 int configLoad()
@@ -692,7 +729,7 @@ Serial.print(" save ");
 void remPrint(int num)
 {
   periLoad(remoteT[num].pernum);
-  Serial.print("   ");Serial.print(num);Serial.print("/");Serial.print(remoteT[num].remnum);Serial.print(" ");
+  Serial.print("   ");Serial.print(num);Serial.print("/");Serial.print(remoteT[num].num);Serial.print(" ");
   Serial.print(remoteT[num].pernum);Serial.print(" ");Serial.print(remoteT[num].persw);Serial.print(" ");
   Serial.print(remoteT[num].enable);Serial.print(" ");
   int v=remoteT[num].persw;
@@ -702,10 +739,10 @@ void remPrint(int num)
 
 void remotePrint()
 {
-  for(uint8_t num=0;num<NBREMOTE;num++){
+  for(uint8_t num=1;num<=NBREMOTE;num++){
     Serial.print(num);Serial.print(" ");Serial.print(remoteN[num].nam);Serial.print(" ");
     for(uint8_t numswr=0;numswr<MAXREMLI;numswr++){
-      if(remoteT[numswr].remnum==num+1){
+      if(remoteT[numswr].num==num){
         remPrint(numswr);  
       }
     }
@@ -715,7 +752,7 @@ void remotePrint()
 
 int remLoad(char* remF,uint16_t remL,char* remA)
 {
-    Serial.print("Load ");Serial.print(remF);
+    Serial.print("Load ");Serial.print(remF);Serial.print(" ");
     if(sdOpen(FILE_READ,&fremote,remF)==SDKO){Serial.println(" KO");return SDKO;}
     for(uint16_t i=0;i<remL;i++){*(remA+i)=fremote.read();}              
     fremote.close();Serial.println(" OK");
@@ -730,6 +767,11 @@ int remSave(char* remF,uint16_t remL,char* remA)
     for(uint16_t i=0;i<remL;i++){fremote.write(*(remA+i));}             
     fremote.close();Serial.println(" OK");
     return SDOK;
+}
+
+void remInit()
+{
+    for(int nb=0;nb<NBREMOTE;nb++){memset(remoteN[nb].nam,'\0',LENNOM);remoteN[nb].enable=0;remoteN[nb].onoff=0;}
 }
 
 void remoteLoad()

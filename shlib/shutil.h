@@ -20,6 +20,7 @@ void serialPrintDate(char* datein);
 void ledblink(uint8_t nbBlk);
 void dumpstr(char* data,uint16_t len);
 bool ctlpass(char* data,char* model);
+int  searchusr(char* usrname);
 bool ctlto(long time,uint16_t to);
 void startto(long* time,uint16_t* to,uint16_t valto);
 

@@ -16,14 +16,14 @@
 #define HOSTIPADDR "192.168.0.35"
 
 #ifdef PERIF
-#define PINLED 0                    //  0 = ESP-12  ; 2 = ESP-01
-#define LEDON LOW
-#define LEDOFF HIGH
+ #define PINLED 0                    //  0 = ESP-12  ; 2 = ESP-01
+ #define LEDON LOW
+ #define LEDOFF HIGH
 #endif  defPERIF
 #ifndef PERIF
-#define PINLED 13
-#define LEDON HIGH
-#define LEDOFF LOW
+ #define PINLED 13
+ #define LEDON HIGH
+ #define LEDOFF LOW
 #endif ndef PERIF
 
     // messages
@@ -68,12 +68,16 @@
 
 #define LBUFSERVER LENMESS+16                // longueur bufserver (messages in/out periphériques)
 
+/* >>>> mots de passe <<<< */
+
 #define SRVPASS     "17515A" // pwd accès serveur pour péri
 #define PERIPASS    SRVPASS
 #define USRPASS     "17515A" // pwd accès serveur via browser
 #define MODPASS     "17515A" // pwd modif serveur via browser
 #define LPWD        8
-
+#define LENUSRPASS  8
+#define NBUSR       8
+#define LENUSRNAME  16
 
 /* >>>> WIFI <<<<< */
 

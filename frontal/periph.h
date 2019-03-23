@@ -47,6 +47,8 @@ void  configInitVar();
 void  configPrint();
 
 void remotePrint();
+void remInit();
+int  remSave(char* remF,uint16_t remL,char* remA);
 void remoteLoad();
 void remoteSave();
 

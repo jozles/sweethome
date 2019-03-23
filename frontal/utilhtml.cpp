@@ -110,18 +110,18 @@ void htmlIntro(char* titre,EthernetClient* cli)
             cli->println("text-decoration: none; font-size: 30px; margin: 2px; cursor: pointer;}");
             cli->println(".button2 {background-color: #77878A;}");
 
-            /* sliders */
-            cli->println(".switch {position: relative;display: inline-block;width: 120px;height: 68px;}");
+            /* big sliders */
+            cli->println(".switch {position: relative;display: inline-block;width: 220px;height: 100px; margin: 16px;}");
             cli->println(".switch input {opacity: 0;width: 0;hight: 0;}");
             cli->print(".slider {position: absolute;cursor: pointer;");
             cli->println("  top: 0;left: 0;right: 0;bottom: 0;background-color: #ccc;-webkit-transition: .4s;transition: .4s;}");
             cli->print(".slider:before {position: absolute;content: \"\";");
-            cli->println("  height: 52px;width: 52px;left: 8px;bottom: 8px;background-color: white;-webkit-transition: .4s;transition: .4s;}");
+            cli->println("  height: 84px;width: 84px;left: 8px;bottom: 8px;background-color: white;-webkit-transition: .4s;transition: .4s;}");
             cli->println("input:checked + .slider {background-color: #2196F3;}");
             cli->println("input:focus + .slider {box-shadow: 0 0 1px #2196F3;}");
-            cli->println("input:checked + .slider:before {-webkit-transform: translateX(52px);-ms-transform: translateX(26px);transform: translateX(52px);}");
+            cli->println("input:checked + .slider:before {-webkit-transform: translateX(110px);-ms-transform: translateX(55px);transform: translateX(110px);}");
             /* Rounded sliders */
-            cli->println(".slider.round {border-radius: 34px;}");
+            cli->println(".slider.round {border-radius: 50px;}");
             cli->println(".slider.round:before {border-radius: 50%;}");
 
           cli->println("</style>");

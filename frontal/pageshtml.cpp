@@ -11,7 +11,7 @@
 
 extern char* nomserver;
 extern byte* mac;              // adresse server
-extern char* usrpass;          // mot de passe browser
+extern char* userpass;          // mot de passe browser
 extern char* modpass;          // mot de passe modif
 extern char* peripass;         // mot de passe périphériques
 
@@ -23,6 +23,10 @@ extern long     sdpos;
 extern char     strSD[RECCHAR];
 extern char*    ssid;
 extern char*    passssid;
+extern char*    usrnames;
+extern char*    usrpass;
+extern long*    usrtime;
+extern int      usernum;
 
 File fimg;     // fichier image
 
@@ -119,9 +123,34 @@ void accueilHtml(EthernetClient* cli)
 
             cli->println("<body><form method=\"get\" >");
             cli->println(VERSION);cli->println("<br>");
+
+            cli->println("<p>user <input type=\"username\" name=\"username__\" value=\"\" size=\"6\" maxlength=\"8\" ></p>");            
             cli->println("<p>pass <input type=\"password\" name=\"password__\" value=\"\" size=\"6\" maxlength=\"8\" ></p>");
+                        cli->println(" <input type=\"submit\" value=\"MàJ\"><br>");
             cli->println("</form></body></html>");
 }          
+
+void subcfgtable(EthernetClient* cli,char* titre,int nbl,char* nom1,char* value1,int len1,char* nom2,char* value2,int len2)
+{
+              cli->println("<table>");
+              cli->println("<tr>");
+              cli->println("<th>   </th><th>    ");cli->print(titre);cli->print("    </th><th>  password  </th>");
+              cli->println("</tr>");
+
+              for(int nb=0;nb<nbl;nb++){
+                cli->println("<tr>");
+                  cli->print("<td>");cli->print(nb);cli->print("</td>");
+
+                  cli->print("<td><input type=\"text\" name=\"");cli->print(nom1);cli->print("\"");cli->print((char)(nb+PMFNCHAR));cli->print("\" value=\"");    
+                      cli->print(value1+(nb*(len1+1)));cli->print("\" size=\"");cli->print(len1/2);cli->print("\" maxlength=\"");cli->print(len1);cli->println("\" ></td>");
+                      
+                  cli->print("<td><input type=\"text\" name=\"");cli->print(nom2);cli->print("\"");cli->print((char)(nb+PMFNCHAR));cli->print("\" value=\"");
+                      cli->print(value2+(nb*(len2+1)));cli->print("\" size=\"");cli->print(len2/2);cli->print("\" maxlength=\"");cli->print(len2);cli->println("\" ></td>");
+                      
+                cli->println("</tr>");
+              }
+            cli->println("</table>");          
+}
 
 void cfgServerHtml(EthernetClient* cli)
 {
@@ -130,16 +159,48 @@ void cfgServerHtml(EthernetClient* cli)
             
             cli->println("<body><form method=\"get\" >");
             cli->println(VERSION);cli->println("<br>");
-            //char pwd[32]="password__=\0";strcat(pwd,usrpass);lnkTableHtml(cli,pwd,"retour");
-            bouTableHtml(cli,"password__",modpass,"retour",0,0);  // génère peritable
+            //char pwd[32]="password__=\0";strcat(pwd,userpass);lnkTableHtml(cli,pwd,"retour");
+            //bouTableHtml(cli,"password__",modpass,"retour",0,0);  // génère peritable
+            
+            cli->print("<a href=\"?user_ref_");cli->print((char)(usernum+PMFNCHAR));cli->print("=");cli->print(usrtime[usernum]);
+            cli->print("\"><input type=\"button\" value=\"retour\"></a>");
+            
             cli->println(" <input type=\"submit\" value=\"MàJ\"><br>");
             
-            cli->print(" password <input type=\"text\" name=\"pwdcfg____\" value=\"");cli->print(usrpass);cli->print("\" size=\"5\" maxlength=\"");cli->print(LPWD);cli->println("\" >");
+            cli->print(" password <input type=\"text\" name=\"pwdcfg____\" value=\"");cli->print(userpass);cli->print("\" size=\"5\" maxlength=\"");cli->print(LPWD);cli->println("\" >");
             cli->print("  modpass <input type=\"text\" name=\"modpcfg___\" value=\"");cli->print(modpass);cli->print("\" size=\"5\" maxlength=\"");cli->print(LPWD);cli->println("\" >");            
             cli->print(" peripass <input type=\"text\" name=\"peripcfg__\" value=\"");cli->print(peripass);cli->print("\" size=\"5\" maxlength=\"");cli->print(LPWD);cli->println("\" >");            
             cli->print(" serverMac <input type=\"text\" name=\"maccfg____\" value=\"");for(int k=0;k<6;k++){cli->print(chexa[mac[k]/16]);cli->print(chexa[mac[k]%16]);}cli->print("\" size=\"11\" maxlength=\"");cli->print(12);cli->println("\" >");                        
+
+            subcfgtable(cli,"SSID",MAXSSID,"ssid_____",ssid,LENSSID,"passssid_",passssid,LPWSSID);
+            subcfgtable(cli,"USERNAME",NBUSR,"usrname__",usrnames,LENUSRNAME,"usrpass__",usrpass,LENUSRPASS);
             
+/* table pass 
+
+            cli->println("<table>");
+              cli->println("<tr>");
+              cli->println("<th>   </th><th>    USRNAME    </th><th>  password  </th>");
+              cli->println("</tr>");
+
+              for(int nb=0;nb<NBUSR;nb++){
+                cli->println("<tr>");
+                  cli->print("<td>");cli->print(nb);cli->print("</td>");
+
+                  cli->print("<td><input type=\"text\" name=\"usrname__");cli->print((char)(nb+PMFNCHAR));cli->print("\" value=\"");    
+                      cli->print(usrname+(nb*(LENUSRNAME+1)));cli->print("\" size=\"12\" maxlength=\"");cli->print(LENUSRNAME);cli->println("\" ></td>");
+                      
+                  cli->print("<td><input type=\"text\" name=\"usrpass__");cli->print((char)(nb+PMFNCHAR));cli->print("\" value=\"");
+                      cli->print(usrpass+(nb*(LENUSRPASS+1)));cli->print("\" size=\"38\" maxlength=\"");cli->print(LENUSRPASS);cli->println("\" ></td>");
+                      
+                cli->println("</tr>");
+              }
+            cli->println("</table>");
             
+/* table ssid 
+
+            subcfgtable(EthernetClient* cli,"SSID",MAXSSID,"ssid_____",ssid,LENSSID,"passssid_",passssid,LPWSSID)
+            subcfgtable(EthernetClient* cli,"USERNAME",MBUSR,"usrname__",usrnames,LENUSRNAME,"usrpass__",usrpass,LENUSRPASS)
+                        
             cli->println("<table>");
               cli->println("<tr>");
               cli->println("<th>   </th><th>      SSID      </th><th>  password  </th>");
@@ -158,12 +219,14 @@ void cfgServerHtml(EthernetClient* cli)
                 cli->println("</tr>");
               }
             cli->println("</table>");            
+*/            
             cli->println("</form></body></html>");
 }
 
 void cfgRemoteHtml(EthernetClient* cli)
 {
   char nf[LENNOM+1];nf[LENNOM]='\0';
+  uint8_t val;
   
             Serial.println(" config remote");
             htmlIntro(nomserver,cli);
@@ -171,35 +234,35 @@ void cfgRemoteHtml(EthernetClient* cli)
             cli->println("<body><form method=\"get\" >");
             cli->println(VERSION);cli->println("<br>");
             
-            bouTableHtml(cli,"password__",modpass,"retour",0,0);  // génère peritable
+            cli->print("<a href=\"?user_ref_");cli->print((char)(usernum+PMFNCHAR));cli->print("=");cli->print(usrtime[usernum]);
+            cli->print("\"><input type=\"button\" value=\"retour\"></a>");
+
             cli->println(" <input type=\"submit\" value=\"MàJ\"><br>");
 
 /* table remotes */
 
               cli->println("<table>");
               cli->println("<tr>");
-              cli->println("<th>   </th><th>      Nom      </th><th> en </th>");
+              cli->println("<th>   </th><th>      Nom      </th><th> on/off </th><th> en </th>");
               cli->println("</tr>");
 
               for(int nb=0;nb<NBREMOTE;nb++){
                 cli->println("<tr>");
                 
                 cli->print("<td>");cli->print(nb+1);cli->print("</td>");
-                cli->print("<td><input type=\"text\" name=\"remote_no");cli->print((char)(nb+PMFNCHAR));cli->print("\" value=\"");
+                cli->print("<td><input type=\"text\" name=\"remotecfn");cli->print((char)(nb+PMFNCHAR));cli->print("\" value=\"");
                         cli->print(remoteN[nb].nam);cli->print("\" size=\"12\" maxlength=\"");cli->print(LENREMNAM-1);cli->println("\" ></td>");
 
-                sliderHtml(cli,(uint8_t*)(&remoteN[nb].enable),"remote_en_",nb,0,1);
+                //sliderHtml(cli,(uint8_t*)(&remoteN[nb].onoff),"remotecfo_",nb,0,1);
+
+                memcpy(nf,"remotecfo_",LENNOM);nf[LENNOM-1]=(char)(nb+PMFNCHAR);
+                val=(uint8_t)remoteN[nb].onoff;
+                checkboxTableHtml(cli,&val,nf,-1,1);         
                 
-                /*memcpy(nf,"remote_en_",LENNOM);nf[LENNOM-1]=(char)(nb+PMFNCHAR);
-                cli->print("<td><label class=\"switch\"><input type=\"checkbox\" name=\"");cli->print(nf);cli->print("\" value=\"1\"");
-                if(remoteN[nb].enable!=0){cli->print(" checked");}
-                cli->print(" ><span class=\"slider round\"></span></label></td>");
-                */
-                /*
-                uint8_t ren=(uint8_t)remoteN[nb].enable;
-                checkboxTableHtml(cli,&ren,nf,-1,1);         
-                */
-                
+                memcpy(nf,"remotecfe_",LENNOM);nf[LENNOM-1]=(char)(nb+PMFNCHAR);
+                val=(uint8_t)remoteN[nb].enable;
+                checkboxTableHtml(cli,&val,nf,-1,1);         
+                   
                 cli->println("</tr>");
               }
             cli->println("</table><br>");
@@ -215,18 +278,18 @@ void cfgRemoteHtml(EthernetClient* cli)
                 cli->println("<tr>");
                 cli->print("<td>");cli->print(nb+1);cli->print("</td>");
                 
-                memcpy(nf,"remote_un_",LENNOM);nf[LENNOM-1]=(char)(nb+PMFNCHAR);
-                numTableHtml(cli,'b',&remoteT[nb].remnum,nf,1,1,0);
+                memcpy(nf,"remotecfu_",LENNOM);nf[LENNOM-1]=(char)(nb+PMFNCHAR);
+                numTableHtml(cli,'b',&remoteT[nb].num,nf,1,1,0);
                 
-                cli->print("<td>");if(remoteT[nb].remnum!=0){cli->print(remoteN[remoteT[nb].remnum-1].nam);}else {cli->print(" ");}cli->print("</td>");
-                memcpy(nf,"remote_pn_",LENNOM);nf[LENNOM-1]=(char)(nb+PMFNCHAR);
+                cli->print("<td>");if(remoteT[nb].num!=0){cli->print(remoteN[remoteT[nb].num-1].nam);}else {cli->print(" ");}cli->print("</td>");
+                memcpy(nf,"remotecfp_",LENNOM);nf[LENNOM-1]=(char)(nb+PMFNCHAR);
                 numTableHtml(cli,'b',&remoteT[nb].pernum,nf,2,1,0);
                 
                 cli->print("<td>");if(remoteT[nb].pernum!=0){periLoad(remoteT[nb].pernum);cli->print(periNamer);}else {cli->print(" ");}cli->print("</td>");
-                memcpy(nf,"remote_sw_",LENNOM);nf[LENNOM-1]=(char)(nb+PMFNCHAR);
+                memcpy(nf,"remotecfs_",LENNOM);nf[LENNOM-1]=(char)(nb+PMFNCHAR);
 
                 numTableHtml(cli,'b',&remoteT[nb].persw,nf,1,1,0);
-                memcpy(nf,"remote_xe_",LENNOM);nf[LENNOM-1]=(char)(nb+PMFNCHAR);
+                memcpy(nf,"remotecfx_",LENNOM);nf[LENNOM-1]=(char)(nb+PMFNCHAR);
                 uint8_t ren=(uint8_t)remoteT[nb].enable;
                 checkboxTableHtml(cli,&ren,nf,-1,1);         
                 
@@ -250,37 +313,31 @@ void remoteHtml(EthernetClient* cli)
             
             bouTableHtml(cli,"password__",modpass,"retour",0,0);  // génère peritable
             cli->println("<br>");
-            //cli->println(" <input type=\"submit\" value=\"MàJ\"><br>");
 
 /* table remotes */
 
               cli->println("<table>");
-              //cli->println("<tr>");
-              //cli->println("<th>   </th><th>      Nom      </th><th> en </th>");
-              //cli->println("</tr>");
 
               for(int nb=0;nb<NBREMOTE;nb++){
                 cli->println("<tr>");
                 
                 cli->print("<td>");cli->print(nb+1);cli->print("</td>");
-                cli->print("<td><input type=\"text\" name=\"remote_no");cli->print((char)(nb+PMFNCHAR));cli->print("\" value=\"");
-                        cli->print(remoteN[nb].nam);cli->print("\" size=\"12\" maxlength=\"");cli->print(LENREMNAM-1);cli->println("\" ></td>");
+                cli->print("<td><p hidden><input type=\"text\" name=\"remotecfn_");cli->print((char)(nb+PMFNCHAR));
+                      cli->print("\" value=\"");cli->print(remoteN[nb].nam);cli->print("\"></p>");
+                cli->print(" <font size=\"7\">");cli->print(remoteN[nb].nam);cli->println("</font></td>");
 
-                sliderHtml(cli,(uint8_t*)(&remoteN[nb].enable),"remote_en_",nb,0,1);
+                sliderHtml(cli,(uint8_t*)(&remoteN[nb].onoff),"remotecfo_",nb,0,1);
                 
-                /*memcpy(nf,"remote_en_",LENNOM);nf[LENNOM-1]=(char)(nb+PMFNCHAR);
-                cli->print("<td><label class=\"switch\"><input type=\"checkbox\" name=\"");cli->print(nf);cli->print("\" value=\"1\"");
-                if(remoteN[nb].enable!=0){cli->print(" checked");}
-                cli->print(" ><span class=\"slider round\"></span></label></td>");
-                */
-                /*
                 uint8_t ren=(uint8_t)remoteN[nb].enable;
                 checkboxTableHtml(cli,&ren,nf,-1,1);         
-                */
+                
                 
                 cli->println("</tr>");
               }
-            cli->println("</table>");            
+            cli->println("</table>");
+            
+            cli->println(" <font size=\"7\"><input type=\"submit\"  value=\"MàJ\" style=\"height:100px;width:200px\"></font>");
+                        
             cli->println("</form></body></html>");
 }
 
@@ -295,7 +352,7 @@ void testHtml(EthernetClient* cli)
             
             htmlIntro(nomserver,cli);
 
-            char pwd[32]="password__=\0";strcat(pwd,usrpass);
+            char pwd[32]="password__=\0";strcat(pwd,userpass);
             
             cli->println("<body><form method=\"get\" action=\"page.html\" >");
 
@@ -314,10 +371,10 @@ void testHtml(EthernetClient* cli)
             cli->println("<a href=page.html?");cli->print(pwd);cli->print(":><input type=\"submit\" value=\"retour\"></a><br>");
             cli->println("<a><input type=\"submit\" formaction=\"page.html?password__=17515A:\" value=\"formaction\"></a><br>");
 
-            bouTableHtml(cli,"password__",usrpass,"boutable",2,1);
+            bouTableHtml(cli,"password__",userpass,"boutable",2,1);
             
             cli->print("<form><p hidden><input type=\"text\" name=\"password__\" value=\"");
-            cli->print(usrpass);
+            cli->print(userpass);
             cli->print("\" ><p><input type=\"submit\" value=\"submit\"><br></form>");
             
             

@@ -9,9 +9,11 @@ static unsigned long blinktime=0;
 uint8_t nbreBlink=0;          // si nbreBlink impair   -> blocage
 uint8_t cntBlink=0;
 
-//#define FLAGTIMEOVF
 #define TIMEOVFSLOTNB 10
 uint32_t timeOvfSlot[TIMEOVFSLOTNB];
+
+extern char* usrnames;
+extern char* usrpass;
 
 
   /* debug
@@ -365,4 +367,23 @@ void startto(long* time,uint16_t* to,uint16_t valto)
   *to=valto;
   *time=millis();
         //Serial.print("startto=");Serial.print(*time);Serial.print(" to=");Serial.print(*to);Serial.print(" valto=");Serial.println(valto);
+}
+
+int searchusr(char* usrname)
+{
+    int nbu=-1,k=0;
+    bool ok=FAUX;
+    Serial.print(usrname);Serial.print(" usernames=");Serial.println(usrnames);
+
+    for (nbu=NBUSR-1;nbu>=0;nbu--){
+        for(k=0;k<LENUSRNAME;k++){
+                Serial.print(usrname[k]);
+            if(usrname[k]=='\0' && k==0){break;}
+            else if(usrname[k]=='\0'){ok=VRAI;}
+            else if(usrname[k]!=usrnames[k+nbu*LENUSRNAME]){break;}
+        }
+        Serial.print(" k=");Serial.print(k);Serial.print(" nbu=");Serial.println(nbu);
+        if(k==LENUSRNAME || ok==VRAI){return nbu;}
+    }
+    return -1;
 }

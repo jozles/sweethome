@@ -20,10 +20,13 @@ extern char*     nomserver;
 extern byte      memDetServ;  // image mémoire NBDSRV détecteurs (8)
 extern uint16_t  perrefr;
 
-extern char*     usrpass;             // mot de passe browser
+extern char*     userpass;            // mot de passe browser
 extern char*     modpass;             // mot de passe modif
 extern char*     peripass;            // mot de passe périphériques
-
+extern char*     usrnames;            // usernames
+extern char*     usrpass;             // userpass
+extern long*     usrtime;
+extern int       usernum;
 
 extern char*     chexa;
 
@@ -143,13 +146,16 @@ void SwCtlTableHtml(EthernetClient* cli,int nbsw,int nbtypes)
 
   cli->println("<form method=\"get\" >");
     cli->print(VERSION);cli->println("  ");
+    cli->print(periCur);cli->print("-");cli->print(periNamer);cli->println("<br>");
+
+    //char pwd[32]="password__=\0";strcat(pwd,userpass);lnkTableHtml(cli,pwd,"retour");
+    //bouTableHtml(cli,"password__",modpass,"retour",0,0);  // génère peritable
+            cli->print("<a href=\"?user_ref_");cli->print((char)(usernum+PMFNCHAR));cli->print("=");cli->print(usrtime[usernum]);
+            cli->print("\"><input type=\"button\" value=\"retour\"></a>");
+
     cli->print("<p hidden>");
       numTableHtml(cli,'i',&periCur,"peri_t_sw_",2,0,0); // pericur n'est pas modifiable (fixation pericur, periload, cberase)
     cli->println("</p>");
-    cli->print(periCur);cli->print("-");cli->print(periNamer);cli->println("<br>");
-
-    //char pwd[32]="password__=\0";strcat(pwd,usrpass);lnkTableHtml(cli,pwd,"retour");
-    bouTableHtml(cli,"password__",modpass,"retour",0,0);  // génère peritable
   
     cli->println("<input type=\"submit\" value=\"MàJ\">");
     
@@ -260,8 +266,9 @@ Serial.print("début péritable ; remote_IP ");serialPrintIp(remote_IP_cur);Seri
           cli->println(" GMT ; local IP ");cli->print(Ethernet.localIP());cli->println(" ");
           cli->print(th);cli->println("°C<br>");
 
-          cli->print("<input type=\"password\" name=\"macmaster_\" value=\"\" size=\"6\" maxlength=\"8\" > ");cli->println("<input type=\"submit\" value=\"ok\">");
-          bouTableHtml(cli,"password__",modpass,"refresh",0,0);
+          //cli->print("<input type=\"password\" name=\"admin_____\" value=\"\" size=\"6\" maxlength=\"8\" > ");cli->println("<input type=\"submit\" value=\"ok\">");
+            cli->print("<a href=\"?user_ref_");cli->print((char)(usernum+PMFNCHAR));cli->print("=");cli->print(usrtime[usernum]);
+            cli->print("\"><input type=\"button\" value=\"refresh\"></a>");
           numTableHtml(cli,'d',&perrefr,"per_refr__",4,0,0);cli->println("<input type=\"submit\" value=\"ok\">");          
           bouTableHtml(cli,"reset_____","","reset",0,0);
           bouTableHtml(cli,"cfgserv___","","config",0,0);

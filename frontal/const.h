@@ -3,7 +3,7 @@
 
 //#define WEMOS
 
-#define VERSION "1.2"
+#define VERSION "1.2a"
 /* 1.1 ajout voltage dans données data_read_ ; modif unpackMac
  * 1.1a ajout volts et version dans table
  * 1.1b suppression dht ; ajout periDetVal et periSwVal avec affichage/saisie dans la table ; gestion serveur dev
@@ -32,6 +32,9 @@
  *      ajout serveur pilote (pilotserv()) et traitement dans pilotserver()       -> client cli_b
  *      l'acquisition/traitement des fonctions de periserv() devient periserver() -> client cli_a
  *      remoteHtml() traitement des requêtes sur pilotserv
+ * 1.2a ajout dans fichier config de la table username/usrpass
+ *      commonserver() 
+ *      nouveau systême password (voir commonserver())
  *      
  * à faire :
  *     
@@ -74,7 +77,7 @@
 #define PERINAMLEN 16+1                      // longueur nom perif
 #define PERIRECLEN 213 // V1.1k              // longueur record périph
 
-#define CONFIGRECLEN 591                     // longueur record config 
+#define CONFIGRECLEN 815                     // longueur record config 
 
 #define MAXIMGLEN   4000                     // longueur maxi pour fichiers image
 
@@ -95,7 +98,7 @@
 
 struct swRemote
 {
-  uint8_t  remnum;        // remote number
+  uint8_t  num;           // remote number
   uint16_t pernum;        // periph number
   uint8_t  persw;         // periph sw
   bool     enable;        // remote enable
@@ -103,8 +106,8 @@ struct swRemote
 
 struct Remote
 {
-  uint8_t remnum;         // remote number
   char    nam[LENREMNAM]; // remote name
+  bool    onoff;          // remote on/off
   bool    enable;         // remote enable
 };
 
