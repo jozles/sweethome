@@ -58,7 +58,12 @@ extern byte      periMacBuf[6];
 
 extern uint16_t  perrefr;
 
-extern int  chge_pwd; //=FAUX;
+extern char*     usrnames; 
+extern char*     usrpass; 
+extern long*     usrtime;  
+
+extern int       usernum;
+//extern int       chge_pwd;
 
 extern byte mask[];
 
@@ -176,6 +181,38 @@ void textTableHtml(EthernetClient* cli,char type,float* valfonct,float* valmin,f
   cli->print("</font>");
   if(br==1){cli->print("<br>");}
   if(td==2 || td==3){cli->println("</td>");}
+}
+
+void usrFormHtml(EthernetClient* cli,bool hid)                  // pour mettre en tête des formulaires ("<p hidden> .... </p>")
+{
+  if(hid){cli->print("<p hidden>");}
+  cli->print("<input type=\"text\" name=\"user_ref_");cli->print((char)(usernum+PMFNCHAR));
+  cli->print("\" value=\"");cli->print(usrtime[usernum]);cli->print("\">");  
+  if(hid){cli->print("</p>");}
+}
+
+void boutRetour(EthernetClient* cli,char* lib,uint8_t td,uint8_t br)
+{
+    if(td==1 || td==2){cli->print("<td>");}
+    cli->print("<a href=\"?user_ref_");cli->print((char)(usernum+PMFNCHAR));cli->print("=");cli->print(usrtime[usernum]);
+    cli->print("\"><input type=\"button\" value=\"");cli->print(lib);cli->print("\"></a>");
+    if(br!=0){cli->print("<br>");}
+    if(td==1 || td==3){cli->print("</td>");}
+    cli->println();
+}
+
+void boutFonction(EthernetClient* cli,char* nomfonct,char* valfonct,char* lib,uint8_t td,uint8_t br)
+/* génère user_ref_x=nnnnnnn...?ffffffffff=zzzzzz... */
+{
+    if(td==1 || td==2){cli->print("<td>");}
+
+    cli->print("<a href=\"?user_ref_");cli->print((char)(usernum+PMFNCHAR));cli->print("=");cli->print(usrtime[usernum]);
+    cli->print("?");cli->print(nomfonct);cli->print("=");cli->print(valfonct);
+    cli->print("\"><input type=\"button\" value=\"");cli->print(lib);cli->print("\"></a>");
+
+    if(br!=0){cli->print("<br>");}
+    if(td==1 || td==3){cli->print("</td>");}
+    cli->println();
 }
 
 void bouTableHtml(EthernetClient* cli,char* nomfonct,char* valfonct,char* lib,uint8_t td,uint8_t br)

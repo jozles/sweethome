@@ -148,15 +148,12 @@ void SwCtlTableHtml(EthernetClient* cli,int nbsw,int nbtypes)
     cli->print(VERSION);cli->println("  ");
     cli->print(periCur);cli->print("-");cli->print(periNamer);cli->println("<br>");
 
-    //char pwd[32]="password__=\0";strcat(pwd,userpass);lnkTableHtml(cli,pwd,"retour");
-    //bouTableHtml(cli,"password__",modpass,"retour",0,0);  // génère peritable
-            cli->print("<a href=\"?user_ref_");cli->print((char)(usernum+PMFNCHAR));cli->print("=");cli->print(usrtime[usernum]);
-            cli->print("\"><input type=\"button\" value=\"retour\"></a>");
-
     cli->print("<p hidden>");
+      usrFormHtml(cli,0);
       numTableHtml(cli,'i',&periCur,"peri_t_sw_",2,0,0); // pericur n'est pas modifiable (fixation pericur, periload, cberase)
     cli->println("</p>");
-  
+
+    boutRetour(cli,"retour",0,0);  
     cli->println("<input type=\"submit\" value=\"MàJ\">");
     
     cli->print(" détecteurs serveur enable ");
@@ -266,18 +263,18 @@ Serial.print("début péritable ; remote_IP ");serialPrintIp(remote_IP_cur);Seri
           cli->println(" GMT ; local IP ");cli->print(Ethernet.localIP());cli->println(" ");
           cli->print(th);cli->println("°C<br>");
 
-          //cli->print("<input type=\"password\" name=\"admin_____\" value=\"\" size=\"6\" maxlength=\"8\" > ");cli->println("<input type=\"submit\" value=\"ok\">");
-            cli->print("<a href=\"?user_ref_");cli->print((char)(usernum+PMFNCHAR));cli->print("=");cli->print(usrtime[usernum]);
-            cli->print("\"><input type=\"button\" value=\"refresh\"></a>");
+          usrFormHtml(cli,1);
+
+          boutRetour(cli,"refresh",0,0);
           numTableHtml(cli,'d',&perrefr,"per_refr__",4,0,0);cli->println("<input type=\"submit\" value=\"ok\">");          
-          bouTableHtml(cli,"reset_____","","reset",0,0);
-          bouTableHtml(cli,"cfgserv___","","config",0,0);
-          bouTableHtml(cli,"remote____","","remote",0,0);
-          bouTableHtml(cli,"testhtml__","","test_html",0,0);
+          boutFonction(cli,"reset_____","","reset",0,0);
+          boutFonction(cli,"cfgserv___","","config",0,0);
+          boutFonction(cli,"remote____","","remote_cfg",0,0);
+          boutFonction(cli,"remotehtml","","remotehtml",0,0);
 
           cli->print("(");long sdsiz=fhisto.size();cli->print(sdsiz);cli->println(") ");
           numTableHtml(cli,'i',(uint32_t*)&sdpos,"sd_pos____",9,0,0);cli->println("<input type=\"submit\" value=\"ok\"> ");
-          bouTableHtml(cli,"dump_sd___","","dump SDcard",0,0);
+          boutFonction(cli,"dump_sd___","","dump SDcard",0,0);
           
           cli->println(" détecteurs serveur :");
           for(int k=0;k<NBDSRV;k++){subDSn(cli,"mem_dsrv__\0",memDetServ,k);}
@@ -303,7 +300,10 @@ Serial.print("début péritable ; remote_IP ");serialPrintIp(remote_IP_cur);Seri
                       
                       cli->print("<td>");
                       cli->println(periCur);
-                      cli->print("<p hidden>");numTableHtml(cli,'i',&periCur,"peri_cur__",2,3,0);cli->println("</p>");
+                      cli->print("<p hidden>");
+                        usrFormHtml(cli,0);
+                        numTableHtml(cli,'i',&periCur,"peri_cur__",2,3,0);
+                      cli->println("</p>");
                       cli->print("<td><input type=\"text\" name=\"peri_nom__\" value=\"");
                         cli->print(periNamer);cli->print("\" size=\"12\" maxlength=\"");cli->print(PERINAMLEN-1);cli->println("\" ></td>");
                       textTableHtml(cli,'f',periLastVal,periThmin,periThmax,1,1);
@@ -342,7 +342,7 @@ Serial.print("début péritable ; remote_IP ");serialPrintIp(remote_IP_cur);Seri
  
                       if(*periSwNb!=0){
                         char swf[]="switchs___";swf[LENNOM-1]=periCur+PMFNCHAR;swf[LENNOM]='\0';
-                        bouTableHtml(cli,swf,"","Switchs",3,0);}
+                        boutFonction(cli,swf,"","Switchs",3,0);}
 
                   cli->print("</form>");
                 cli->println("</tr>");

@@ -34,7 +34,7 @@
  *      remoteHtml() traitement des requêtes sur pilotserv
  * 1.2a ajout dans fichier config de la table username/usrpass
  *      commonserver() 
- *      nouveau systême password (voir commonserver())
+ *      nouveau système password et TO (voir commonserver()) (boutRetour,boutFonction,usrForm)
  *      
  * à faire :
  *     

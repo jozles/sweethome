@@ -1,7 +1,8 @@
 #ifndef _PAGESHTML_H_
 #define _PAGESHTML_H_
 
-int  dumpsd(EthernetClient* cli);
+void dumpsd(EthernetClient* cli);
+int  dumpsd0(EthernetClient* cli);
 void htmlIntro0(EthernetClient* cli);
 void htmlIntro(char* titre,EthernetClient* cli);
 void cfgServerHtml(EthernetClient* cli);

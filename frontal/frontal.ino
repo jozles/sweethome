@@ -85,7 +85,7 @@ EthernetServer pilotserv(PORTPILOTSERVER);   // serveur pilotage
                                        // donne l'habilitation pour effectuer des modifs dans peritable
                                        // (sinon renvoi à l'accueil)
   int8_t  numfonct[NBVAL];             // les fonctions trouvées  (au max version 1.1k 23+4*57=251)
-  char*   fonctions="per_temp__peri_pass_username__password__user_ref__admin_____per_refr__peri_tofs_switchs___reset_____dump_sd___sd_pos____data_save_data_read_peri_swb__peri_cur__peri_refr_peri_nom__peri_mac__accueil___peri_tableperi_prog_peri_sondeperi_pitchperi_pmo__peri_detnbperi_intnbperi_rtempremote____testhtml__peri_vsw__peri_t_sw_peri_otf__peri_imn__peri_imc__peri_pto__peri_ptt__peri_thminperi_thmaxperi_vmin_peri_vmax_peri_dsv__mem_dsrv__ssid______passssid__cfgserv___pwdcfg____modpcfg___peripcfg__maccfg____remotecf__done______last_fonc_";  //};
+  char*   fonctions="per_temp__peri_pass_username__password__user_ref__admin_____per_refr__peri_tofs_switchs___reset_____dump_sd___sd_pos____data_save_data_read_peri_swb__peri_cur__peri_refr_peri_nom__peri_mac__accueil___peri_tableperi_prog_peri_sondeperi_pitchperi_pmo__peri_detnbperi_intnbperi_rtempremote____testhtml__peri_vsw__peri_t_sw_peri_otf__peri_imn__peri_imc__peri_pto__peri_ptt__peri_thminperi_thmaxperi_vmin_peri_vmax_peri_dsv__mem_dsrv__ssid______passssid__cfgserv___pwdcfg____modpcfg___peripcfg__maccfg____remotecf__remote_ctlremotehtmldone______last_fonc_";  //};
   /*  nombre fonctions, valeur pour accueil, data_save_ fonctions multiples etc */
   int     nbfonct=0,faccueil=0,fdatasave=0,fperiSwVal=0,fperiDetSs=0,fdone=0,fpericur=0,fperipass=0,fpassword=0,fusername=0,fuserref=0;
   char    valeurs[LENVALEURS];         // les valeurs associées à chaque fonction trouvée
@@ -755,6 +755,17 @@ void bitvSwCtl(byte* data,uint8_t sw,uint8_t datalen,uint8_t shift,byte msk)
   memcpy((char*)(data+sw*datalen),(char*)&pipm,datalen);
 }
 
+void switchCtl(uint8_t sw)
+{
+  switch(sw){
+    case 0:*periSwVal&=0xfd;*periSwVal|=(*valf&0x01)<<1;break;                           // peri Sw Val 0
+    case 1:*periSwVal&=0xf7;*periSwVal|=(*valf&0x01)<<3;break;                           // peri Sw Val 1
+    case 2:*periSwVal&=0xdf;*periSwVal|=(*valf&0x01)<<5;break;                           // peri Sw Val 2
+    case 3:*periSwVal&=0x7f;*periSwVal|=(*valf&0x01)<<7;break;                           // peri Sw Val 3
+    default:break;
+  }
+}
+
 void test2Switchs()
 {
 
@@ -895,11 +906,19 @@ void commonserver(EthernetClient cli)
           par une fonction qui précède les fonctions modifiant des variables du formulaire concerné (peri_cur__, peri_t_sw_) 
 
     si la première fonction est fperipass, c'est un périphérique, sinon un browser 
-    si c'est un browser : username__ puis password__ en cas de login, sinon user_ref__ et contrôle du TO
+    si c'est un browser : username__ puis password__ en cas de login, sinon user_ref_n=ttt... et contrôle du TO (ttt... millis() du dernier accés)
        si ok et pas de TO, retrig et la suite est exécutée sinon page d'accueil
+       si user_ref_ est utilisée seule -> peritable 
     
     fonctionnement de la rémanence de password_ :
     millis() est échantillonnée à chaque accès de l'utilisateur s'il n'est pas en TO (sinon accueil)
+
+    Sécurité à développer : pour assurer que le mot de passe n'est pas dérobable et que sans mot de passe on ne peut avoir de réponse du serveur,
+    le mot de passe doit être crypté dans une chaine qui change de valeur à chaque transmission ; donc crypter mdp+heure. 
+    Le serveur accepte une durée de validité (10sec?) au message et refuse le ré-emploi de la même heure.
+    Ajouter du java pour crypter ce qui sort du navigateur ? (les 64 premiers caractères de GET / : username,password,heure/user_ref,heure)
+    
+
 
     /////// ancien systeme /////////
     toPassword=0 annule la rémanence de password_                        - disTrigPwd()
@@ -1011,13 +1030,15 @@ void commonserver(EthernetClient cli)
               case 29: testHtml(&cli);break;                                                         // testhtml
               case 30: {uint8_t sw=*(libfonctions+2*i+1)-48;
                        //Serial.print(" sw=");Serial.print(sw);Serial.print(" periSwVal=");Serial.println(*periSwVal,HEX);
-                       switch(sw){
+                         switchCtl(sw);
+/*                       switch(sw){
                          case 0:*periSwVal&=0xfd;*periSwVal|=(*valf&0x01)<<1;break;                           // peri Sw Val 0
                          case 1:*periSwVal&=0xf7;*periSwVal|=(*valf&0x01)<<3;break;                           // peri Sw Val 1
                          case 2:*periSwVal&=0xdf;*periSwVal|=(*valf&0x01)<<5;break;                           // peri Sw Val 2
                          case 3:*periSwVal&=0x7f;*periSwVal|=(*valf&0x01)<<7;break;                           // peri Sw Val 3
                          default:break;
-                       }
+                         }
+*/
                        Serial.print(" sw=");Serial.print(sw);Serial.print(" periSwVal=");Serial.println(*periSwVal,HEX);
                        }break;
               case 31: what=5;periCur=0;conv_atob(valf,&periCur);                                    // peri_t_sw_
@@ -1065,7 +1086,7 @@ void commonserver(EthernetClient cli)
               case 47: memset(modpass,0x00,LPWD);memcpy(modpass,valf,nvalf[i+1]-nvalf[i]);break;     // modpcfg___
               case 48: memset(peripass,0x00,LPWD);memcpy(peripass,valf,nvalf[i+1]-nvalf[i]);break;   // peripcfg__
               case 49: for(j=0;j<6;j++){conv_atoh(valf+j*2,(mac+j));}break;                          // Mac config
-              case 50: what=8;                                                                       // remote__
+              case 50: what=8;                                                                       // remote__ (cdes de config)
                        {int nb=*(libfonctions+2*i+1)-PMFNCHAR; 
                           switch(*(libfonctions+2*i)){                                               // no nom remote courante
                             case 'n': memset(remoteN[nb].nam,0x00,LENREMNAM);                                      
@@ -1083,7 +1104,13 @@ void commonserver(EthernetClient cli)
                             default:break;
                           }
                        }break;
-               case 51: break;                                                                        // done                        
+              case 51: what=9;                                                                       // remote_ctl (cdes on/off)
+                       {int nb=*(libfonctions+2*i+1)-PMFNCHAR;
+                       periCur=remoteT[nb].pernum;periLoad(periCur);switchCtl(remoteT[nb].persw);
+                       Serial.print("remoteCtl=");Serial.print(nb);Serial.print(" pericur=");Serial.println(periCur);
+                       }break;                                                                       
+              case 52: what=10;break;                                                                // remotehtml
+              case 53: break;                                                                        // done                        
                               
               default:break;
               }
@@ -1111,6 +1138,8 @@ void commonserver(EthernetClient cli)
           case 6:configSave();periTableHtml(&cli);break;      // config        
           case 7:periSend();SwCtlTableHtml(&cli,*periSwNb,4);break; // config switchs - smise à jour des périphériques (fait periParamsHtml)
           case 8:remoteSave();periTableHtml(&cli);break;      // fonctions de cfgRemote
+          case 9:remoteSave();periSave(periCur);remoteHtml(&cli_b);break;       // commande remote
+          case 10:remoteHtml(&cli_b);break;
           default:accueilHtml(&cli);break;
         }
 
@@ -1134,7 +1163,7 @@ void pilotserver()
 {
       if(cli_b = pilotserv.available())      // attente d'un client
         {
-
+/*      
         getremote_IP(&cli_b,remote_IPb,remote_MACb);
 
       Serial.print("\n **** loop  IP_cur=");serialPrintIp(remote_IPb);//Serial.print(" IP_Mac=");serialPrintIp(remote_IP_Mac);Serial.print(" new=");serialPrintIp(remote_IP);
@@ -1142,13 +1171,15 @@ void pilotserver()
       
       if (cli_b.connected()) 
         {
-
-          remoteHtml(&cli_b);
-          
+*/
+          commonserver(cli_b);
+          //remoteHtml(&cli_b);
+/*          
           cli_b.stop();
           delay(1);
           Serial.println("---- cli stopped"); 
         }   // cli.connected
+*/
       }     // server.available  
 }
 

@@ -7,7 +7,7 @@
 #include "shconst.h"
 #include "shutil.h"
 #include "periph.h"
-//#include "peritable.h"
+#include "pageshtml.h"
 
 extern char* nomserver;
 extern byte* mac;              // adresse server
@@ -67,7 +67,19 @@ void htmlFavicon(EthernetClient* cli)
   htmlImg(cli,"sweeth.png");
 }
 
-int dumpsd(EthernetClient* cli)                 // liste le fichier de la carte sd
+void dumpsd(EthernetClient* cli)
+{ 
+  htmlIntro(nomserver,cli);
+
+  cli->print("<body>");cli->print(VERSION);cli->println("<br>");
+  boutRetour(cli,"retour",0,1);
+  if(dumpsd0(cli)!=SDOK){cli->println("SDKO");}
+  boutRetour(cli,"retour",0,1);
+  
+  cli->println("</body></html>");
+}
+
+int dumpsd0(EthernetClient* cli)                 // liste le fichier de la carte sd
 {
   char inch=0;
   
@@ -79,7 +91,6 @@ int dumpsd(EthernetClient* cli)                 // liste le fichier de la carte 
   
   Serial.print("histoSD ");Serial.print(sdpos);Serial.print("/");Serial.print(sdsiz);
 
-  htmlIntro(nomserver,cli);cli->println("<body>");
   cli->print("histoSD ");cli->print(sdpos);cli->print("/");cli->print(sdsiz);cli->println("<br>");
 
   long ptr=sdpos;
@@ -88,33 +99,9 @@ int dumpsd(EthernetClient* cli)                 // liste le fichier de la carte 
     inch=fhisto.read();ptr++;
     cli->print(inch);
   }
-  cli->println("</body>");
-  return sdOpen(FILE_WRITE,&fhisto,"fdhisto.txt");
-}
-/* 
-  int cnt=0,strSDpt=0;
-  bool ignore=FAUX; // ignore until next line
-  long ptr=sdpos;
-  while (ptr<sdsiz || inch==-1)
-    {
-    inch=fhisto.read();ptr++;
-    if(!ignore)
-      {        
-      strSD[strSDpt]=inch;strSDpt++;strSD[strSDpt]='\0';
-      if((strSDpt>=(RECCHAR-1)) || (strSD[strSDpt-2]=='\r' && strSD[strSDpt-1]=='\n')){
-        cli->println(strSD);                                                                                                                                                                                                        
-        memset(strSD,'\0',RECCHAR);strSDpt=0;
-        }
-      }
-      else if (inch==10){ignore=FAUX;}
-    }
-  cli->println(strSD);
-
-  cli->println("</body>");
 
   return sdOpen(FILE_WRITE,&fhisto,"fdhisto.txt");
 }
-*/
 
 void accueilHtml(EthernetClient* cli)
 {
@@ -159,11 +146,10 @@ void cfgServerHtml(EthernetClient* cli)
             
             cli->println("<body><form method=\"get\" >");
             cli->println(VERSION);cli->println("<br>");
-            //char pwd[32]="password__=\0";strcat(pwd,userpass);lnkTableHtml(cli,pwd,"retour");
-            //bouTableHtml(cli,"password__",modpass,"retour",0,0);  // génère peritable
+
+            usrFormHtml(cli,1);
             
-            cli->print("<a href=\"?user_ref_");cli->print((char)(usernum+PMFNCHAR));cli->print("=");cli->print(usrtime[usernum]);
-            cli->print("\"><input type=\"button\" value=\"retour\"></a>");
+            boutRetour(cli,"retour",0,0);
             
             cli->println(" <input type=\"submit\" value=\"MàJ\"><br>");
             
@@ -175,51 +161,6 @@ void cfgServerHtml(EthernetClient* cli)
             subcfgtable(cli,"SSID",MAXSSID,"ssid_____",ssid,LENSSID,"passssid_",passssid,LPWSSID);
             subcfgtable(cli,"USERNAME",NBUSR,"usrname__",usrnames,LENUSRNAME,"usrpass__",usrpass,LENUSRPASS);
             
-/* table pass 
-
-            cli->println("<table>");
-              cli->println("<tr>");
-              cli->println("<th>   </th><th>    USRNAME    </th><th>  password  </th>");
-              cli->println("</tr>");
-
-              for(int nb=0;nb<NBUSR;nb++){
-                cli->println("<tr>");
-                  cli->print("<td>");cli->print(nb);cli->print("</td>");
-
-                  cli->print("<td><input type=\"text\" name=\"usrname__");cli->print((char)(nb+PMFNCHAR));cli->print("\" value=\"");    
-                      cli->print(usrname+(nb*(LENUSRNAME+1)));cli->print("\" size=\"12\" maxlength=\"");cli->print(LENUSRNAME);cli->println("\" ></td>");
-                      
-                  cli->print("<td><input type=\"text\" name=\"usrpass__");cli->print((char)(nb+PMFNCHAR));cli->print("\" value=\"");
-                      cli->print(usrpass+(nb*(LENUSRPASS+1)));cli->print("\" size=\"38\" maxlength=\"");cli->print(LENUSRPASS);cli->println("\" ></td>");
-                      
-                cli->println("</tr>");
-              }
-            cli->println("</table>");
-            
-/* table ssid 
-
-            subcfgtable(EthernetClient* cli,"SSID",MAXSSID,"ssid_____",ssid,LENSSID,"passssid_",passssid,LPWSSID)
-            subcfgtable(EthernetClient* cli,"USERNAME",MBUSR,"usrname__",usrnames,LENUSRNAME,"usrpass__",usrpass,LENUSRPASS)
-                        
-            cli->println("<table>");
-              cli->println("<tr>");
-              cli->println("<th>   </th><th>      SSID      </th><th>  password  </th>");
-              cli->println("</tr>");
-
-              for(int nb=0;nb<MAXSSID;nb++){
-                cli->println("<tr>");
-                  cli->print("<td>");cli->print(nb);cli->print("</td>");
-
-                  cli->print("<td><input type=\"text\" name=\"ssid_____");cli->print((char)(nb+PMFNCHAR));cli->print("\" value=\"");    
-                      cli->print(ssid+(nb*(LENSSID+1)));cli->print("\" size=\"12\" maxlength=\"");cli->print(LENSSID);cli->println("\" ></td>");
-                      
-                  cli->print("<td><input type=\"text\" name=\"passssid_");cli->print((char)(nb+PMFNCHAR));cli->print("\" value=\"");
-                      cli->print(passssid+(nb*(LPWSSID+1)));cli->print("\" size=\"38\" maxlength=\"");cli->print(LPWSSID);cli->println("\" ></td>");
-                      
-                cli->println("</tr>");
-              }
-            cli->println("</table>");            
-*/            
             cli->println("</form></body></html>");
 }
 
@@ -234,8 +175,8 @@ void cfgRemoteHtml(EthernetClient* cli)
             cli->println("<body><form method=\"get\" >");
             cli->println(VERSION);cli->println("<br>");
             
-            cli->print("<a href=\"?user_ref_");cli->print((char)(usernum+PMFNCHAR));cli->print("=");cli->print(usrtime[usernum]);
-            cli->print("\"><input type=\"button\" value=\"retour\"></a>");
+            usrFormHtml(cli,1);
+            boutRetour(cli,"retour",0,0);
 
             cli->println(" <input type=\"submit\" value=\"MàJ\"><br>");
 
@@ -310,8 +251,10 @@ void remoteHtml(EthernetClient* cli)
             
             cli->println("<body><form method=\"get\" >");
             cli->println(VERSION);cli->println(" ");
+
+            usrFormHtml(cli,1);
             
-            bouTableHtml(cli,"password__",modpass,"retour",0,0);  // génère peritable
+            boutRetour(cli,"retour",0,0);
             cli->println("<br>");
 
 /* table remotes */
@@ -326,7 +269,7 @@ void remoteHtml(EthernetClient* cli)
                       cli->print("\" value=\"");cli->print(remoteN[nb].nam);cli->print("\"></p>");
                 cli->print(" <font size=\"7\">");cli->print(remoteN[nb].nam);cli->println("</font></td>");
 
-                sliderHtml(cli,(uint8_t*)(&remoteN[nb].onoff),"remotecfo_",nb,0,1);
+                sliderHtml(cli,(uint8_t*)(&remoteN[nb].onoff),"remote_ctl",nb,0,1);
                 
                 uint8_t ren=(uint8_t)remoteN[nb].enable;
                 checkboxTableHtml(cli,&ren,nf,-1,1);         
