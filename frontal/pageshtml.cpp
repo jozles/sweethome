@@ -111,9 +111,9 @@ void accueilHtml(EthernetClient* cli)
             cli->println("<body><form method=\"get\" >");
             cli->println(VERSION);cli->println("<br>");
 
-            cli->println("<p>user <input type=\"username\" name=\"username__\" value=\"\" size=\"6\" maxlength=\"8\" ></p>");            
-            cli->println("<p>pass <input type=\"password\" name=\"password__\" value=\"\" size=\"6\" maxlength=\"8\" ></p>");
-                        cli->println(" <input type=\"submit\" value=\"MàJ\"><br>");
+            cli->println("<p>user <input type=\"username\" placeholder=\"Username\" name=\"username__\" value=\"\" size=\"6\" maxlength=\"8\" ></p>");            
+            cli->println("<p>pass <input type=\"password\" placeholder=\"Password\" name=\"password__\" value=\"\" size=\"6\" maxlength=\"8\" ></p>");
+                        cli->println(" <input type=\"submit\" value=\"login\"><br>");
             cli->println("</form></body></html>");
 }          
 
@@ -128,10 +128,10 @@ void subcfgtable(EthernetClient* cli,char* titre,int nbl,char* nom1,char* value1
                 cli->println("<tr>");
                   cli->print("<td>");cli->print(nb);cli->print("</td>");
 
-                  cli->print("<td><input type=\"text\" name=\"");cli->print(nom1);cli->print("\"");cli->print((char)(nb+PMFNCHAR));cli->print("\" value=\"");    
+                  cli->print("<td><input type=\"text\" name=\"");cli->print(nom1);cli->print((char)(nb+PMFNCHAR));cli->print("\" value=\"");    
                       cli->print(value1+(nb*(len1+1)));cli->print("\" size=\"");cli->print(len1/2);cli->print("\" maxlength=\"");cli->print(len1);cli->println("\" ></td>");
                       
-                  cli->print("<td><input type=\"text\" name=\"");cli->print(nom2);cli->print("\"");cli->print((char)(nb+PMFNCHAR));cli->print("\" value=\"");
+                  cli->print("<td><input type=\"text\" name=\"");cli->print(nom2);cli->print((char)(nb+PMFNCHAR));cli->print("\" value=\"");
                       cli->print(value2+(nb*(len2+1)));cli->print("\" size=\"");cli->print(len2/2);cli->print("\" maxlength=\"");cli->print(len2);cli->println("\" ></td>");
                       
                 cli->println("</tr>");
@@ -243,10 +243,8 @@ void cfgRemoteHtml(EthernetClient* cli)
 
 
 void remoteHtml(EthernetClient* cli)
-{
-  char nf[LENNOM+1];nf[LENNOM]='\0';
-  
-            Serial.println("remote table");
+{  
+            Serial.println("remote control");
             htmlIntro(nomserver,cli);
             
             cli->println("<body><form method=\"get\" >");
@@ -259,27 +257,30 @@ void remoteHtml(EthernetClient* cli)
 
 /* table remotes */
 
-              cli->println("<table>");
+            cli->println("<table>");
 
-              for(int nb=0;nb<NBREMOTE;nb++){
+            for(int nb=0;nb<NBREMOTE;nb++){
+              if(remoteN[nb].nam[0]!='\0'){
                 cli->println("<tr>");
                 
-                cli->print("<td>");cli->print(nb+1);cli->print("</td>");
-                cli->print("<td><p hidden><input type=\"text\" name=\"remotecfn_");cli->print((char)(nb+PMFNCHAR));
-                      cli->print("\" value=\"");cli->print(remoteN[nb].nam);cli->print("\"></p>");
+                cli->print("<td>");cli->print(nb+1);cli->println("</td>");
+                cli->print("<td>");
+                // l'input hidden assure que toutes les lignes génèrent une fonction dans 'GET /' pour assurer l'effacement des cb
+                cli->print("<input type=\"hidden\" name=\"remote_cn");cli->print((char)(nb+PMFNCHAR));cli->println("\">");
                 cli->print(" <font size=\"7\">");cli->print(remoteN[nb].nam);cli->println("</font></td>");
 
                 sliderHtml(cli,(uint8_t*)(&remoteN[nb].onoff),"remote_ctl",nb,0,1);
                 
                 uint8_t ren=(uint8_t)remoteN[nb].enable;
-                checkboxTableHtml(cli,&ren,nf,-1,1);         
-                
-                
+                char nf[LENNOM+1]="remote_xe_";nf[LENNOM-1]=(char)(nb+PMFNCHAR);
+                checkboxTableHtml(cli,&ren,nf,-1,1);
+                            
                 cli->println("</tr>");
               }
+            }
             cli->println("</table>");
             
-            cli->println(" <font size=\"7\"><input type=\"submit\"  value=\"MàJ\" style=\"height:100px;width:200px\"></font>");
+            cli->println("<p align=\"center\" ><input type=\"submit\" value=\"MàJ\" style=\"height:120px;width:400px;background-color:LightYellow;\"></p>");
                         
             cli->println("</form></body></html>");
 }

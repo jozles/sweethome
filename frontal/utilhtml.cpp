@@ -310,7 +310,7 @@ void sliderHtml(EthernetClient* cli,uint8_t* val,char* nomfonct,int nb,int sqr,u
 
   char nf[LENNOM+1];nf[LENNOM]='\0';
   memcpy(nf,nomfonct,LENNOM);if(nb>=0){nf[LENNOM-1]=(char)(nb+PMFNCHAR);}
-  cli->print("<label class=\"switch\"><input type=\"checkbox\" name=\"");cli->print(nf);cli->print("\" value=\"1\"");
+  cli->print("<label class=\"switch\"><input type=\"checkbox\" style=\"color:Khaki;\" name=\"");cli->print(nf);cli->print("\" value=\"1\"");
   if((*val & 0x01)!=0){cli->print(" checked");}
   cli->print(" ><span class=\"slider ");if(sqr==0){cli->print(" round");}
   cli->println("\"></span></label>");

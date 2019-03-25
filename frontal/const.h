@@ -109,6 +109,7 @@ struct Remote
   char    nam[LENREMNAM]; // remote name
   bool    onoff;          // remote on/off
   bool    enable;         // remote enable
+  bool    newonoff;       // buffer pour reception et traitement cb par GET /
 };
 
 

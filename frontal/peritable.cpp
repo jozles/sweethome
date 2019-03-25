@@ -83,7 +83,6 @@ extern byte mask[];
 void subDSn(EthernetClient* cli,char* fnc,uint8_t val,uint8_t num) // checkbox transportant 1 bit 
                                                                    // num le numéro du bit dans le byte
                                                                    // le caractère LENNOM-1 est le numéro du bit(+PMFNCHAR) dans periDetServ 
-
 {
   char fonc[LENNOM+1];
   memcpy(fonc,fnc,LENNOM+1);

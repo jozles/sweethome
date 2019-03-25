@@ -739,10 +739,10 @@ void remPrint(int num)
 
 void remotePrint()
 {
-  for(uint8_t num=1;num<=NBREMOTE;num++){
-    Serial.print(num);Serial.print(" ");Serial.print(remoteN[num].nam);Serial.print(" ");
+  for(uint8_t num=0;num<NBREMOTE;num++){
+    Serial.print(num+1);Serial.print(" ");Serial.print(remoteN[num].nam);for(int nr=LENREMNAM-strlen(remoteN[num].nam);nr>=0;nr--){Serial.print(" ");}
     for(uint8_t numswr=0;numswr<MAXREMLI;numswr++){
-      if(remoteT[numswr].num==num){
+      if(remoteT[numswr].num==num+1){
         remPrint(numswr);  
       }
     }
