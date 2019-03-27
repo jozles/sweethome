@@ -103,6 +103,7 @@
 #define BCODEPBNTP        2   // pas de service NTP
 #define BCODEWAITWIFI     4   // attente WIFI
 #define BCODESDCARDKO     5   // pas de SDCARD
+#define BCODEFHISTO       6   // write 0 car (sdstore_textdh0)
 #define BCODELENVAL       7   // LENVAL trop petit
 #define BCODECONFIGRECLEN 9   // CONFIGRECLEN faux -> blocage
 #define BCODEPERICACHEKO 11   // periSave et cache invalide

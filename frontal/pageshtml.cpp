@@ -21,12 +21,19 @@ extern uint16_t perrefr;
 extern File     fhisto;           // fichier histo sd card
 extern long     sdpos;
 extern char     strSD[RECCHAR];
+
+
 extern char*    ssid;
 extern char*    passssid;
 extern char*    usrnames;
 extern char*    usrpass;
 extern long*    usrtime;
+extern char*    thermonames;
+extern int16_t* thermoperis;
+
 extern int      usernum;
+
+extern byte*     periSwVal;                    // ptr ds buffer peri : état/cde des inter 
 
 File fimg;     // fichier image
 
@@ -117,26 +124,39 @@ void accueilHtml(EthernetClient* cli)
             cli->println("</form></body></html>");
 }          
 
-void subcfgtable(EthernetClient* cli,char* titre,int nbl,char* nom1,char* value1,int len1,char* nom2,char* value2,int len2)
+void sscfgt(EthernetClient* cli,char* nom,uint8_t nb,void* value,int len)
 {
-              cli->println("<table>");
-              cli->println("<tr>");
-              cli->println("<th>   </th><th>    ");cli->print(titre);cli->print("    </th><th>  password  </th>");
-              cli->println("</tr>");
+  cli->print("<td><input type=\"text\" name=\"");cli->print(nom);cli->print((char)(nb+PMFNCHAR));cli->print("\" value=\"");
+  if(len<0){cli->print(*((int16_t*)value+nb));cli->println("\" size=\"1\" maxlength=\"2\" ></td>");}
+  else {cli->print((char*)(((char*)value+(nb*(len+1)))));cli->print("\" size=\"");cli->print(len);cli->print("\" maxlength=\"");cli->print(len);cli->println("\" ></td>");}
+}
 
-              for(int nb=0;nb<nbl;nb++){
-                cli->println("<tr>");
-                  cli->print("<td>");cli->print(nb);cli->print("</td>");
+void subcfgtable(EthernetClient* cli,char* titre,int nbl,char* nom1,char* value1,int len1,char* nom2,void* value2,int len2,char* titre2)
+{
+    cli->println("<table><col width=\"22\">");
+    cli->println("<tr>");
+    cli->print("<th></th><th>");cli->print(titre);cli->print("</th><th>");cli->print(titre2);cli->println("</th>");
+    cli->println("</tr>");
 
-                  cli->print("<td><input type=\"text\" name=\"");cli->print(nom1);cli->print((char)(nb+PMFNCHAR));cli->print("\" value=\"");    
-                      cli->print(value1+(nb*(len1+1)));cli->print("\" size=\"");cli->print(len1/2);cli->print("\" maxlength=\"");cli->print(len1);cli->println("\" ></td>");
+    for(int nb=0;nb<nbl;nb++){
+      cli->println("<tr>");
+      cli->print("<td>");cli->print(nb);cli->print("</td>");
+
+      sscfgt(cli,nom1,nb,value1,len1);
+//                  cli->print("<td><input type=\"text\" name=\"");cli->print(nom1);cli->print((char)(nb+PMFNCHAR));cli->print("\" value=\"");    
+//                      cli->print(value1+(nb*(len1+1)));cli->print("\" size=\"");cli->print(len1/2);cli->print("\" maxlength=\"");cli->print(len1);cli->println("\" ></td>");
                       
-                  cli->print("<td><input type=\"text\" name=\"");cli->print(nom2);cli->print((char)(nb+PMFNCHAR));cli->print("\" value=\"");
-                      cli->print(value2+(nb*(len2+1)));cli->print("\" size=\"");cli->print(len2/2);cli->print("\" maxlength=\"");cli->print(len2);cli->println("\" ></td>");
-                      
-                cli->println("</tr>");
-              }
-            cli->println("</table>");          
+      sscfgt(cli,nom2,nb,value2,len2);
+//                  cli->print("<td><input type=\"text\" name=\"");cli->print(nom2);cli->print((char)(nb+PMFNCHAR));cli->print("\" value=\"");
+//                      cli->print((char*)(value2+(nb*(len2+1))));cli->print("\" size=\"");cli->print(len2/2);cli->print("\" maxlength=\"");cli->print(len2);cli->println("\" ></td>");
+      if(len2==-1){
+        int16_t peri=*((int16_t*)value2+nb);
+        if(peri>0){Serial.print(peri);periLoad(peri);cli->println("<td>");cli->println(periNamer);cli->println("</td>");}
+        if(nb==nbl-1){Serial.println();}
+      }
+      cli->println("</tr>");
+    }
+    cli->println("</table>");          
 }
 
 void cfgServerHtml(EthernetClient* cli)
@@ -158,8 +178,9 @@ void cfgServerHtml(EthernetClient* cli)
             cli->print(" peripass <input type=\"text\" name=\"peripcfg__\" value=\"");cli->print(peripass);cli->print("\" size=\"5\" maxlength=\"");cli->print(LPWD);cli->println("\" >");            
             cli->print(" serverMac <input type=\"text\" name=\"maccfg____\" value=\"");for(int k=0;k<6;k++){cli->print(chexa[mac[k]/16]);cli->print(chexa[mac[k]%16]);}cli->print("\" size=\"11\" maxlength=\"");cli->print(12);cli->println("\" >");                        
 
-            subcfgtable(cli,"SSID",MAXSSID,"ssid_____",ssid,LENSSID,"passssid_",passssid,LPWSSID);
-            subcfgtable(cli,"USERNAME",NBUSR,"usrname__",usrnames,LENUSRNAME,"usrpass__",usrpass,LENUSRPASS);
+            subcfgtable(cli,"SSID",MAXSSID,"ssid_____",ssid,LENSSID,"passssid_",passssid,LPWSSID,"password");
+            subcfgtable(cli,"USERNAME",NBUSR,"usrname__",usrnames,LENUSRNAME,"usrpass__",usrpass,LENUSRPASS,"password");
+            subcfgtable(cli,"THERMO",NBTHERMO,"thername_",thermonames,LENTHNAME,"therperi_",thermoperis,-1,"peri");
             
             cli->println("</form></body></html>");
 }
@@ -212,7 +233,7 @@ void cfgRemoteHtml(EthernetClient* cli)
 
             cli->println("<table>");
               cli->println("<tr>");
-              cli->println("<th>  </th><th> rem </th><th>  </th><th> per </th><th>  </th><th> sw </th><th>   </th>");
+              cli->println("<th>  </th><th> rem </th><th>  </th><th> per </th><th>  </th><th>I/O</th><th> sw </th><th>   </th>");
               cli->println("</tr>");
               
               for(int nb=0;nb<MAXREMLI;nb++){
@@ -226,8 +247,10 @@ void cfgRemoteHtml(EthernetClient* cli)
                 memcpy(nf,"remotecfp_",LENNOM);nf[LENNOM-1]=(char)(nb+PMFNCHAR);
                 numTableHtml(cli,'b',&remoteT[nb].pernum,nf,2,1,0);
                 
-                cli->print("<td>");if(remoteT[nb].pernum!=0){periLoad(remoteT[nb].pernum);cli->print(periNamer);}else {cli->print(" ");}cli->print("</td>");
-                memcpy(nf,"remotecfs_",LENNOM);nf[LENNOM-1]=(char)(nb+PMFNCHAR);
+                cli->print("<td>");
+                if(remoteT[nb].pernum!=0){periLoad(remoteT[nb].pernum);cli->print(periNamer);cli->print("</td><td>");if((*periSwVal>>(2*remoteT[nb].persw)+1)&0x01!=0){cli->print("I");}else{cli->print("O");}}
+                else {cli->print(" </td><td>");}
+                cli->print("</td>");
 
                 numTableHtml(cli,'b',&remoteT[nb].persw,nf,1,1,0);
                 memcpy(nf,"remotecfx_",LENNOM);nf[LENNOM-1]=(char)(nb+PMFNCHAR);

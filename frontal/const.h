@@ -77,7 +77,10 @@
 #define PERINAMLEN 16+1                      // longueur nom perif
 #define PERIRECLEN 213 // V1.1k              // longueur record périph
 
-#define CONFIGRECLEN 815                     // longueur record config 
+#define NBTHERMO  NBPERIF
+#define LENTHNAME 16
+
+#define CONFIGRECLEN 1211                    // longueur record config 
 
 #define MAXIMGLEN   4000                     // longueur maxi pour fichiers image
 
@@ -111,7 +114,6 @@ struct Remote
   bool    enable;         // remote enable
   bool    newonoff;       // buffer pour reception et traitement cb par GET /
 };
-
 
 
 

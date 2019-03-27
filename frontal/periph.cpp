@@ -28,7 +28,8 @@ extern int*  nbssid;
 extern char* usrnames;  
 extern char* usrpass;     
 extern long* usrtime;
-
+extern char* thermonames;
+extern int16_t* thermoperis;
 extern byte* configBegOfRecord;
 extern byte* configEndOfRecord;
 
@@ -228,24 +229,26 @@ byte* temp=(byte*)configRec;
   nbssid=(int*)temp;
   temp+=sizeof(int);
   usrnames=(char*)temp;
-  temp+=NBUSR*LENUSRNAME;
+  temp+=NBUSR*(LENUSRNAME+1);
   usrpass=(char*)temp;
-  temp+=NBUSR*LENUSRPASS;
+  temp+=NBUSR*(LENUSRPASS+1);
   usrtime=(long*)temp;
   temp+=NBUSR*sizeof(long);
+  thermonames=(char*)temp;
+  temp+=NBTHERMO*(LENTHNAME+1);
+  thermoperis=(int16_t*)temp;
+  temp+=NBTHERMO*sizeof(int16_t);
 
   configEndOfRecord=(byte*)temp;      // doit être le dernier !!!
-  temp ++;
-//Serial.print((long)temp);Serial.print(" ");Serial.print((long)configEndOfRecord);Serial.print(" ");Serial.println((long)configBegOfRecord);
-  
+
+//Serial.print((long)temp);Serial.print(" ");Serial.print((long)configEndOfRecord);Serial.print(" ");Serial.println((long)configBegOfRecord);  
   configInitVar();
-//Serial.print((long)temp);Serial.print(" ");Serial.print((long)configEndOfRecord);Serial.print(" ");Serial.println((long)configBegOfRecord);
 }
 
 void configInitVar()
 {
 memcpy(mac,MACADDR,6);
-memcpy(localIp,lip,4);
+memcpy(localIp,lip,4); 
 *portserver = PORTSERVER;
 memset(nomserver,0x00,LNSERV);memcpy(nomserver,NOMSERV,strlen(NOMSERV));
 memset(userpass,0x00,LPWD+1);memcpy(userpass,USRPASS,strlen(SRVPASS));
@@ -261,10 +264,13 @@ memcpy(passssid,PWDSSID1,strlen(PWDSSID1));memcpy(passssid+LPWSSID+1,PWDSSID2,st
 memset(usrnames,0x00,NBUSR*LENUSRNAME);memset(usrpass,0x00,NBUSR*LENUSRPASS);
 memcpy(usrnames,"admin",5);memcpy(usrpass,"17515A\0\0",8);
 memset(usrtime,0x00,NBUSR*sizeof(long));
+memset(thermonames,0x00,340); //NBTHERMO*(LENTHNAME+1));
+memset(thermoperis,0x00,NBTHERMO*sizeof(int16_t));
 }
 
-void subcprint(char* str1,char* str2,uint8_t nbl,uint8_t len1,uint8_t len2,long* cxtime)
+void subcprint(char* str1,void* strv,uint8_t nbl,uint8_t len1,int len2,long* cxtime)
 {
+  char* str2=(char*)strv;
   #define LBUFCPRINT LENSSID+1+LPWSSID+1+3+4
   char bufcprint[LBUFCPRINT];
   for(int nb=0;nb<nbl;nb++){
@@ -272,9 +278,12 @@ void subcprint(char* str1,char* str2,uint8_t nbl,uint8_t len1,uint8_t len2,long*
         memset(bufcprint,0x00,LBUFCPRINT);bufcprint[0]=0x20;sprintf(bufcprint+1,"%1u",nb);strcat(bufcprint," ");
         strcat(bufcprint,str1+(nb*(len1+1)));strcat(bufcprint," ");
         int lsp=(len1-strlen(str1+nb*(len1+1)));for(int ns=0;ns<lsp;ns++){strcat(bufcprint," ");}
-        strcat(bufcprint,str2+(nb*(len2+1)));
-        lsp=(len2-strlen(str2+nb*(len2+1)));for(int ns=0;ns<lsp;ns++){strcat(bufcprint," ");}
-        Serial.print(bufcprint);if(cxtime[nbl]!=0){Serial.print(cxtime[nbl]);}Serial.println();
+        if(len2>=0){
+          strcat(bufcprint,str2+(nb*(len2+1)));
+          lsp=(len2-strlen(str2+nb*(len2+1)));for(int ns=0;ns<lsp;ns++){strcat(bufcprint," ");}
+          Serial.print(bufcprint);if(cxtime[nbl]!=0){Serial.print(cxtime[nbl]);}Serial.println();
+        }
+        else{int16_t peri=*((int16_t*)strv+nb);Serial.print(bufcprint);Serial.println(peri);}  
     }
   }
 }
@@ -287,23 +296,8 @@ void configPrint()
   Serial.print("password=");Serial.print(userpass);Serial.print(" modpass=");Serial.print(modpass);Serial.print(" peripass=");Serial.println(peripass);
   Serial.println("table ssid ");subcprint(ssid,passssid,MAXSSID,LENSSID,LPWSSID,0);
   Serial.println("table user ");subcprint(usrnames,usrpass,NBUSR,LENUSRNAME,LENUSRPASS,usrtime);
-/*  #define LBUFCPRINT LENSSID+1+LPWSSID+1+3+3
-  char bufcprint[LENSSID+LPWSSID];
-  for(int nb=0;nb<MAXSSID;nb++){
-    if(*(ssid+(nb*(LENSSID+1)))!='\0'){
-        memset(bufcprint,0x00,LBUFCPRINT);bufcprint[0]=0x20;sprintf(bufcprint+1,"%1u",nb);strcat(bufcprint," ");
-        strcat(bufcprint,ssid+(nb*(LENSSID+1)));strcat(bufcprint," ");
-        int lsp=(LENSSID-strlen(ssid+nb*(LENSSID+1)));for(int ns=0;ns<lsp;ns++){strcat(bufcprint," ");}
-        strcat(bufcprint,passssid+(nb*(LPWSSID+1)));
-        Serial.println(bufcprint);}}
-  for(int nb=0;nb<NBUSR;nb++){
-    if(*(usrnames+(nb*(LENUSRNAME+1)))!='\0'){
-        memset(bufcprint,0x00,LBUFCPRINT);bufcprint[0]=0x20;sprintf(bufcprint+1,"%1u",nb);strcat(bufcprint," ");
-        strcat(bufcprint,usrnames+(nb*(LENUSRNAME+1)));strcat(bufcprint," ");
-        int lsp=(LENUSRNAME-strlen(usrnames+nb*(LENUSRNAMES+1)));for(int ns=0;ns<lsp;ns++){strcat(bufcprint," ");}
-        strcat(bufcprint,usrpass+(nb*(LENUSRPASS+1)));
-        Serial.println(bufcprint);}}        
-*/        
+  Serial.println("table thermo ");subcprint(thermonames,thermoperis,NBTHERMO,LENTHNAME,-1,0);
+  //dumpstr((char*)thermoperis,16);
 }
 
 int configLoad()

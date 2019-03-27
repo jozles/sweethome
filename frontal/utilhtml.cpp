@@ -96,7 +96,7 @@ void htmlIntro(char* titre,EthernetClient* cli)
             cli->println("table {");
               cli->println("font-family: Courier, sans-serif;");
               cli->println("border-collapse: collapse;");
-              cli->println("width: 100%;");
+              //cli->println("width: 100%;");
               cli->println("overflow: auto;");
               cli->println("white-space:nowrap;"); 
             cli->println("}");

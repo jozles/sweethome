@@ -42,9 +42,11 @@ void sdstore_textdh0(File* fhisto,char* val1,char* val2,char* val3)
         sprintf(text,"%.8lu",amj);strcat(text," ");       // 9
         sprintf(text+9,"%.6lu",hms);strcat(text," ");     // +7
         strcat(text,val1);strcat(text," ");               // +3
-        strcat(text,val2);strcat(text," ");               // +3
+        strcat(text,val2);strcat(text,'\0');               // +3
         
-          fhisto->print(text);fhisto->print(val3);
+          //fhisto->print(text);fhisto->print(val3);
+          int v=fhisto->write(text);int w=fhisto->write(val3);
+          if(v==0 || w==0){ledblink(BCODEFHISTO);}
 }
 
 void sdstore_textdh(File* fhisto,char* val1,char* val2,char* val3)
