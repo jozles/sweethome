@@ -11,11 +11,24 @@
 
 extern char* nomserver;
 extern byte* mac;              // adresse server
-extern char* userpass;          // mot de passe browser
+extern char* userpass;         // mot de passe browser
 extern char* modpass;          // mot de passe modif
 extern char* peripass;         // mot de passe périphériques
 
 extern char* chexa;
+
+extern int   periCur;          // Numéro du périphérique courant
+
+extern byte*     periMacr;                     // ptr ds buffer : mac address 
+extern char*     periNamer;                    // ptr ds buffer : description périphérique
+extern float*    periLastVal;                  // ptr ds buffer : dernière valeur de température  
+extern float*    periThmin;                    // ptr ds buffer : alarme mini th
+extern float*    periThmax;                    // ptr ds buffer : alarme maxi th
+extern float*    periThOffset;                 // ptr ds buffer : offset correctif sur mesure température
+extern char*     periLastDateIn;               // ptr ds buffer : date/heure de dernière réception
+extern char*     periLastDateOut;              // ptr ds buffer : date/heure de dernier envoi  
+extern char*     periVers;                     // ptr ds buffer : version logiciel du périphérique
+extern char*     periModel;                    // ptr ds buffer : model du périphérique
 
 extern uint16_t perrefr;
 extern File     fhisto;           // fichier histo sd card
@@ -303,11 +316,52 @@ void remoteHtml(EthernetClient* cli)
             }
             cli->println("</table>");
             
-            cli->println("<p align=\"center\" ><input type=\"submit\" value=\"MàJ\" style=\"height:120px;width:400px;background-color:LightYellow;\"></p>");
-                        
+            cli->println("<p align=\"center\" ><input type=\"submit\" value=\"MàJ\" style=\"height:120px;width:400px;background-color:LightYellow;\"></p><br>");
+            boutFonction(cli,"thermohtml","","thermohtml",0,0,7,1);                        
+            
             cli->println("</form></body></html>");
 }
 
+
+void thermoHtml(EthernetClient* cli)
+{  
+            Serial.println("thermo show");
+            htmlIntro(nomserver,cli);
+            
+            cli->print("<body>");cli->print(VERSION);cli->println("<br>");
+            boutRetour(cli,"retour",0,1);
+
+/* peritable températures */
+
+         cli->println("<table>");
+              cli->println("<tr>");
+                cli->println("<th>thermo</th><th>peri</th><th></th><th>TH</th><th>min</th><th>max</th><th>last in</th>");
+              cli->println("</tr>");
+
+              for(int nuth=0;nuth<NBTHERMO;nuth++){
+                int16_t nuper=*(thermoperis+nuth);
+                if(nuper!=0){
+                  periInitVar();periCur=nuper;periLoad(periCur);
+                  if(periMacr[0]!=0x00){
+                    cli->println("<tr>");
+                      cli->print("<td>");cli->print(nuth+1);cli->print("</td>");
+                      cli->print("<td>");cli->print(periCur);cli->println("</td>");
+                      cli->print("<td>");cli->print(" <font size=\"7\">");cli->print(thermonames+nuth*(LENTHNAME+1));cli->println("</font>");cli->println("</td>");
+                      cli->print("<td>");cli->print(" <font size=\"7\">");cli->print(*periLastVal+*periThOffset);cli->println("</font>");cli->println("</td>");
+                      cli->print("<td>");cli->print(*periThmin);cli->println("</td>");
+                      cli->print("<td>");cli->print(*periThmax);cli->println("</td>");
+                      cli->print("<td>");printPeriDate(cli,periLastDateIn);cli->println("</td>");                      
+                    cli->println("</tr>");
+                  }
+                }
+              }
+          cli->println("</table>");
+
+        boutRetour(cli,"retour",0,0);
+        boutFonction(cli,"remotehtml","","remote",0,0,7,1);                        
+
+        cli->println("</body></html>");
+}
 
 void testHtml(EthernetClient* cli)
 {

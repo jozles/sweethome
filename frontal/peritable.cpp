@@ -266,14 +266,15 @@ Serial.print("début péritable ; remote_IP ");serialPrintIp(remote_IP_cur);Seri
 
           boutRetour(cli,"refresh",0,0);
           numTableHtml(cli,'d',&perrefr,"per_refr__",4,0,0);cli->println("<input type=\"submit\" value=\"ok\">");          
-          boutFonction(cli,"reset_____","","reset",0,0);
-          boutFonction(cli,"cfgserv___","","config",0,0);
-          boutFonction(cli,"remote____","","remote_cfg",0,0);
-          boutFonction(cli,"remotehtml","","remotehtml",0,0);
+          boutFonction(cli,"reset_____","","reset",0,0,0,0);
+          boutFonction(cli,"cfgserv___","","config",0,0,0,0);
+          boutFonction(cli,"remote____","","remote_cfg",0,0,0,0);
+          boutFonction(cli,"remotehtml","","remotehtml",0,0,0,0);
+          boutFonction(cli,"thermohtml","","thermohtml",0,0,0,0);
 
           cli->print("(");long sdsiz=fhisto.size();cli->print(sdsiz);cli->println(") ");
           numTableHtml(cli,'i',(uint32_t*)&sdpos,"sd_pos____",9,0,0);cli->println("<input type=\"submit\" value=\"ok\"> ");
-          boutFonction(cli,"dump_sd___","","dump SDcard",0,0);
+          boutFonction(cli,"dump_sd___","","dump SDcard",0,0,0,0);
           
           cli->println(" détecteurs serveur :");
           for(int k=0;k<NBDSRV;k++){subDSn(cli,"mem_dsrv__\0",memDetServ,k);}
@@ -329,11 +330,14 @@ Serial.print("début péritable ; remote_IP ");serialPrintIp(remote_IP_cur);Seri
                       cli->print("<font size=\"2\">");for(j=0;j<4;j++){cli->print(periIpAddr[j]);if(j<3){cli->print(".");}}cli->println("</font></td>");
                       cli->print("<td><font size=\"2\">");for(j=0;j<LENVERSION;j++){cli->print(periVers[j]);}cli->println("<br>");
                       
-                      char dateascii[12],colourbr[6];
+                      //char dateascii[12];
+                      char colourbr[6];
                       memcpy(colourbr,"black\0",6);if(dateCmp(periLastDateOut,pkdate,*periPerRefr,1,1)<0){memcpy(colourbr,"red\0",4);}setColour(cli,colourbr);
-                      unpackDate(dateascii,periLastDateOut);for(j=0;j<12;j++){cli->print(dateascii[j]);if(j==5){cli->print(" ");}}cli->println("<br>");
+                      //unpackDate(dateascii,periLastDateOut);for(j=0;j<12;j++){cli->print(dateascii[j]);if(j==5){cli->print(" ");}}cli->println("<br>");
+                      printPeriDate(cli,periLastDateOut);
                       memcpy(colourbr,"black\0",6);if(dateCmp(periLastDateIn,pkdate,*periPerRefr,1,1)<0){memcpy(colourbr,"red\0",4);}setColour(cli,colourbr);
-                      unpackDate(dateascii,periLastDateIn);for(j=0;j<12;j++){cli->print(dateascii[j]);if(j==5){cli->print(" ");}}cli->println("<br>");
+                      //unpackDate(dateascii,periLastDateIn);for(j=0;j<12;j++){cli->print(dateascii[j]);if(j==5){cli->print(" ");}}cli->println("<br>");
+                      printPeriDate(cli,periLastDateIn);
                       setColour(cli,"black");
                       cli->println("</font></td>");
                       
@@ -341,7 +345,7 @@ Serial.print("début péritable ; remote_IP ");serialPrintIp(remote_IP_cur);Seri
  
                       if(*periSwNb!=0){
                         char swf[]="switchs___";swf[LENNOM-1]=periCur+PMFNCHAR;swf[LENNOM]='\0';
-                        boutFonction(cli,swf,"","Switchs",3,0);}
+                        boutFonction(cli,swf,"","Switchs",3,0,0,0);}
 
                   cli->print("</form>");
                 cli->println("</tr>");

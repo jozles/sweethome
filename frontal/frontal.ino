@@ -87,7 +87,7 @@ EthernetServer pilotserv(PORTPILOTSERVER);   // serveur pilotage
                                        // donne l'habilitation pour effectuer des modifs dans peritable
                                        // (sinon renvoi à l'accueil)
   int8_t  numfonct[NBVAL];             // les fonctions trouvées  (au max version 1.1k 23+4*57=251)
-  char*   fonctions="per_temp__peri_pass_username__password__user_ref__admin_____per_refr__peri_tofs_switchs___reset_____dump_sd___sd_pos____data_save_data_read_peri_swb__peri_cur__peri_refr_peri_nom__peri_mac__accueil___peri_tableperi_prog_peri_sondeperi_pitchperi_pmo__peri_detnbperi_intnbperi_rtempremote____testhtml__peri_vsw__peri_t_sw_peri_otf__peri_imn__peri_imc__peri_pto__peri_ptt__peri_thminperi_thmaxperi_vmin_peri_vmax_peri_dsv__mem_dsrv__ssid______passssid__usrname___usrpass____cfgserv___pwdcfg____modpcfg___peripcfg__maccfg____remotecfg_remote_ctlremotehtmlthername__therperi__done______last_fonc_";  //};
+  char*   fonctions="per_temp__peri_pass_username__password__user_ref__admindispoper_refr__peri_tofs_switchs___reset_____dump_sd___sd_pos____data_save_data_read_peri_swb__peri_cur__peri_refr_peri_nom__peri_mac__accueil___peri_tableperi_prog_peri_sondeperi_pitchperi_pmo__peri_detnbperi_intnbperi_rtempremote____testhtml__peri_vsw__peri_t_sw_peri_otf__peri_imn__peri_imc__peri_pto__peri_ptt__peri_thminperi_thmaxperi_vmin_peri_vmax_peri_dsv__mem_dsrv__ssid______passssid__usrname___usrpass____cfgserv___pwdcfg____modpcfg___peripcfg__maccfg____remotecfg_remote_ctlremotehtmlthername__therperi__thermohtmldone______last_fonc_";  //};
   /*  nombre fonctions, valeur pour accueil, data_save_ fonctions multiples etc */
   int     nbfonct=0,faccueil=0,fdatasave=0,fperiSwVal=0,fperiDetSs=0,fdone=0,fpericur=0,fperipass=0,fpassword=0,fusername=0,fuserref=0;
   char    valeurs[LENVALEURS];         // les valeurs associées à chaque fonction trouvée
@@ -305,7 +305,8 @@ void setup() {                              // =================================
   Serial.print("CONFIGRECLEN=");Serial.print(CONFIGRECLEN);Serial.print("/");Serial.print(configRecLength);
   delay(100);if(configRecLength!=CONFIGRECLEN){ledblink(BCODECONFIGRECLEN);}
   Serial.print(" nbfonct=");Serial.println(nbfonct);
-  configSave();configLoad();configPrint();
+  //configSave();
+  configLoad();configPrint();
   
   periInit();long periRecLength=(long)periEndOfRecord-(long)periBegOfRecord+1;
   
@@ -394,7 +395,6 @@ while(1){}
   
   sdstore_textdh(&fhisto,".3","RE","<br>\n\0");
 
-  //SD.remove(REMOTENFNAME);remInit();remSave(REMOTENFNAME,remoteNlen,remoteNA);
   remoteLoad();
 
   Serial.println("fin setup");
@@ -893,7 +893,7 @@ void commonserver(EthernetClient cli)
 */
         periInitVar();        // pas de rémanence des données des périphériques entre 2 accès au serveur
 
-        memset(strSD,0x00,sizeof(strSD)); memset(buf,0,sizeof(buf));charIp(remote_IP,strSD);          // histo :
+        memset(strSD,0x00,sizeof(strSD)); memset(buf,0,sizeof(buf));charIp(remote_IP,strSD);       // histo :
         sprintf(buf,"%d",nbreparams+1);strcat(strSD," ");strcat(strSD,buf);strcat(strSD," = ");    // une ligne par transaction
         strcat(strSD,strSdEnd);
 
@@ -970,19 +970,16 @@ void commonserver(EthernetClient cli)
             switch (numfonct[i])      
               {
               case 0:  pertemp=0;conv_atobl(valf,&pertemp);break;                                           // pertemp serveur
-              /*case 1:  if((memcmp(macMaster,remote_MAC,6)==0 && memcmp(remote_IP_Mac,remote_IP,4)==0 && !chkTrigPwd()) || ctlpass(valf,modpass)){
-                         trigPwd();memcpy(macMaster,remote_MAC,6);memcpy(remote_IP_Mac,remote_IP,4);}       // macmaster_
-                       else {disTrigPwd();memset(macMaster,0x00,6);memset(remote_IP_Mac,0x00,4);what=-1;nbreparams=0;}
-                       memDetServ=0;                                    // raz checkbit det serv effectué par la première fonction de l'en-tête
-                       break;*/
               case 1:  if(checkData(valf)==MESSOK){                                                         // peri_pass_
                          periPassOk=ctlpass(valf+5,peripass);                                               // skip len
                          if(periPassOk==FAUX){memset(remote_IP_cur,0x00,4);sdstore_textdh(&fhisto,"pp","ko",strSD);}
                          else {memcpy(remote_IP_cur,remote_IP,4);}
                        }break;
-              case 2:  usernum=searchusr(valf);if(usernum<0){
+              case 2:  usernum=searchusr(valf);if(usernum<0){                                        // username__
                           what=-1;nbreparams=-1;i=0;numfonct[i]=faccueil;}
-                       Serial.print("usernum=");Serial.println(usernum);
+                       Serial.print("username:");Serial.print(valf);Serial.print(" usernum=");
+                       Serial.print(usernum);Serial.print("/");Serial.print(usrnames+usernum*LENUSRNAME);
+                       Serial.print(" usrtime=");Serial.println(usrtime[usernum]);
                        break;
               case 3:  if(!ctlpass(valf,usrpass+usernum*LENUSRPASS)){                                // password__
                          what=-1;nbreparams=-1;i=0;numfonct[i]=faccueil;usrtime[usernum]=0;          // si faux accueil (what=-1)
@@ -991,11 +988,15 @@ void commonserver(EthernetClient cli)
                        break;                                                                        
               case 4:  {int nb=*(libfonctions+2*i+1)-PMFNCHAR;                                       // user_ref__
                         long cxtime=0;conv_atobl(valf,(uint32_t*)&cxtime);
-                        Serial.print(nb);Serial.print(" millis()/1000=");Serial.print(millis()/1000);Serial.print(" cxtime=");Serial.print(cxtime);Serial.print(" usrtime[nb]=");Serial.println(usrtime[nb]);
+                        Serial.print("nb=");Serial.print(nb);Serial.print(" millis()/1000=");Serial.print(millis()/1000);Serial.print(" cxtime=");Serial.print(cxtime);Serial.print(" usrtime[nb]=");Serial.println(usrtime[nb]);
                         if(usrtime[nb]!=cxtime || (millis()-usrtime[nb])>(TO_PASSWORD*1000)){
                           what=-1;nbreparams=-1;i=0;numfonct[i]=faccueil;usrtime[nb]=0;}
                         else {Serial.println("user ok");usrtime[usernum]=millis();if(nbreparams==0){what=2;}}
-                        }break;                                                                        
+                        }
+                       Serial.print("user_ref__:");Serial.print(valf);Serial.print(" usernum=");
+                       Serial.print(usernum);Serial.print("/");Serial.print(usrnames+usernum*LENUSRNAME);
+                       Serial.print(" usrtime=");Serial.println(usrtime[usernum]);
+                       break;                                                                        
               case 5:  break;                                                                        // admin
               case 6:  what=2;perrefr=0;conv_atob(valf,&perrefr);                                           // periode refresh browser
                        break;                                                                               
@@ -1121,7 +1122,7 @@ void commonserver(EthernetClient cli)
                        if((char)*(libfonctions+2*i)=='n'){remoteN[nb].newonoff=0;}                   // effacement cb si cn
                        else {remoteN[nb].newonoff=1;}                                                // check cb si ct
                        }break;                                                                       
-              case 54: what=2;Serial.println("remoteHtml()");break;                                  // remotehtml
+              case 54: Serial.println("remoteHtml()");remoteHtml(&cli);break;                        // remotehtml
               case 55: {int nb=*(libfonctions+2*i+1)-PMFNCHAR;                                       // thername_
                        memset(thermonames+nb*(LENTHNAME+1),0x00,LENTHNAME+1);memcpy(thermonames+nb*(LENTHNAME+1),valf,nvalf[i+1]-nvalf[i]);
                        }break;
@@ -1129,7 +1130,8 @@ void commonserver(EthernetClient cli)
                        *(thermoperis+nb)=0;conv_atob(valf,(uint16_t*)(thermoperis+nb));
                        if(*(thermoperis+nb)>NBPERIF){*(thermoperis+nb)=NBPERIF;}
                        }break;
-              case 57: break;                                                                        // done                        
+              case 57: Serial.println("thermoHtml()");thermoHtml(&cli);break;                        // thermohtml
+              case 58: break;                                                                        // done                        
                               
               default:break;
               }
@@ -1159,7 +1161,8 @@ void commonserver(EthernetClient cli)
           case 7:periSend();SwCtlTableHtml(&cli,*periSwNb,4);break; // config switchs - smise à jour des périphériques (fait periParamsHtml)
           case 8:remoteSave();periTableHtml(&cli);break;      // cfgRemote
           case 9:for(int xx=0;xx<NBREMOTE;xx++){Serial.print(remoteN[xx].newonoff);Serial.print(" - ");Serial.println(remoteN[xx].onoff);}
-          remoteUpdate();remoteHtml(&cli);break;       // remote suite à modif ctl depuis remote
+                  remoteUpdate();remoteHtml(&cli);break;      // remote suite à modif ctl depuis remote
+
           default:accueilHtml(&cli);break;
         }
 

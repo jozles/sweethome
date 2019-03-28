@@ -201,14 +201,19 @@ void boutRetour(EthernetClient* cli,char* lib,uint8_t td,uint8_t br)
     cli->println();
 }
 
-void boutFonction(EthernetClient* cli,char* nomfonct,char* valfonct,char* lib,uint8_t td,uint8_t br)
+void boutFonction(EthernetClient* cli,char* nomfonct,char* valfonct,char* lib,uint8_t td,uint8_t br,uint8_t sizfnt,bool aligncenter)
 /* génère user_ref_x=nnnnnnn...?ffffffffff=zzzzzz... */
 {
     if(td==1 || td==2){cli->print("<td>");}
 
     cli->print("<a href=\"?user_ref_");cli->print((char)(usernum+PMFNCHAR));cli->print("=");cli->print(usrtime[usernum]);
     cli->print("?");cli->print(nomfonct);cli->print("=");cli->print(valfonct);
-    cli->print("\"><input type=\"button\" value=\"");cli->print(lib);cli->print("\"></a>");
+    cli->print("\">");
+    if(aligncenter){cli->print("<p align=\"center\">");}
+    cli->print("<input type=\"button\" value=\"");cli->print(lib);cli->print("\"");
+    if(sizfnt==7){cli->print(" style=\"height:120px;width:400px;background-color:LightYellow;\"");}
+    if(aligncenter){cli->println("></p></a>");}
+    else{cli->println("></a>");}
 
     if(br!=0){cli->print("<br>");}
     if(td==1 || td==3){cli->print("</td>");}
@@ -317,5 +322,12 @@ void sliderHtml(EthernetClient* cli,uint8_t* val,char* nomfonct,int nb,int sqr,u
   
   if(td==1 || td==3){cli->print("</td>");}
   cli->println();
+}
+
+void printPeriDate(EthernetClient* cli,char* periDate)
+{
+  char dateascii[12];
+  int j;
+  unpackDate(dateascii,periDate);for(j=0;j<12;j++){cli->print(dateascii[j]);if(j==5){cli->print(" ");}}cli->println("<br>");
 }
 

@@ -772,7 +772,7 @@ void remoteLoad()
 {
   remLoad(REMOTETFNAME,remoteTlen,remoteTA);
   remLoad(REMOTENFNAME,remoteNlen,remoteNA);
-  remotePrint();
+  //remotePrint();
 }
 
 void remoteSave()
