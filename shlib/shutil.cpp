@@ -376,13 +376,13 @@ int searchusr(char* usrname)
     Serial.print(usrname);Serial.print(" usernames=");Serial.println(usrnames);
 
     for (nbu=NBUSR-1;nbu>=0;nbu--){
+        Serial.print("nbu=");Serial.println(nbu);
         for(k=0;k<LENUSRNAME;k++){
-                Serial.print(usrname[k]);
+                Serial.print(" ");Serial.print(k);Serial.print(" ");Serial.print(usrname[k]);Serial.print(" ");Serial.println(usrnames[k+nbu*(LENUSRNAME+1)]);
             if(usrname[k]=='\0' && k==0){break;}
             else if(usrname[k]=='\0'){ok=VRAI;}
-            else if(usrname[k]!=usrnames[k+nbu*LENUSRNAME]){break;}
+            else if(usrname[k]!=usrnames[k+nbu*(LENUSRNAME+1)]){break;}
         }
-        Serial.print(" k=");Serial.print(k);Serial.print(" nbu=");Serial.println(nbu);
         if(k==LENUSRNAME || ok==VRAI){return nbu;}
     }
     return -1;
