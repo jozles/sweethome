@@ -16,7 +16,7 @@ char timeServer[] = "ntp-p1.obspm.fr\0"; //"ntp-p1.obspm.fr\0";      // 145.238.
 const int NTP_PACKET_SIZE = 48;           // NTP time stamp is in the first 48 bytes of the message
 byte packetBuffer[ NTP_PACKET_SIZE];      // buffer to hold incoming and outgoing packets
 
-// UDP instance 
+// UDP instance
 EthernetUDP Udp;
 
 extern char months[36];
@@ -30,9 +30,9 @@ extern uint8_t* chexa;
 
 int sdOpen(char mode,File* fileS,char* fname)
 {
-  fileS->close();  
+  fileS->close();
   if(!(*fileS=SD.open(fname,mode))){Serial.print(fname);Serial.println(" inaccessible");return SDKO;}
-  
+
   return SDOK;
 }
 
@@ -43,7 +43,7 @@ void sdstore_textdh0(File* fhisto,char* val1,char* val2,char* val3)
         sprintf(text+9,"%.6lu",hms);strcat(text," ");     // +7
         strcat(text,val1);strcat(text," ");               // +3
         strcat(text,val2);strcat(text,'\0');               // +3
-        
+
           //fhisto->print(text);fhisto->print(val3);
           int v=fhisto->write(text);int w=fhisto->write(val3);
           if(v==0 || w==0){ledblink(BCODEFHISTO);}
@@ -62,7 +62,7 @@ int htmlSave(File* fhtml,char* fname,char* buff)                           // en
   char inch;
   fhtml->close();
   if(sdOpen(FILE_WRITE,fhtml,fname)==SDKO){Serial.print("html ");Serial.print(fname);Serial.println("KO");return SDKO;}
-  
+
   fhtml->print(buff);Serial.print(inch);
   return SDOK;
 }
@@ -72,7 +72,7 @@ int htmlPrint(EthernetClient* cli,File* fhtml,char* fname)                 // li
   char inch;
   int brcrlf=0;
   if(sdOpen(FILE_READ,fhtml,fname)==SDKO){cli->print("</title></head><body>");cli->print(fname);cli->println(" inaccessible<br>");return SDKO;}
-  
+
   long htmlSiz=fhtml->size();
   long ptr=0;
   while (ptr<htmlSiz || inch==-1)
@@ -98,19 +98,19 @@ void getdate_google(EthernetClient* cligoogle)
 {
   Serial.print("cligoogle connected ?...");
   Serial.println("cligoogle connected");
-  
+
   cligoogle->println("GET /search?q=test  HTTP/1.1");
   cligoogle->println("Host: www.google.com");
   cligoogle->println("Connection: close");
-  cligoogle->println(); 
+  cligoogle->println();
 
-  boolean termine=FAUX,fini=FAUX,fini2=FAUX; 
+  boolean termine=FAUX,fini=FAUX,fini2=FAUX;
   int ptr=0,cnt=0;
   int posdate=-1;
   Serial.println("*getdate google*");
   while (!fini || !fini2)
     {
-    if (cligoogle->available()) 
+    if (cligoogle->available())
       {
       char c = cligoogle->read();Serial.print(c);
       //debug(c,ptr,posdate,strdate,cnt);
@@ -120,7 +120,7 @@ void getdate_google(EthernetClient* cligoogle)
           {
           cnt++;if(cnt>500){termine=VRAI;Serial.println("***terminé");}
           strdate[ptr]=c;posdate=strstr(strdate,"Date: ");
-          if(posdate!=strdate){ptr++;if(ptr>=5){for(ptr=0;ptr<5;ptr++){strdate[ptr]=strdate[ptr+1];}ptr=5;}}    
+          if(posdate!=strdate){ptr++;if(ptr>=5){for(ptr=0;ptr<5;ptr++){strdate[ptr]=strdate[ptr+1];}ptr=5;}}
           else {termine=VRAI;ptr=0;}
           }
       }
@@ -130,7 +130,7 @@ void getdate_google(EthernetClient* cligoogle)
 }
 */
 
-void sendNTPpacket(char* address) 
+void sendNTPpacket(char* address)
 {
   // set all bytes in the buffer to 0
   memset(packetBuffer, 0, NTP_PACKET_SIZE);
@@ -153,7 +153,7 @@ void sendNTPpacket(char* address)
   Udp.endPacket();
 }
 
-void convertNTP(unsigned long *dateUnix,int *year,int *month,int *day,byte *js,int *hour,int *minute,int *second)
+void convertNTP(long *dateUnix,int *year,int *month,int *day,byte *js,int *hour,int *minute,int *second)
 {
     int feb29;
     unsigned long secDay=24*3600L;
@@ -165,7 +165,7 @@ void convertNTP(unsigned long *dateUnix,int *year,int *month,int *day,byte *js,i
     unsigned long secLastYear=0;
     unsigned long secLastMonth=0;
     unsigned long secLastDay=0;
-    
+
     if(*dateUnix<2*secYear){*year=(int)(*dateUnix/secYear)+1970;feb29=1;}
     else
       {sec1quart = 4*secYear+secDay;
@@ -181,7 +181,7 @@ void convertNTP(unsigned long *dateUnix,int *year,int *month,int *day,byte *js,i
 //      Serial.print("monthSec[i+1]=");Serial.print(i+1);Serial.print("/");Serial.println(monthSec[i+1]);
       if(monthSec[i+1]>secLastYear){*month=i+1;i=12;}
     }
-    secLastMonth=secLastYear-monthSec[*month-1];                           
+    secLastMonth=secLastYear-monthSec[*month-1];
     *day  = (int)(secLastMonth/secDay)+1;
     secLastDay = secLastMonth-((*day-1)*secDay);
 //    Serial.print("secLastDay=");Serial.print(secLastDay);Serial.print("/");Serial.print(*day);Serial.print(" secLastMonth=");Serial.print(secLastMonth);Serial.print("/");Serial.print(*month);Serial.print(" secLastYear=");Serial.print(secLastYear);Serial.print("/");Serial.println(*year);
@@ -192,18 +192,18 @@ void convertNTP(unsigned long *dateUnix,int *year,int *month,int *day,byte *js,i
     int k=0;if(*month>=3){k=2;}
     *js=( (int)((23*(*month))/9) + *day + 4 + *year + (int)((*year-1)/4) - (int)((*year-1)/100) + (int)((*year-1)/400) - k )%7;
 
-//char buf[4]={0};strncat(buf,days+(*js)*3,3);    
+//char buf[4]={0};strncat(buf,days+(*js)*3,3);
 //Serial.print(*js);Serial.print(" ");Serial.print(buf);Serial.print(" ");
-//Serial.print(*year);Serial.print("/");Serial.print(*month);Serial.print("/");Serial.print(*day);Serial.print(" ");
-//Serial.print(*hour);Serial.print(":");Serial.print(*minute);Serial.print(":");Serial.print(*second);
+Serial.print(*year);Serial.print("/");Serial.print(*month);Serial.print("/");Serial.print(*day);Serial.print(" ");
+Serial.print(*hour);Serial.print(":");Serial.print(*minute);Serial.print(":");Serial.println(*second);
 }
 
 int getUDPdate(uint32_t* hms,uint32_t* amj,byte* js)
 {
   int year=0,month=0,day=0,hour=0,minute=0,second=0;
-  
+
   Udp.begin(localUDPPort);
-  
+
   sendNTPpacket(timeServer); // send an NTP packet to a time server
 
   // wait to see if a reply is available
@@ -212,18 +212,49 @@ int getUDPdate(uint32_t* hms,uint32_t* amj,byte* js)
     Udp.read(packetBuffer, NTP_PACKET_SIZE);  // get it                 // sec1900- 2208988800UL;
     unsigned long highWord = word(packetBuffer[40], packetBuffer[41]);
     unsigned long lowWord = word(packetBuffer[42], packetBuffer[43]);
-    unsigned long secsSince1900 = highWord << 16 | lowWord;
-    unsigned long secsSince1970 = secsSince1900 -2208988800UL;          //sec1970=1456790399UL;  // 29/02/2016
+    long secsSince1900 = highWord << 16 | lowWord;
+    long secsSince1970 = secsSince1900 -2208988800UL;          //sec1970=1456790399UL;  // 29/02/2016
 
 //Serial.print("packetBuffer 40-43 : ");Serial.print(packetBuffer[40]);Serial.print(" ");Serial.print(packetBuffer[41]);Serial.print(" ");Serial.print(packetBuffer[42]);Serial.print(" ");Serial.println(packetBuffer[43]);
 //Serial.print(" sin 1900/1970 : ");Serial.print(secsSince1900,10);Serial.print("/");Serial.println(secsSince1970,10);
     convertNTP(&secsSince1970,&year,&month,&day,js,&hour,&minute,&second);
     *amj=year*10000L+month*100+day;*hms=hour*10000L+minute*100+second;
-//Serial.print(*amj);Serial.print(" ");Serial.println(*hms);    
+//Serial.print(*amj);Serial.print(" ");Serial.println(*hms);
     return 1;
   }
   return 0;
 }
 
 
+long genUnixDate(int* year,int* month, int* day, int* hour,int* minute,int* seconde)
+{
+    unsigned long secDay=24*3600L;
+    unsigned long secYear=365*secDay;
+    unsigned long m28=secDay*28L,m30=m28+secDay+secDay,m31=m30+secDay;
+    unsigned long monthSec[]={0,m31,monthSec[1]+m28,monthSec[2]+m31,monthSec[3]+m30,monthSec[4]+m31,monthSec[5]+m30,monthSec[6]+m31,monthSec[7]+m31,monthSec[8]+m30,monthSec[9]+m31,monthSec[10]+m30,monthSec[11]+m31};
+
+    long udate;
+    
+    int yy=*year;if(yy<1970){yy=1970;}
+    yy-=1970;
+    int nbybis=(yy+1)/4;
+    int day29=0;
+    if(((yy+2)%4)==0){
+      if(*month>2 || (*month==2 && *day==29)){day29=1;}
+    }
+    udate=(long)yy*secYear+(long)monthSec[*month-1]+(long)(*day-1)*secDay+(long)*hour*3600L+(long)*minute*60L+(long)*seconde+(long)nbybis*secDay+(long)day29*secDay;
+
+    return udate;
+}
+
+void calcDate(int bd,int* yy,int*mm,int* dd,int* js,int*hh,int* mi,int* ss)     // bd jours avant date*
+{
+  long udate=genUnixDate(yy,mm,dd,hh,mi,ss);
+  Serial.print("udate1=");Serial.println(udate);Serial.print(" (");Serial.print(*yy);Serial.print("/");Serial.print(*mm);Serial.print("/");Serial.print(*dd);Serial.println(") ");
+  udate-=bd*24*3600;
+  Serial.print("udate2=");Serial.println(udate);
+  byte js0;
+  convertNTP(&udate,yy,mm,dd,&js0,hh,mi,ss);
+  *js=js0;  
+}
 

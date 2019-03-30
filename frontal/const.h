@@ -26,7 +26,7 @@
  *      gestion mots de passe et TO révisée (rémanence password via macMaster)
  *      fichier config sur SD, séparation pages switch dans peritable, multiples révisions des fonctions.
  *      ajout periPerTemp dans fichiers periphériques pour paramétrage période temp via péritable
- *      ajout datecmp();ShowMemory();fichier remote et fonctions associées cfgremote,load,save,print;sliderhtml() 
+ *      ajout datecmp(),fichier remote et fonctions associées cfgremote,load,save,print;sliderhtml() 
  *      
  * 1.2  utilhtml regroupe les fonctions utiles aux pages html 
  *      ajout serveur pilote (pilotserv()) et traitement dans pilotserver()       -> client cli_b

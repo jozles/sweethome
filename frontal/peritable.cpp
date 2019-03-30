@@ -292,8 +292,8 @@ Serial.print("début péritable ; remote_IP ");serialPrintIp(remote_IP_cur);Seri
                 // envoie une commande GET/POST 
                 // et pour assurer l'effacement des bits de checkbox : le navigateur ne renvoie que ceux "checkés"
                 periInitVar();periLoad(i);periCur=i;
-                if(*periSwNb>MAXSW){periCheck(i,"perT");periInitVar();periSave(i);}
-                if(*periDetNb>MAXDET){periCheck(i,"perT");periInitVar();periSave(i);}
+                if(*periSwNb>MAXSW){periCheck(i,"perT");periInitVar();periSave(i,PERISAVESD);}
+                if(*periDetNb>MAXDET){periCheck(i,"perT");periInitVar();periSave(i,PERISAVESD);}
 
                 cli->println("<tr>");
                   cli->println("<form method=\"GET \">");

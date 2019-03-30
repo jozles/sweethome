@@ -346,7 +346,7 @@ while(1){}
 /* //correction de valeurs dans les fichiers de périphériques
     Serial.print("correction en cours...");
     periInit();
-    for(i=1;i<=NBPERIF;i++){periSave(i);}
+    for(i=1;i<=NBPERIF;i++){periSave(i,PERISAVESD);}
     Serial.println("terminé");
     while(1){}
 */
@@ -512,7 +512,7 @@ void periDataRead()             // traitement d'une chaine "dataSave" ou "dataRe
     memcpy(periIpAddr,remote_IP_cur,4);            //for(int i=0;i<4;i++){periIpAddr[i]=remote_IP_cur[i];}      // Ip addr
     char date14[14];alphaNow(date14);checkdate(0);packDate(periLastDateIn,date14+2);    // maj dates
 Serial.println("periDataRead");periPrint(periCur);
-    periSave(periCur);checkdate(6);
+    periSave(periCur,PERISAVESD);checkdate(6);
   }
 }
 
@@ -568,7 +568,7 @@ int periParamsHtml(EthernetClient* cli,char* host,int port)   // fonction set ou
           checkdate(5);
           if(zz==MESSOK){packDate(periLastDateOut,date14+2);}
           *periErr=zz;
-          periSave(periCur);                              // modifs de periTable et date effacèe par prochain periLoad si pas save
+          periSave(periCur,PERISAVESD);                  // modifs de periTable et date effacèe par prochain periLoad si pas save
 
           return zz;
 }
@@ -770,7 +770,8 @@ void remoteUpdate()
       remoteN[nbr].onoff=remoteN[nbr].newonoff;
       for(uint8_t nbs=0;nbs<MAXREMLI;nbs++){
         if(remoteT[nbs].num==nbr+1){
-          periCur=remoteT[nbs].pernum;periLoad(periCur);switchCtl(remoteT[nbs].persw,remoteN[nbr].newonoff);periSave(periCur);periSend();
+          periCur=remoteT[nbs].pernum;periLoad(periCur);switchCtl(remoteT[nbs].persw,remoteN[nbr].newonoff);
+          periSave(periCur,PERISAVESD);periSend();
           Serial.print(remoteT[nbs].num);Serial.print(" ");Serial.print(remoteT[nbs].pernum);Serial.print(" ");Serial.print(remoteT[nbs].persw);Serial.print(" ");
           Serial.println(*periSwVal,HEX);
           }
@@ -1155,7 +1156,7 @@ void commonserver(EthernetClient cli)
           case 2:if(cli==cli_a){periTableHtml(&cli);}         // peritable
                  if(cli==cli_b){remoteHtml(&cli);} break;     // remote suite à login
           case 3:periParamsHtml(&cli," ",0);break;            // data_read
-          case 4:periSave(periCur);periTableHtml(&cli);break; // periphériques non serveurs pas de commande get /set ...
+          case 4:periSave(periCur,PERISAVESD);periTableHtml(&cli);break; // periphériques non serveurs pas de commande get /set ...
           case 5:periSend();periTableHtml(&cli);break;        // périphériques serveurs            commande get /set ... (fait periParamsHtml)
           case 6:configSave();periTableHtml(&cli);break;      // config        
           case 7:periSend();SwCtlTableHtml(&cli,*periSwNb,4);break; // config switchs - smise à jour des périphériques (fait periParamsHtml)
@@ -1186,23 +1187,7 @@ void pilotserver()
 {
       if(cli_b = pilotserv.available())      // attente d'un client
         {
-/*      
-        getremote_IP(&cli_b,remote_IPb,remote_MACb);
-
-      Serial.print("\n **** loop  IP_cur=");serialPrintIp(remote_IPb);//Serial.print(" IP_Mac=");serialPrintIp(remote_IP_Mac);Serial.print(" new=");serialPrintIp(remote_IP);
-      Serial.print(" MAC=");serialPrintMac(remote_MACb,1);//Serial.print("  master=");serialPrintMac(macMaster,1);
-      
-      if (cli_b.connected()) 
-        {
-*/
           commonserver(cli_b);
-          //remoteHtml(&cli_b);
-/*          
-          cli_b.stop();
-          delay(1);
-          Serial.println("---- cli stopped"); 
-        }   // cli.connected
-*/
-      }     // server.available  
+        }     
 }
 

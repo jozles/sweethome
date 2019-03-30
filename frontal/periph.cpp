@@ -178,7 +178,7 @@ void getdate(uint32_t* hms2,uint32_t* amj2,byte* js)
   char* days={"SunMonTueWedThuFriSat"};
   char* months={"JanFebMarAprMayJunJulAugSepOctNovDec"};
   int i=0;
-  byte seconde,minute,heure,joursemaine,jour,mois,annee,msb,lsb; // numérique DS3231
+  byte seconde,minute,heure,jour,mois,annee,msb,lsb; // numérique DS3231   // ,joursemaine
   char buf[8];for(byte i=0;i<8;i++){buf[i]=0;} 
   readDS3231time(&seconde,&minute,&heure,js,&jour,&mois,&annee);
   *hms2=(long)(heure)*10000+(long)minute*100+(long)seconde;*amj2=(long)(annee+2000)*10000+(long)mois*100+(long)jour;
@@ -330,7 +330,7 @@ int configSave()
 
 /* >>>>>>>>> périphériques <<<<<<<<<< */
 
-void periCheck(int num,char* text){periSave(NBPERIF+1);periLoad(num);Serial.print(" ");Serial.print(text);Serial.print(" Nb(");Serial.print(num);Serial.print(") sw=");Serial.print(*periSwNb);Serial.print(" det=");Serial.println(*periDetNb);periLoad(NBPERIF+1);}
+void periCheck(int num,char* text){periSave(NBPERIF+1,PERISAVESD);periLoad(num);Serial.print(" ");Serial.print(text);Serial.print(" Nb(");Serial.print(num);Serial.print(") sw=");Serial.print(*periSwNb);Serial.print(" det=");Serial.println(*periDetNb);periLoad(NBPERIF+1);}
 
 
 void periFname(int num,char* fname)
@@ -369,7 +369,7 @@ int periRemove(int num)
   return SDOK;
 }
 
-int periSave(int num)
+int periSave(int num,bool sd)
 {
 
   int i=0;
@@ -381,18 +381,20 @@ int periSave(int num)
   periCacheStatus[num]=1;                                               // cache ok
 
   *periNum=periCur;
-  if(sdOpen(FILE_WRITE,&fperi,periFile)!=SDKO){
-    sta=SDOK;
-    fperi.seek(0);
-    for(i=0;i<PERIRECLEN;i++){fperi.write(periRec[i]);}
+  sta=SDOK;
+  if(sd){
+    if(sdOpen(FILE_WRITE,&fperi,periFile)!=SDKO){
+      fperi.seek(0);
+      for(i=0;i<PERIRECLEN;i++){fperi.write(periRec[i]);}
 //for(i=0;i<PERIRECLEN+sizeof(uint16_t);i++){fperi.write(periRec[i]);}      // ajouter les longueurs des variables ajoutées avant de modifier PERIRECLEN
-    fperi.close();
+      fperi.close();
 
-    for(int x=0;x<4;x++){lastIpAddr[x]=periIpAddr[x];}
+      for(int x=0;x<4;x++){lastIpAddr[x]=periIpAddr[x];}
+    }
+    else sta=SDKO;
+    Serial.print("periSave(");Serial.print(num);Serial.print(")status=");Serial.print(sta);Serial.print(" periNum=");Serial.print(*periNum);Serial.print(" NbSw=");Serial.print(*periSwNb);if(num!=NBPERIF+1){Serial.println();}
+    return sta;
   }
-  else sta=SDKO;
-  Serial.print("periSave(");Serial.print(num);Serial.print(")status=");Serial.print(sta);Serial.print(" periNum=");Serial.print(*periNum);Serial.print(" NbSw=");Serial.print(*periSwNb);if(num!=NBPERIF+1){Serial.println();}
-  return sta;
 }
 
 void periInit()                 // pointeurs de l'enregistrement de table courant
@@ -542,7 +544,7 @@ void periConvert()
     if(periLoad(i)!=SDOK){Serial.print(" load KO");}
     else{
       SD.remove(periFile);
-      if(periSave(i)!=SDOK){Serial.print(" save KO");} 
+      if(periSave(i,PERISAVESD)!=SDOK){Serial.print(" save KO");} 
     }
     Serial.println();
   }

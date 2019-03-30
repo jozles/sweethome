@@ -322,9 +322,57 @@ void remoteHtml(EthernetClient* cli)
             cli->println("</form></body></html>");
 }
 
+void scalcTh(int bd)
+{
+  int   yy,mm,dd,js,hh,mi,ss;
+  byte  yb,mb,db,dsb,hb,ib,sb;
+  readDS3231time(&sb,&ib,&hb,&dsb,&db,&mb,&yb);            // get date(now)
+  yy=yb+2000;mm=mb;dd=db;hh=hb;mi=ib;ss=sb;
+  calcDate(bd,&yy,&mm,&dd,&js,&hh,&mi,&ss);               // get new date
+  uint32_t amj=yy*10000L+mm*100+dd;
+  uint32_t hms=hh*10000L+mi*100+ss;
+  char     dhasc[16];
+  sprintf(dhasc,"%.8lu",amj);strcat(dhasc," ");
+  sprintf(dhasc+9,"%.6lu",hms);dhasc[15]='\0';            // dhasc date/heure recherchée
+  Serial.print("dhasc=");Serial.println(dhasc);
+
+  char inch=0;
+  
+  if(sdOpen(FILE_READ,&fhisto,"fdhisto.txt")==SDKO){return SDKO;}
+  
+  long sdsiz=fhisto.size();
+  long pos=fhisto.position();
+  long ptr,curpos=pos-10000;
+  fhisto.seek(curpos);
+  
+  Serial.print("start search date at ");Serial.print(curpos);Serial.print("/");Serial.print(sdsiz);Serial.print(" (millis=");Serial.print(millis());Serial.println(")");
+
+  string bufSd;
+  ptr=curpos;
+  while(ptr<sdsiz){
+    inch=fhisto.read();ptr++;
+    if(inch=='\n'){
+      inch=fhisto.read();ptr++;
+      while(inch!='\n'){
+        bufSd+=inch;inch=fhisto.read();ptr++;
+      }
+/*  une ligne est présente dans bufSd ; la date/heure doit être < que celle cherchée
+          sinon reprendre avec une position plus ancienne
+    continuer de charger des lignes jusqu'à la première da date/heure > 
+    et commencer le traitement
+*/
+      if(memcmp(bufSd,dhasc,8)==0){}
+    }
+  }
+  Serial.print("--- fin millis=");Serial.print(millis());Serial.println("");
+  fhisto.seek(pos);
+  return sdOpen(FILE_WRITE,&fhisto,"fdhisto.txt");
+}
 
 void thermoHtml(EthernetClient* cli)
 {  
+            scalcTh(1);          // update periphériques
+            
             Serial.println("thermo show");
             htmlIntro(nomserver,cli);
             
