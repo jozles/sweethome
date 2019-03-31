@@ -28,24 +28,27 @@ char* v3debug[NBDBPTS*NBDBOC];
 int   int00=0;
 int*  int0=&int00;
 
+int convIntToString(char* str,int num)
+{
+  int i=0,t=0,num0=num;
+  while(num0!=0){num0/=10;i++;}                 // comptage nbre chiffres partie entière
+  t=i;
+  for (i;i>0;i--){num0=num%10;num/=10;str[i-1]=chexa[num0];}
+  str[t]='\0';
+  return t;
+}
 
 int convNumToString(char* str,float num)  // retour string terminée par '\0' ; return longueur totale '\0' inclus
 {
-  long num0=(long)num;
-  float num1=num;
-  int i=0,j=0,n=0,v=0,t=0;
+  int i=0,v=0,t=0;
 
-  while(num0!=0){num0/=10;i++;}                         // comptage nbre chiffres partie entière
-  t=i;n=i;num0=(long)num;
-  for (i;i>0;i--){v=num0%10;str[i-1]=chexa[v];}      // unpack digits partie entière
+  t=convIntToString(str,(int)num);
 
-  i=2;
-  if(i!=0){
-    str[n]='.';t=t+(i+1);                            // t longueur totale, n+1=longueur entière+'.'
-    num1=num-(int)num;
-    for(j=0;j<i;j++){num1=num1*10;v=(int)num1;num1=num1-v;str[n+1+j]=chexa[v];}
-  }
-  str[t]='\0';t++;
+  num=num-(int)num;
+  str[t]='.';
+  for(i=0;i<2;i++){num=num*10;v=(int)num;num=num-v;str[t+1+i]=chexa[v];}
+  t+=3;
+  str[t]='\0';
 
   return t;
 }
@@ -373,12 +376,12 @@ int searchusr(char* usrname)
 {
     int nbu=-1,k=0;
     bool ok=FAUX;
-    Serial.print(usrname);Serial.print(" usernames=");Serial.println(usrnames);
+//    Serial.print(usrname);Serial.print(" usernames=");Serial.println(usrnames);
 
     for (nbu=NBUSR-1;nbu>=0;nbu--){
-        Serial.print("nbu=");Serial.println(nbu);
+//        Serial.print("nbu=");Serial.println(nbu);
         for(k=0;k<LENUSRNAME;k++){
-                Serial.print(" ");Serial.print(k);Serial.print(" ");Serial.print(usrname[k]);Serial.print(" ");Serial.println(usrnames[k+nbu*(LENUSRNAME+1)]);
+//                Serial.print(" ");Serial.print(k);Serial.print(" ");Serial.print(usrname[k]);Serial.print(" ");Serial.println(usrnames[k+nbu*(LENUSRNAME+1)]);
             if(usrname[k]=='\0' && k==0){break;}
             else if(usrname[k]=='\0'){ok=VRAI;}
             else if(usrname[k]!=usrnames[k+nbu*(LENUSRNAME+1)]){break;}

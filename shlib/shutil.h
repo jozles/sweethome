@@ -6,6 +6,7 @@ byte setcrc(char* buf,int len);
 void conv_atoh(char* ascii,byte* hex);
 void conv_htoa(char* ascii,byte* hex);
 float convStrToNum(char* str,int* sizeRead);
+int convIntToString(char* str,int num);
 int convNumToString(char* str,float num);  // retour string terminée par '\0' ; return longueur totale '\0' inclus
 boolean compMac(byte* mac1,byte* mac2);       // FAUX si != ; VRAI si ==
 void packMac(byte* mac,char* ascMac);

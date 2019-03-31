@@ -68,6 +68,12 @@
 
 #define LBUFSERVER LENMESS+16                // longueur bufserver (messages in/out periphériques)
 
+/* positions fixées dans strSD (fhisto) */
+
+#define SDPOSNUMPER 9   // position numéro périphérique / ';'
+#define SDPOSMAC    12  // position addr mac    / ';'
+#define SDPOSTEMP   30  // position température / ';'
+
 /* >>>> mots de passe <<<< */
 
 #define SRVPASS     "17515A" // pwd accès serveur pour péri
@@ -107,6 +113,7 @@
 #define BCODELENVAL       7   // LENVAL trop petit
 #define BCODECONFIGRECLEN 9   // CONFIGRECLEN faux -> blocage
 #define BCODEPERICACHEKO 11   // periSave et cache invalide
+#define BCODESYSERR      13   // system error (fdatasave>99)
 
 
 enum {FAUX,VRAI};
