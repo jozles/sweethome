@@ -307,8 +307,10 @@ Serial.print("début péritable ; remote_IP ");serialPrintIp(remote_IP_cur);Seri
                       cli->print("<td><input type=\"text\" name=\"peri_nom__\" value=\"");
                         cli->print(periNamer);cli->print("\" size=\"12\" maxlength=\"");cli->print(PERINAMLEN-1);cli->println("\" ></td>");
                       textTableHtml(cli,'f',periLastVal,periThmin,periThmax,1,1);
-                      numTableHtml(cli,'f',periThmin,"peri_thmin",5,0,0);cli->println("<br>");
-                      numTableHtml(cli,'f',periThmax,"peri_thmax",5,3,0);
+                      //numTableHtml(cli,'f',periThmin,"peri_thmin",5,0,0);cli->println("<br>");
+                      //numTableHtml(cli,'f',periThmax,"peri_thmax",5,3,0);
+                      cli->print(*periThmin);cli->println("<br>");
+                      cli->print(*periThmax);
                       textTableHtml(cli,'f',periAlim,periVmin,periVmax,1,1);
                       numTableHtml(cli,'f',periVmin,"peri_vmin_",5,0,0);cli->println("<br>");
                       numTableHtml(cli,'f',periVmax,"peri_vmax_",5,3,0);

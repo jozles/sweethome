@@ -330,7 +330,7 @@ int scalcTh(int bd)
 
   int   yy,mm,dd,js,hh,mi,ss;
   byte  yb,mb,db,dsb,hb,ib,sb;
-  readDS3231time(&sb,&ib,&hb,&dsb,&db,&mb,&yb);            // get date(now)
+  readDS3231time(&sb,&ib,&hb,&dsb,&db,&mb,&yb);           // get date(now)
   yy=yb+2000;mm=mb;dd=db;hh=hb;mi=ib;ss=sb;
   calcDate(bd,&yy,&mm,&dd,&js,&hh,&mi,&ss);               // get new date
   uint32_t amj=yy*10000L+mm*100+dd;
@@ -343,12 +343,12 @@ int scalcTh(int bd)
   if(sdOpen(FILE_READ,&fhisto,"fdhisto.txt")==SDKO){return SDKO;}
   
   long sdsiz=fhisto.size();
-  long pos=fhisto.position();
   long searchStep=100000;
-  long ptr,curpos=pos;
-  
+  long ptr,curpos=sdsiz;
   fhisto.seek(curpos);
-  Serial.print("--- start search date at ");Serial.print(curpos-searchStep);Serial.print("/");Serial.print(sdsiz);Serial.print(" (millis=");Serial.print(millis());Serial.println(")");
+  long pos=fhisto.position();  
+  
+  Serial.print("--- start search date at ");Serial.print(curpos-searchStep);Serial.print(" sdsiz=");Serial.print(sdsiz);Serial.print(" pos=");Serial.print(pos);Serial.print(" (millis=");Serial.print(millis());Serial.println(")");
 
   char inch1=0,inch2=0;
   char buf[RECCHAR];
@@ -357,7 +357,7 @@ int scalcTh(int bd)
     
   while(curpos>0 && !fini){
     curpos-=searchStep;if(curpos<0){curpos=0;}ptr=curpos;
-
+    fhisto.seek(curpos);
     while(ptr<curpos+searchStep && inch1!='\n'){inch1=fhisto.read();ptr++;}
     for(pt=0;pt<ldate;pt++){buf[pt]=fhisto.read();ptr++;}                    // '\n' trouvé : get date
     if(memcmp(buf,dhasc,ldate)>0){ptr=curpos+searchStep;}                    // si la date trouvée est > reculer
@@ -372,29 +372,35 @@ int scalcTh(int bd)
       }
     }
   }
+  long t0=millis();
   Serial.print("--- fin recherche ptr=");Serial.print(ptr);Serial.print(" millis=");Serial.print(millis());Serial.println("");
 
-  char strfds[3];if(convNumToString(strfds,fdatasave)>3){Serial.print("fdatasave>99!!");ledblink(BCODESYSERR);}
+  
+  char strfds[3];memset(strfds,0x00,3);
+  if(convIntToString(strfds,fdatasave)>2){
+    Serial.print("fdatasave>99!! ");Serial.print("fdatasave=");Serial.print(fdatasave);Serial.print(" strfds=");Serial.println(strfds);ledblink(BCODESYSERR);
+  }
   char* pc;
   float th,np;
   int lnp=0,nbli=0,nbth=0;
 
-  for(int pp=1;pp<=NBPERIF;pp++){periLoad(pp);*periThmin=99;*periThmax=-99;periSave(pp,PERISAVELOCAL);}
+  for(int pp=1;pp<=NBPERIF;pp++){periLoad(pp);if(periMacr[0]!=0x00){*periThmin=99;*periThmax=-99;periSave(pp,PERISAVELOCAL);}}
                                                                              
                                                                          // acquisition
   fhisto.seek(ptr-ldate);                                                // sur début enregistrement
   fini=FAUX;
   while(ptr<pos){
     pt=0;
-    buf[pt]='\0';      
-    while(ptr<pos && buf[pt]!='\n'){buf[pt]=fhisto.read();pt++;ptr++;}   // get record
+    inch1='\0';      
+    while(ptr<pos && inch1!='\n'){inch1=fhisto.read();buf[pt]=inch1;pt++;ptr++;}   // get record
+    buf[pt]='\0';
     nbli++;
-    buf[pt+1]='\0';
     pc=strchr(buf,';');
     if(memcmp(buf+ldate+1,"ip",2)==0 && memcmp(pc+1,strfds,2)==0){       // datasave (après ';' soit '\n' soit'<' soit num fonction)
       np=convStrToNum(pc+SDPOSNUMPER,&lnp);                              // num périphérique
       th=convStrToNum(pc+SDPOSTEMP,&lnp);                                // temp périphérique
       periLoad((int)np);
+//delay(20);Serial.print(buf);Serial.print(" per=");Serial.print(np);Serial.print(" th=");Serial.print(th);Serial.print(" - ");periPrint(np);
       packMac(periMacBuf,pc+SDPOSMAC);                       
       if(compMac(periMacBuf,periMacr)){                                  // contrôle mac
         if(*periThmin>th){*periThmin=th;periSave((int)np,PERISAVELOCAL);nbth++;}
@@ -402,9 +408,9 @@ int scalcTh(int bd)
       }      
     }
   }
-  for(int pp=1;pp<=NBPERIF;pp++){periLoad(pp);periSave(pp,PERISAVESD);}   // écriture SD
+  for(int pp=1;pp<=NBPERIF;pp++){periLoad(pp);if(periMacr[0]!=0x00){periSave(pp,PERISAVESD);}}   // écriture SD
   
-  Serial.print("--- fin balayage ");Serial.print(nbli);Serial.print(" lignes ; ");Serial.print(nbth);Serial.print(" màj ; millis=");Serial.print(millis());Serial.println("");
+  Serial.print("--- fin balayage ");Serial.print(nbli);Serial.print(" lignes ; ");Serial.print(nbth);Serial.print(" màj ; millis=");Serial.print(millis()-t0);Serial.println("");
  
   fhisto.seek(pos);
   return sdOpen(FILE_WRITE,&fhisto,"fdhisto.txt");
@@ -437,8 +443,8 @@ void thermoHtml(EthernetClient* cli)
                       cli->print("<td>");cli->print(periCur);cli->println("</td>");
                       cli->print("<td>");cli->print(" <font size=\"7\">");cli->print(thermonames+nuth*(LENTHNAME+1));cli->println("</font>");cli->println("</td>");
                       cli->print("<td>");cli->print(" <font size=\"7\">");cli->print(*periLastVal+*periThOffset);cli->println("</font>");cli->println("</td>");
-                      cli->print("<td>");cli->print(*periThmin);cli->println("</td>");
-                      cli->print("<td>");cli->print(*periThmax);cli->println("</td>");
+                      cli->print("<td><font size=\"4\">");cli->print(*periThmin);cli->println("</font></td>");
+                      cli->print("<td><font size=\"4\">");cli->print(*periThmax);cli->println("</font></td>");
                       cli->print("<td>");printPeriDate(cli,periLastDateIn);cli->println("</td>");                      
                     cli->println("</tr>");
                   }
