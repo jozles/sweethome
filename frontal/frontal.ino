@@ -497,7 +497,11 @@ void periDataRead()             // traitement d'une chaine "dataSave" ou "dataRe
 
   if(periCur!=0){                                                 // si ni trouvé, ni place libre, periCur=0 
     memcpy(periMacr,periMacBuf,6);
-    k=valf+2+1+17+1;*periLastVal=convStrToNum(k,&i);                                    // température si save
+#define PNP 2+1+17+1
+    k=valf+PNP;*periLastVal=convStrToNum(k,&i);                                    // température si save
+#if PNP != SDPOSTEMP-SDPOSNUMPER
+    periCur/=0;
+#endif     
     k+=i;convStrToNum(k,&i);                                                            // age si save
     k+=i;*periAlim=convStrToNum(k,&i);                                                  // alim
     k+=i;strncpy(periVers,k,LENVERSION);                                                // version

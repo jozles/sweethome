@@ -30,21 +30,23 @@ extern char*     periLastDateOut;              // ptr ds buffer : date/heure de 
 extern char*     periVers;                     // ptr ds buffer : version logiciel du périphérique
 extern char*     periModel;                    // ptr ds buffer : model du périphérique
 
-extern uint16_t perrefr;
-extern File     fhisto;           // fichier histo sd card
-extern long     sdpos;
-extern char     strSD[RECCHAR];
+extern byte      periMacBuf[6]; 
+
+extern uint16_t  perrefr;
+extern File      fhisto;           // fichier histo sd card
+extern long      sdpos;
+extern char      strSD[RECCHAR];
 
 
-extern char*    ssid;
-extern char*    passssid;
-extern char*    usrnames;
-extern char*    usrpass;
-extern long*    usrtime;
-extern char*    thermonames;
-extern int16_t* thermoperis;
+extern char*     ssid;
+extern char*     passssid;
+extern char*     usrnames;
+extern char*     usrpass;
+extern long*     usrtime;
+extern char*     thermonames;
+extern int16_t*  thermoperis;
 
-extern int      usernum;
+extern int       usernum;
 
 extern byte*     periSwVal;                    // ptr ds buffer peri : état/cde des inter 
 
@@ -55,7 +57,7 @@ extern struct Remote remoteN[NBREMOTE];
 
 extern char*     periNamer;                    // ptr ds buffer : description périphérique
 
-
+extern int       fdatasave;
 
 
 int htmlImg(EthernetClient* cli,char* fimgname)    // suffisant pour commande péripheriques
@@ -322,8 +324,10 @@ void remoteHtml(EthernetClient* cli)
             cli->println("</form></body></html>");
 }
 
-void scalcTh(int bd)
+int scalcTh(int bd)
 {
+  int   ldate=15;
+
   int   yy,mm,dd,js,hh,mi,ss;
   byte  yb,mb,db,dsb,hb,ib,sb;
   readDS3231time(&sb,&ib,&hb,&dsb,&db,&mb,&yb);            // get date(now)
@@ -331,40 +335,77 @@ void scalcTh(int bd)
   calcDate(bd,&yy,&mm,&dd,&js,&hh,&mi,&ss);               // get new date
   uint32_t amj=yy*10000L+mm*100+dd;
   uint32_t hms=hh*10000L+mi*100+ss;
-  char     dhasc[16];
+  char     dhasc[ldate+1];
   sprintf(dhasc,"%.8lu",amj);strcat(dhasc," ");
   sprintf(dhasc+9,"%.6lu",hms);dhasc[15]='\0';            // dhasc date/heure recherchée
   Serial.print("dhasc=");Serial.println(dhasc);
-
-  char inch=0;
   
   if(sdOpen(FILE_READ,&fhisto,"fdhisto.txt")==SDKO){return SDKO;}
   
   long sdsiz=fhisto.size();
   long pos=fhisto.position();
-  long ptr,curpos=pos-10000;
-  fhisto.seek(curpos);
+  long searchStep=100000;
+  long ptr,curpos=pos;
   
-  Serial.print("start search date at ");Serial.print(curpos);Serial.print("/");Serial.print(sdsiz);Serial.print(" (millis=");Serial.print(millis());Serial.println(")");
+  fhisto.seek(curpos);
+  Serial.print("--- start search date at ");Serial.print(curpos-searchStep);Serial.print("/");Serial.print(sdsiz);Serial.print(" (millis=");Serial.print(millis());Serial.println(")");
 
-  string bufSd;
-  ptr=curpos;
-  while(ptr<sdsiz){
-    inch=fhisto.read();ptr++;
-    if(inch=='\n'){
-      inch=fhisto.read();ptr++;
-      while(inch!='\n'){
-        bufSd+=inch;inch=fhisto.read();ptr++;
+  char inch1=0,inch2=0;
+  char buf[RECCHAR];
+  bool fini=FAUX;
+  int pt;
+    
+  while(curpos>0 && !fini){
+    curpos-=searchStep;if(curpos<0){curpos=0;}ptr=curpos;
+
+    while(ptr<curpos+searchStep && inch1!='\n'){inch1=fhisto.read();ptr++;}
+    for(pt=0;pt<ldate;pt++){buf[pt]=fhisto.read();ptr++;}                    // '\n' trouvé : get date
+    if(memcmp(buf,dhasc,ldate)>0){ptr=curpos+searchStep;}                    // si la date trouvée est > reculer
+    else {                                                                   // sinon chercher >
+      
+      while(!fini){
+        while(ptr<pos && inch1!='\n'){inch1=fhisto.read();ptr++;}
+        for(pt=0;pt<ldate;pt++){buf[pt]=fhisto.read();ptr++;}                // '\n' trouvé : get date
+        if(memcmp(buf,dhasc,ldate)>0){                                       // si la date trouvé est > ok sinon continuer
+          fini=VRAI;                                                         // ptr ok ; pt ok commencer l'acquisition
+        }
       }
-/*  une ligne est présente dans bufSd ; la date/heure doit être < que celle cherchée
-          sinon reprendre avec une position plus ancienne
-    continuer de charger des lignes jusqu'à la première da date/heure > 
-    et commencer le traitement
-*/
-      if(memcmp(bufSd,dhasc,8)==0){}
     }
   }
-  Serial.print("--- fin millis=");Serial.print(millis());Serial.println("");
+  Serial.print("--- fin recherche ptr=");Serial.print(ptr);Serial.print(" millis=");Serial.print(millis());Serial.println("");
+
+  char strfds[3];if(convNumToString(strfds,fdatasave)>3){Serial.print("fdatasave>99!!");ledblink(BCODESYSERR);}
+  char* pc;
+  float th,np;
+  int lnp=0,nbli=0,nbth=0;
+
+  for(int pp=1;pp<=NBPERIF;pp++){periLoad(pp);*periThmin=99;*periThmax=-99;periSave(pp,PERISAVELOCAL);}
+                                                                             
+                                                                         // acquisition
+  fhisto.seek(ptr-ldate);                                                // sur début enregistrement
+  fini=FAUX;
+  while(ptr<pos){
+    pt=0;
+    buf[pt]='\0';      
+    while(ptr<pos && buf[pt]!='\n'){buf[pt]=fhisto.read();pt++;ptr++;}   // get record
+    nbli++;
+    buf[pt+1]='\0';
+    pc=strchr(buf,';');
+    if(memcmp(buf+ldate+1,"ip",2)==0 && memcmp(pc+1,strfds,2)==0){       // datasave (après ';' soit '\n' soit'<' soit num fonction)
+      np=convStrToNum(pc+SDPOSNUMPER,&lnp);                              // num périphérique
+      th=convStrToNum(pc+SDPOSTEMP,&lnp);                                // temp périphérique
+      periLoad((int)np);
+      packMac(periMacBuf,pc+SDPOSMAC);                       
+      if(compMac(periMacBuf,periMacr)){                                  // contrôle mac
+        if(*periThmin>th){*periThmin=th;periSave((int)np,PERISAVELOCAL);nbth++;}
+        if(*periThmax<th){*periThmax=th;periSave((int)np,PERISAVELOCAL);nbth++;} 
+      }      
+    }
+  }
+  for(int pp=1;pp<=NBPERIF;pp++){periLoad(pp);periSave(pp,PERISAVESD);}   // écriture SD
+  
+  Serial.print("--- fin balayage ");Serial.print(nbli);Serial.print(" lignes ; ");Serial.print(nbth);Serial.print(" màj ; millis=");Serial.print(millis());Serial.println("");
+ 
   fhisto.seek(pos);
   return sdOpen(FILE_WRITE,&fhisto,"fdhisto.txt");
 }
