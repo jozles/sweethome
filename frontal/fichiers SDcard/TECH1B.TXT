@@ -1,2 +1,0 @@
-) <br>
-<form method="get" ><p><label for="pos_SD">position SD</label> : <input type="text" name="sd_pos____" id="pos_SD" value="

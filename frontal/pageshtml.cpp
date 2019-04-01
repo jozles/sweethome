@@ -45,6 +45,7 @@ extern char*     usrpass;
 extern long*     usrtime;
 extern char*     thermonames;
 extern int16_t*  thermoperis;
+extern uint16_t* toPassword;
 
 extern int       usernum;
 
@@ -191,6 +192,7 @@ void cfgServerHtml(EthernetClient* cli)
             cli->print(" password <input type=\"text\" name=\"pwdcfg____\" value=\"");cli->print(userpass);cli->print("\" size=\"5\" maxlength=\"");cli->print(LPWD);cli->println("\" >");
             cli->print("  modpass <input type=\"text\" name=\"modpcfg___\" value=\"");cli->print(modpass);cli->print("\" size=\"5\" maxlength=\"");cli->print(LPWD);cli->println("\" >");            
             cli->print(" peripass <input type=\"text\" name=\"peripcfg__\" value=\"");cli->print(peripass);cli->print("\" size=\"5\" maxlength=\"");cli->print(LPWD);cli->println("\" >");            
+            numTableHtml(cli,'d',toPassword,"to_passwd_",6,0,0);cli->println("<br>");
             cli->print(" serverMac <input type=\"text\" name=\"maccfg____\" value=\"");for(int k=0;k<6;k++){cli->print(chexa[mac[k]/16]);cli->print(chexa[mac[k]%16]);}cli->print("\" size=\"11\" maxlength=\"");cli->print(12);cli->println("\" >");                        
 
             subcfgtable(cli,"SSID",MAXSSID,"ssid_____",ssid,LENSSID,"passssid_",passssid,LPWSSID,"password");
@@ -324,8 +326,10 @@ void remoteHtml(EthernetClient* cli)
             cli->println("</form></body></html>");
 }
 
-int scalcTh(int bd)
+int scalcTh(int bd)           // maj temp min/max des périphériques sur les bd derniers jours
 {
+/* --- calcul date début --- */
+  
   int   ldate=15;
 
   int   yy,mm,dd,js,hh,mi,ss;
@@ -349,6 +353,8 @@ int scalcTh(int bd)
   long pos=fhisto.position();  
   
   Serial.print("--- start search date at ");Serial.print(curpos-searchStep);Serial.print(" sdsiz=");Serial.print(sdsiz);Serial.print(" pos=");Serial.print(pos);Serial.print(" (millis=");Serial.print(millis());Serial.println(")");
+
+/* --- recherche 1ère ligne --- */
 
   char inch1=0,inch2=0;
   char buf[RECCHAR];
@@ -375,6 +381,7 @@ int scalcTh(int bd)
   long t0=millis();
   Serial.print("--- fin recherche ptr=");Serial.print(ptr);Serial.print(" millis=");Serial.print(millis());Serial.println("");
 
+/* --- balayage et màj --- */
   
   char strfds[3];memset(strfds,0x00,3);
   if(convIntToString(strfds,fdatasave)>2){

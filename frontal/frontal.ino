@@ -59,15 +59,17 @@ char configRec[CONFIGRECLEN];
   long* usrtime;          // user cx time
   char* thermonames;      // noms sondes thermos
   int16_t* thermoperis;   // num périphériques thermo
+  uint16_t* toPassword;   // Délai validité password en sec !
 
   byte* configBegOfRecord;
   byte* configEndOfRecord;
 
-EthernetServer periserv(PORTPERISERVER);    // port 1789 service, 1790 devt
-EthernetServer pilotserv(PORTPILOTSERVER);   // serveur pilotage
+  bool    periPassOk=FAUX;  // contrôle du mot de passe des périphériques
+  int     usernum=-1;       // numéro(0-n) de l'utilisateur connecté (valide durant commonserver)   
 
-//byte macremote[]= {"\x90\xA2\xDA\x0F\xDF\xAD"};
-//byte remoteserverIp[]={192,168,0,36};
+
+EthernetServer periserv(PORTPERISERVER);    // port 1789 service, 1790 devt
+EthernetServer pilotserv(PORTPILOTSERVER);  // serveur pilotage
 
   uint8_t remote_IP[4]={0,0,0,0};           // periserver
   uint8_t remote_IP_cur[4]={0,0,0,0};       // périphériques periserver
@@ -76,18 +78,9 @@ EthernetServer pilotserv(PORTPILOTSERVER);   // serveur pilotage
   byte    remote_MAC[6]={0,0,0,0,0,0};      // periserver
   byte    remote_MACb[6]={0,0,0,0,0,0};     // pilotserver
 
-#define TO_PASSWORD 600     // sec
-  uint16_t toPassword=0;    // rémanence du mot de passe browser (sec)
-  long    timePassword=0;          
-  bool    periPassOk=FAUX;  // contrôle du mot de passe des périphériques
-  int     usernum=-1;       // numéro(0-n) de l'utilisateur connecté (un seul à la fois)   
 
-//  byte    macMaster[6]={0,0,0,0,0,0};  // adresse mac d'un browser chargée lors de la saisie du mot de passe dans peritable
-                                       // permet d'identifier le browser pour ne pas avoir à re-saisir le mot de passe 
-                                       // donne l'habilitation pour effectuer des modifs dans peritable
-                                       // (sinon renvoi à l'accueil)
   int8_t  numfonct[NBVAL];             // les fonctions trouvées  (au max version 1.1k 23+4*57=251)
-  char*   fonctions="per_temp__peri_pass_username__password__user_ref__admindispoper_refr__peri_tofs_switchs___reset_____dump_sd___sd_pos____data_save_data_read_peri_swb__peri_cur__peri_refr_peri_nom__peri_mac__accueil___peri_tableperi_prog_peri_sondeperi_pitchperi_pmo__peri_detnbperi_intnbperi_rtempremote____testhtml__peri_vsw__peri_t_sw_peri_otf__peri_imn__peri_imc__peri_pto__peri_ptt__peri_thminperi_thmaxperi_vmin_peri_vmax_peri_dsv__mem_dsrv__ssid______passssid__usrname___usrpass____cfgserv___pwdcfg____modpcfg___peripcfg__maccfg____remotecfg_remote_ctlremotehtmlthername__therperi__thermohtmldone______last_fonc_";  //};
+  char*   fonctions="per_temp__peri_pass_username__password__user_ref__to_passwd_per_refr__peri_tofs_switchs___reset_____dump_sd___sd_pos____data_save_data_read_peri_swb__peri_cur__peri_refr_peri_nom__peri_mac__accueil___peri_tableperi_prog_peri_sondeperi_pitchperi_pmo__peri_detnbperi_intnbperi_rtempremote____testhtml__peri_vsw__peri_t_sw_peri_otf__peri_imn__peri_imc__peri_pto__peri_ptt__peri_thminperi_thmaxperi_vmin_peri_vmax_peri_dsv__mem_dsrv__ssid______passssid__usrname___usrpass____cfgserv___pwdcfg____modpcfg___peripcfg__maccfg____remotecfg_remote_ctlremotehtmlthername__therperi__thermohtmldone______last_fonc_";  //};
   /*  nombre fonctions, valeur pour accueil, data_save_ fonctions multiples etc */
   int     nbfonct=0,faccueil=0,fdatasave=0,fperiSwVal=0,fperiDetSs=0,fdone=0,fpericur=0,fperipass=0,fpassword=0,fusername=0,fuserref=0;
   char    valeurs[LENVALEURS];         // les valeurs associées à chaque fonction trouvée
@@ -408,10 +401,6 @@ void getremote_IP(EthernetClient *client,uint8_t* ptremote_IP,byte* ptremote_MAC
     W5100.readSnDHAR(client->getSocketNumber(), ptremote_MAC);
     W5100.readSnDIPR(client->getSocketNumber(), ptremote_IP);
 }
-
-void disTrigPwd(){toPassword=0;}
-void trigPwd(){startto(&timePassword,&toPassword,TO_PASSWORD);}
-bool chkTrigPwd(){return ctlto(timePassword,toPassword);}
 
 
 
@@ -926,29 +915,25 @@ void commonserver(EthernetClient cli)
 
     si la première fonction est fperipass, c'est un périphérique, sinon un browser 
     si c'est un browser : username__ puis password__ en cas de login, sinon user_ref_n=ttt... et contrôle du TO (ttt... millis() du dernier accés)
-       si ok et pas de TO, retrig et la suite est exécutée sinon page d'accueil
-       si user_ref_ est utilisée seule -> peritable 
+                          user_ref__ seule génère peritable
     
     fonctionnement de la rémanence de password_ :
-    millis() est échantillonnée à chaque accès de l'utilisateur s'il n'est pas en TO (sinon accueil)
+    chaque entrée de la table des utilisateurs incorpore un champ usrtime qui stocke millis() de password puis de la dernière fonction usr_ref__
+    les boutons et autres commandes recoivent usrtime et le renvoient lorsque déclenchés. 
+    Si usrtime a changé ou si le délai de validité est dépassé ---> accueil.
+    Le délai est modifiable dans la config (commun à tous les utilisateurs)
+                                       
 
     Sécurité à développer : pour assurer que le mot de passe n'est pas dérobable et que sans mot de passe on ne peut avoir de réponse du serveur,
     le mot de passe doit être crypté dans une chaine qui change de valeur à chaque transmission ; donc crypter mdp+heure. 
     Le serveur accepte une durée de validité (10sec?) au message et refuse le ré-emploi de la même heure.
     Ajouter du java pour crypter ce qui sort du navigateur ? (les 64 premiers caractères de GET / : username,password,heure/user_ref,heure)
     
-
-
-    /////// ancien systeme /////////
-    toPassword=0 annule la rémanence de password_                        - disTrigPwd()
-    toPassword=TO_PASSWORD établit la rémanence
-    ctlto(passwordTime,toPassword) retourne vrai si le temps est dépassé - chkTrigPwd()
-    startto(passwordTime,toPassword,TO_PASSWORD) retrig la rémanence     - trigPwd()
 */     
 
       if(numfonct[0]!=fperipass){
         if((numfonct[0]!=fusername || numfonct[1]!=fpassword) && numfonct[0]!=fuserref){
-          what=-1;nbreparams=-1;i=0;numfonct[i]=faccueil;disTrigPwd();}    // -->> accueil en cas d'anomalie
+          what=-1;nbreparams=-1;i=0;numfonct[i]=faccueil;}    // -->> accueil en cas d'anomalie
       }
 /*
     boucle des fonctions accumulées par getnv
@@ -991,19 +976,15 @@ void commonserver(EthernetClient cli)
                          sdstore_textdh(&fhisto,"pw","ko",strSD);}                                   
                        else {Serial.println("password ok");usrtime[usernum]=millis();if(nbreparams==1){what=2;}}
                        break;                                                                        
-              case 4:  {int nb=*(libfonctions+2*i+1)-PMFNCHAR;                                       // user_ref__
+              case 4:  {usernum=*(libfonctions+2*i+1)-PMFNCHAR;                                      // user_ref__ (argument : millis() envoyées avec la fonction au chargement de la page)
                         long cxtime=0;conv_atobl(valf,(uint32_t*)&cxtime);
-                        Serial.print("nb=");Serial.print(nb);Serial.print(" millis()/1000=");Serial.print(millis()/1000);Serial.print(" cxtime=");Serial.print(cxtime);Serial.print(" usrtime[nb]=");Serial.println(usrtime[nb]);
-                        if(usrtime[nb]!=cxtime || (millis()-usrtime[nb])>(TO_PASSWORD*1000)){
-                          what=-1;nbreparams=-1;i=0;numfonct[i]=faccueil;usrtime[nb]=0;}
-                        else {Serial.println("user ok");usrtime[usernum]=millis();if(nbreparams==0){what=2;}}
-                        }
-                       Serial.print("user_ref__:");Serial.print(valf);Serial.print(" usernum=");
-                       Serial.print(usernum);Serial.print("/");Serial.print(usrnames+usernum*LENUSRNAME);
-                       Serial.print(" usrtime=");Serial.println(usrtime[usernum]);
-                       break;                                                                        
-              case 5:  break;                                                                        // admin
-              case 6:  what=2;perrefr=0;conv_atob(valf,&perrefr);                                           // periode refresh browser
+                        Serial.print("usr_ref__ : usrnum=");Serial.print(usernum);Serial.print(" millis()/1000=");Serial.print(millis()/1000);Serial.print(" cxtime=");Serial.print(cxtime);Serial.print(" usrtime[nb]=");Serial.println(usrtime[usernum]);
+                        if(usrtime[usernum]!=cxtime || (millis()-usrtime[usernum])>(*toPassword*1000)){
+                          what=-1;nbreparams=-1;i=0;numfonct[i]=faccueil;usrtime[usernum]=0;}
+                        else {Serial.print("user ");Serial.print(usrnames+usernum*LENUSRNAME);Serial.println(" ok");usrtime[usernum]=millis();if(nbreparams==0){what=2;}}
+                        }break;                                                                        
+              case 5:  *toPassword=TO_PASSWORD;conv_atob(valf,toPassword);break;                    // to_passwd_
+              case 6:  what=2;perrefr=0;conv_atob(valf,&perrefr);                                    // periode refresh browser
                        break;                                                                               
               case 7:  *periThOffset=0;*periThOffset=convStrToNum(valf,&j);break;                    // Th Offset
               case 8:  periCur=*(libfonctions+2*i+1)-PMFNCHAR;                                       // switchs___ 

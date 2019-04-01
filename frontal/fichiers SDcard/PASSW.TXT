@@ -1,1 +1,0 @@
-<body><form method="get" ><p><label for="password">password</label> : <input type="password" name="password__" id="password" value="" size="6" maxlength="8" ></p></form></body></html>

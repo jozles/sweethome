@@ -1,4 +1,0 @@
-" size="3" maxlength="6"  /><br></p></form>
-<a href=page.html?stop_aff__: target=_self>stop aff</a> <br>
-<form method="get" ><p>
-<label for="af_flags">flags affic</label> : <input type="text" name="aff_flags_" id="af_flags" value="

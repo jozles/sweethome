@@ -30,6 +30,7 @@ extern char* usrpass;
 extern long* usrtime;
 extern char* thermonames;
 extern int16_t* thermoperis;
+extern uint16_t* toPassword;
 extern byte* configBegOfRecord;
 extern byte* configEndOfRecord;
 
@@ -266,6 +267,7 @@ memcpy(usrnames,"admin",5);memcpy(usrpass,"17515A\0\0",8);
 memset(usrtime,0x00,NBUSR*sizeof(long));
 memset(thermonames,0x00,340); //NBTHERMO*(LENTHNAME+1));
 memset(thermoperis,0x00,NBTHERMO*sizeof(int16_t));
+*toPassword=TO_PASSWORD;
 }
 
 void subcprint(char* str1,void* strv,uint8_t nbl,uint8_t len1,int len2,long* cxtime)
@@ -293,7 +295,7 @@ void configPrint()
   Serial.print("Mac=");serialPrintMac(mac,0);
   Serial.print(" ");Serial.print(nomserver);
   Serial.print(" localIp=");for(int pp=0;pp<4;pp++){Serial.print((uint8_t)localIp[pp]);if(pp<3){Serial.print(".");}}Serial.print("/");Serial.println(*portserver);
-  Serial.print("password=");Serial.print(userpass);Serial.print(" modpass=");Serial.print(modpass);Serial.print(" peripass=");Serial.println(peripass);
+  Serial.print("password=");Serial.print(userpass);Serial.print(" modpass=");Serial.print(modpass);Serial.print(" peripass=");Serial.print(peripass);Serial.print(" toPassword=");Serial.println(*toPassword);
   Serial.println("table ssid ");subcprint(ssid,passssid,MAXSSID,LENSSID,LPWSSID,0);
   Serial.println("table user ");subcprint(usrnames,usrpass,NBUSR,LENUSRNAME,LENUSRPASS,usrtime);
   Serial.println("table thermo ");subcprint(thermonames,thermoperis,NBTHERMO,LENTHNAME,-1,0);

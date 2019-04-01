@@ -82,6 +82,8 @@
 
 #define CONFIGRECLEN 1211                    // longueur record config 
 
+#define TO_PASSWORD 600                      // sec (pour initialiser toPassword à la mise sous tension
+
 #define MAXIMGLEN   4000                     // longueur maxi pour fichiers image
 
 #define MAXSERVACCESS 120                    // (sec) période maximale accés au serveur par défaut
