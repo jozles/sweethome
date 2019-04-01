@@ -192,7 +192,7 @@ void cfgServerHtml(EthernetClient* cli)
             cli->print(" password <input type=\"text\" name=\"pwdcfg____\" value=\"");cli->print(userpass);cli->print("\" size=\"5\" maxlength=\"");cli->print(LPWD);cli->println("\" >");
             cli->print("  modpass <input type=\"text\" name=\"modpcfg___\" value=\"");cli->print(modpass);cli->print("\" size=\"5\" maxlength=\"");cli->print(LPWD);cli->println("\" >");            
             cli->print(" peripass <input type=\"text\" name=\"peripcfg__\" value=\"");cli->print(peripass);cli->print("\" size=\"5\" maxlength=\"");cli->print(LPWD);cli->println("\" >");            
-            numTableHtml(cli,'d',toPassword,"to_passwd_",6,0,0);cli->println("<br>");
+            cli->print(" to password");numTableHtml(cli,'d',toPassword,"to_passwd_",6,0,0);cli->println("<br>");
             cli->print(" serverMac <input type=\"text\" name=\"maccfg____\" value=\"");for(int k=0;k<6;k++){cli->print(chexa[mac[k]/16]);cli->print(chexa[mac[k]%16]);}cli->print("\" size=\"11\" maxlength=\"");cli->print(12);cli->println("\" >");                        
 
             subcfgtable(cli,"SSID",MAXSSID,"ssid_____",ssid,LENSSID,"passssid_",passssid,LPWSSID,"password");
@@ -320,8 +320,8 @@ void remoteHtml(EthernetClient* cli)
             }
             cli->println("</table>");
             
-            cli->println("<p align=\"center\" ><input type=\"submit\" value=\"MàJ\" style=\"height:120px;width:400px;background-color:LightYellow;\"></p><br>");
-            boutFonction(cli,"thermohtml","","thermohtml",0,0,7,1);                        
+            cli->println("<p align=\"center\" ><input type=\"submit\" value=\"MàJ\" style=\"height:120px;width:400px;background-color:LightYellow;font-size:40px;font-family:Courier,sans-serif;\"></p><br>");
+            boutFonction(cli,"thermohtml","","températures",0,0,7,1);                        
             
             cli->println("</form></body></html>");
 }
@@ -423,21 +423,43 @@ int scalcTh(int bd)           // maj temp min/max des périphériques sur les bd
   return sdOpen(FILE_WRITE,&fhisto,"fdhisto.txt");
 }
 
+void intro(EthernetClient* cli)
+{
+  htmlIntro0(cli);
+  cli->println("<head><title>sweet hdev</title>");
+  
+  cli->println("<style>");
+  cli->println("table {");
+  cli->println("font-family: Courier, sans-serif;");
+  cli->println("border-collapse: collapse;");
+  cli->println("overflow: auto;");
+  cli->println("white-space:nowrap;");
+  cli->println("}");
+  cli->println("td, th {");
+  cli->println("border: 1px solid #dddddd;");
+  cli->println("text-align: left;");
+  cli->println("}");
+  cli->println("</style>");
+  
+  cli->println("</head>");
+}
+
 void thermoHtml(EthernetClient* cli)
 {  
             scalcTh(1);          // update periphériques
             
             Serial.println("thermo show");
-            htmlIntro(nomserver,cli);
+            //htmlIntro(nomserver,cli);
+            intro(cli);
             
-            cli->print("<body>");cli->print(VERSION);cli->println("<br>");
+            cli->print("<body>");cli->print(VERSION);cli->print(" ");
             boutRetour(cli,"retour",0,1);
 
 /* peritable températures */
 
          cli->println("<table>");
               cli->println("<tr>");
-                cli->println("<th>thermo</th><th>peri</th><th></th><th>TH</th><th>min</th><th>max</th><th>last in</th>");
+                cli->println("<th>peri</th><th></th><th>TH</th><th>min</th><th>max</th><th>last in</th>");
               cli->println("</tr>");
 
               for(int nuth=0;nuth<NBTHERMO;nuth++){
@@ -446,12 +468,12 @@ void thermoHtml(EthernetClient* cli)
                   periInitVar();periCur=nuper;periLoad(periCur);
                   if(periMacr[0]!=0x00){
                     cli->println("<tr>");
-                      cli->print("<td>");cli->print(nuth+1);cli->print("</td>");
+                      //cli->print("<td>");cli->print(nuth+1);cli->print("</td>");
                       cli->print("<td>");cli->print(periCur);cli->println("</td>");
-                      cli->print("<td>");cli->print(" <font size=\"7\">");cli->print(thermonames+nuth*(LENTHNAME+1));cli->println("</font>");cli->println("</td>");
-                      cli->print("<td>");cli->print(" <font size=\"7\">");cli->print(*periLastVal+*periThOffset);cli->println("</font>");cli->println("</td>");
-                      cli->print("<td><font size=\"4\">");cli->print(*periThmin);cli->println("</font></td>");
-                      cli->print("<td><font size=\"4\">");cli->print(*periThmax);cli->println("</font></td>");
+                      cli->print("<td> <font size=\"7\">");cli->print(thermonames+nuth*(LENTHNAME+1));cli->println("</font></td>");
+                      cli->print("<td> <font size=\"7\">");cli->print(*periLastVal+*periThOffset);cli->println("</font></td>");
+                      cli->print("<td> <div style='text-align:right; font-size:30px;'>");cli->print(*periThmin);cli->println("</div></td>");
+                      cli->print("<td> <div style='text-align:right; font-size:30px;'>");cli->print(*periThmax);cli->println("</div></td>");
                       cli->print("<td>");printPeriDate(cli,periLastDateIn);cli->println("</td>");                      
                     cli->println("</tr>");
                   }
@@ -459,7 +481,7 @@ void thermoHtml(EthernetClient* cli)
               }
           cli->println("</table>");
 
-        boutRetour(cli,"retour",0,0);
+        //boutRetour(cli,"retour",0,0);
         boutFonction(cli,"remotehtml","","remote",0,0,7,1);                        
 
         cli->println("</body></html>");

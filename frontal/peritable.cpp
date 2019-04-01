@@ -274,7 +274,7 @@ Serial.print("début péritable ; remote_IP ");serialPrintIp(remote_IP_cur);Seri
 
           cli->print("(");long sdsiz=fhisto.size();cli->print(sdsiz);cli->println(") ");
           numTableHtml(cli,'i',(uint32_t*)&sdpos,"sd_pos____",9,0,0);cli->println("<input type=\"submit\" value=\"ok\"> ");
-          boutFonction(cli,"dump_sd___","","dump SDcard",0,0,0,0);
+          boutFonction(cli,"dump_sd___","","dump SD",0,0,0,0);
           
           cli->println(" détecteurs serveur :");
           for(int k=0;k<NBDSRV;k++){subDSn(cli,"mem_dsrv__\0",memDetServ,k);}

@@ -983,7 +983,7 @@ void commonserver(EthernetClient cli)
                           what=-1;nbreparams=-1;i=0;numfonct[i]=faccueil;usrtime[usernum]=0;}
                         else {Serial.print("user ");Serial.print(usrnames+usernum*LENUSRNAME);Serial.println(" ok");usrtime[usernum]=millis();if(nbreparams==0){what=2;}}
                         }break;                                                                        
-              case 5:  *toPassword=TO_PASSWORD;conv_atob(valf,toPassword);break;                    // to_passwd_
+              case 5:  *toPassword=TO_PASSWORD;conv_atob(valf,toPassword);Serial.print(" topass=");Serial.println(valf);break;                     // to_passwd_
               case 6:  what=2;perrefr=0;conv_atob(valf,&perrefr);                                    // periode refresh browser
                        break;                                                                               
               case 7:  *periThOffset=0;*periThOffset=convStrToNum(valf,&j);break;                    // Th Offset

@@ -211,7 +211,7 @@ void boutFonction(EthernetClient* cli,char* nomfonct,char* valfonct,char* lib,ui
     cli->print("\">");
     if(aligncenter){cli->print("<p align=\"center\">");}
     cli->print("<input type=\"button\" value=\"");cli->print(lib);cli->print("\"");
-    if(sizfnt==7){cli->print(" style=\"height:120px;width:400px;background-color:LightYellow;\"");}
+    if(sizfnt==7){cli->print(" style=\"height:120px;width:400px;background-color:LightYellow;font-size:40px;font-family:Courier,sans-serif;\"");}
     if(aligncenter){cli->println("></p></a>");}
     else{cli->println("></a>");}
 

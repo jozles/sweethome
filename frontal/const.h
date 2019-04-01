@@ -80,7 +80,7 @@
 #define NBTHERMO  NBPERIF
 #define LENTHNAME 16
 
-#define CONFIGRECLEN 1211                    // longueur record config 
+#define CONFIGRECLEN 1213                    // longueur record config 
 
 #define TO_PASSWORD 600                      // sec (pour initialiser toPassword à la mise sous tension
 

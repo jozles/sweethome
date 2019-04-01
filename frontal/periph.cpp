@@ -239,6 +239,8 @@ byte* temp=(byte*)configRec;
   temp+=NBTHERMO*(LENTHNAME+1);
   thermoperis=(int16_t*)temp;
   temp+=NBTHERMO*sizeof(int16_t);
+  toPassword=(uint16_t*)temp;
+  temp+=sizeof(uint16_t);
 
   configEndOfRecord=(byte*)temp;      // doit être le dernier !!!
 
