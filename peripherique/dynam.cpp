@@ -79,6 +79,7 @@ extern  int*  int0=&(0x00);*/
   - fin           compteur courant au max puis avance compteur ; si bloqué -> stapulse end1 ou 2 sinon suite normale
   - short         compteur courant au max ; stapulse inchangé
   - impulsion     si impDetTime < DETIMP effectue raz sinon sans effet
+  - toogle switch change l'état du(ou des) switch(s) utilisant le détecteur (voir const.h pour les^pb de mise en oeuvre)
   
   
   memDetec contient l'image mémoire des détecteurs locaux (physiques et spéciaux) et externes
@@ -259,11 +260,11 @@ void hspr16b(uint16_t hp)
   if(hp&0x00F0==0){Serial.print('0');}Serial.print(hp,HEX);
 }
 
-void isrPul(uint8_t det)                        // maj staPulse au changement d'état d'un détecteur
+void isrPul(uint8_t det)                        // maj staPulse (ou switch) au changement d'état d'un détecteur
 {                                               
   Serial.print(det);Serial.print(" ");
 
-  for(int sw=0;sw<NBSW;sw++){                                               // explo sw
+  for(int sw=0;sw<NBSW;sw++){                                                 // explo sw
 
       Serial.print(sw);Serial.print(":");
       uint64_t spctl=0;memcpy(&spctl,cstRec.pulseCtl+sw*DLSWLEN,DLSWLEN);     // les DL d'un switch
@@ -274,14 +275,14 @@ void isrPul(uint8_t det)                        // maj staPulse au changement d'
         Serial.print((uint8_t)(spctlnb>>DLNLS_PB),HEX);Serial.print("/");Serial.print(DLNLS_PB);Serial.print("/");
         Serial.print(DLNMS_PB);Serial.print("/");
         uint8_t test=0;                                                                                             // si ...
-        if( (uint8_t)((spctlnb>>DLNLS_PB)&mask[(DLNMS_PB)-(DLNLS_PB)+1])==det ){ Serial.print("1");test+=1;}            // =det courant
+        if( (uint8_t)((spctlnb>>DLNLS_PB)&mask[(DLNMS_PB)-(DLNLS_PB)+1])==det ){ Serial.print("1");test+=1;}        // =det courant
         if( (spctlnb&DLENA_VB)!=0 ){  Serial.print("2");test+=2;}                                                   // enable
         if( (spctlnb&DLEL_VB)!=0  ){  Serial.print("3");test+=4;}                                                   // local
         if( (byte)((spctlnb>>DLMHL_PB)&0x01)==(byte)((cstRec.memDetec[det]>>DETBITLH_PB)&0x01) ){  Serial.print("4");test+=8;}    // LH ok
         
         if( test==15){                                                                                              // dl déclenché
-          byte action=(byte)((spctlnb>>DLACLS_PB)&mask[DLACMS_PB-DLACLS_PB+1])+1;                                       // exécuter l'action
-          byte actions[]={PMDCA_STOP+1,PMDCA_START+1,PMDCA_SHORT+1,PMDCA_RAZ+1,PMDCA_RESET+1,PMDCA_IMP+1,PMDCA_END+1,0x00};
+          byte action=(byte)((spctlnb>>DLACLS_PB)&mask[DLACMS_PB-DLACLS_PB+1])+1;                                   // exécuter l'action
+          byte actions[]={PMDCA_STOP+1,PMDCA_START+1,PMDCA_SHORT+1,PMDCA_RAZ+1,PMDCA_RESET+1,PMDCA_IMP+1,PMDCA_END+1,PMDCA_TGL,0x00};
 
           byte act=(byte)(strchr((char*)actions,action)-(char*)actions);
           Serial.print(" action=");Serial.print(action);
@@ -325,6 +326,9 @@ void isrPul(uint8_t det)                        // maj staPulse au changement d'
                     if(staPulse[sw]==PM_RUN1 || cstRec.cntPulseOne[sw]!=0){setPulseChg(sw,&spctl,'O');}
                     else if(staPulse[sw]==PM_RUN2 || cstRec.cntPulseTwo[sw]!=0){setPulseChg(sw,&spctl,'T');}
                     impDetTime[sw]=0;
+                    break;
+            case 7: Serial.print(" toggle");
+                    cstRec.swToggle[sw]=1;forceTrigTemp();
                     break;
             default:Serial.print(" syserr=");Serial.print(action,HEX);Serial.print(" ");
                     staPulse[sw]=PM_DISABLE;

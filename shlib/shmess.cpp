@@ -114,14 +114,17 @@ int messToServer(WiFiClient* cli,const char* host,const int port,char* data)    
 #endif
 {
   byte crc;
-  int w=0,v=MESSOK,x;
+  int w=0,x=0,v=MESSOK,repeat=0;
   long beg=millis();
 
 #ifndef PERIF
-    purgeServer(cli);
+    //purgeServer(cli);
 #endif // PERIF
 
+  while(!x && repeat<10){
     x=cli->connect(host,port);
+    v=MESSOK;
+    repeat++;
     Serial.print("connexion serveur (");Serial.print(x);Serial.print(") ");
     Serial.print(host);Serial.print(":");Serial.print(port);
     Serial.print("...");
@@ -136,8 +139,9 @@ int messToServer(WiFiClient* cli,const char* host,const int port,char* data)    
         }
         delay(1000);Serial.print(":");Serial.print(w++);Serial.print(" ");
         if((millis()-beg)>TO_HTTPCX){*/
-            Serial.println(" échouée");
-            v=MESSCX;
+        Serial.println(" échouée");
+        v=MESSCX;
+      }
     }
     if(v==MESSOK){
         Serial.println(" ok");

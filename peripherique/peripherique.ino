@@ -63,7 +63,7 @@ WiFiClient cliext;              // client externe du serveur local
   char  ageSeconds[8];     // secondes 9999999s=115 jours
   long  tempAge=1;         // secondes
   bool  tempchg=FAUX;
-
+  long timeservbegin;
 
   long  clkTime=millis();   // timer automate rapide
   uint8_t clkFastStep=0;    // stepper automate rapide
@@ -128,9 +128,6 @@ void tmarker()
   pinMode(WPIN,OUTPUT);for(int t=0;t<6;t++){digitalWrite(WPIN,LOW);delayMicroseconds(100);digitalWrite(WPIN,HIGH);delayMicroseconds(100);}
 }
 
-void trigTemp(){startto(&tempTime,&tempPeriod,cstRec.tempPer);}
-bool chkTrigTemp(){return ctlto(tempTime,tempPeriod);}
-void forceTrigTemp(){tempPeriod=0;}
 
 void setup() 
 { 
@@ -263,8 +260,10 @@ delay(100);
   memset(staPulse,0x00,MAXSW);
 
   #ifdef  _SERVER_MODE
+//    wifiConnexion("devolo-5d3","JNCJTRONJMGZEEQL");
+    timeservbegin=millis();
     server.begin(PORTSERVPERI);
-    Serial.println("server-begin");
+    Serial.print("server.begin(");Serial.print((int)PORTSERVPERI);Serial.print(") durée=");Serial.println(millis()-timeservbegin);
   #endif  def_SERVER_MODE
 
   }    // fin setup NO_MODE
@@ -297,7 +296,8 @@ delay(100);
           case 2:   break;
           case 3:   timeOvfSet(3);swAction();timeOvfCtl(3);break;
           case 4:   break;
-          case 5:   timeOvfSet(5);if(cstRec.talkStep!=0){talkServer();}timeOvfCtl(5);break;
+          case 5:   timeOvfSet(5);if(cstRec.talkStep!=0){talkServer();}timeOvfCtl(5);
+                    break;
           case 6:   break;
           case 7:   break;
           case 8:   swDebounce();break;                                 // doit être avant polDx
@@ -398,11 +398,13 @@ readTemp() gestion communications cycliques (déclenche talkServer)
 
 void infos(char* mess,char* data,uint8_t val)           // Serial.print de fonctionnement du périphérique
 {
+/*        
         char ff[LENNOM+1];memcpy(ff,data,LENNOM);ff[LENNOM]='\0';
         char np[3];strncpy(np,data+MPOSNUMPER,2);np[2]='\0';               
         Serial.print(mess);Serial.print("(");Serial.print(ff);Serial.print(") numper=");Serial.print(np);
         Serial.print(";");Serial.print(val);
         Serial.print(" periMess=");Serial.println(periMess);  
+*/
 }
 
 void fServer(uint8_t fwaited)          // réception du message réponse du serveur pour DataRead/Save;
@@ -481,6 +483,10 @@ int talkServer()    // si numPeriph est à 0, dataRead pour se faire reconnaitre
                     // renvoie 0 et periMess valorisé si la com ne s'est pas bien passée.
 {
 
+#ifdef  _SERVER_MODE
+  dateon=millis();
+#endif  def_SERVER_MODE
+
 int v=0;
 
 infos(" talkServer","",cstRec.talkStep);
@@ -504,7 +510,7 @@ switch(cstRec.talkStep){
   case 4:         // connecté au wifi
                   // si le numéro de périphérique est 00 ---> récup (dataread), ctle réponse et maj params
                   
-  Serial.print("durée (talstep=4)=");Serial.print(millis());Serial.print(" - ");
+  Serial.print("durée (talkstep=4)=");Serial.print(millis());Serial.print(" - ");
   Serial.print(dateon);Serial.print(" = ");Serial.println(millis()-dateon);
   
       if(memcmp(cstRec.numPeriph,"00",2)==0){
@@ -525,7 +531,9 @@ switch(cstRec.talkStep){
       
   case 6:         // si numPeriph !=0 ou réponse au dataread ok -> datasave
                   // sinon recommencer au prochain timing
-
+      
+      if(cstRec.talkStep!=STEPDATASAVE){ledblink(BCODESYSERR);}
+      
       if(memcmp(cstRec.numPeriph,"00",2)==0){cstRec.talkStep=9;}
       else {  
         v=dataSave();infos("  dataSave","",v);
@@ -539,6 +547,7 @@ switch(cstRec.talkStep){
                   // sinon recommencer au prochain timing
 
        fServer(fack_______);
+       memset(cstRec.swToggle,0x00,MAXSW);                  // effacement bits toggle après fin du transfert
        // le num de périph a été mis à 0 si la com ne s'est pas bien passée
        cstRec.talkStep=9;
        break;  
@@ -547,6 +556,13 @@ switch(cstRec.talkStep){
 
   case 9:
        cstRec.talkStep=0;
+
+#ifdef  _SERVER_MODE
+  timeservbegin=millis();
+  server.begin(PORTSERVPERI);
+  Serial.print("server.begin(");Serial.print((int)PORTSERVPERI);Serial.print(") durée=");Serial.println(millis()-timeservbegin);
+#endif  def_SERVER_MODE
+
        break;
 
 
@@ -651,7 +667,7 @@ void talkClient(char* etat) // réponse à une requête
 
 int buildReadSave(char* nomfonction,char* data)   //   assemble et envoie read/save (sortie MESSCX connexion échouée)
                                                   //   password__=nnnnpppppp..cc?
-                                                  //   data_rs.._=nnnnppmm.mm.mm.mm.mm.mm_[-xx.xx_aaaaaaa_v.vv]_r.r_siiii_diiii_cc
+                                                  //   data_rs.._=nnnnppmm.mm.mm.mm.mm.mm_[-xx.xx_aaaaaaa_v.vv]_r.r_siiii_diiii_ffff_cc
 {
   strcpy(bufServer,"GET /cx?\0");
   if(!buildMess("peri_pass_",srvpswd,"?")==MESSOK){
@@ -665,7 +681,11 @@ int buildReadSave(char* nomfonction,char* data)   //   assemble et envoie read/s
       memcpy(message+2,"_\0",2);
       sb=3;
       unpackMac((char*)(message+sb),mac);                             // macaddr                    - 18
-      strncpy(message+sb+17,"_\0",2);
+#define PNP 3+17   // sb+17
+      strncpy(message+PNP,"_\0",2);
+#if PNP != SDPOSTEMP-SDPOSNUMPER-1
+  sb/=0;
+#endif       
       strcat(message,data);strcat(message,"_");                       // temp, âge (dans data_save seul) - 15
 
       sb=strlen(message);
@@ -695,6 +715,10 @@ int buildReadSave(char* nomfonction,char* data)   //   assemble et envoie read/s
       sb+=MAXSW+1;
       memcpy(message+sb,model,LENMODEL);
       strcpy(message+sb+LENMODEL,"_\0");                                                        //   - 7
+
+      sb+=LENMODEL+1;
+      for(i=(NBSW-1);i>=0;i--){message[sb+(MAXSW-1)-i]=(char)(chexa[cstRec.swToggle[i]]);}
+      strcpy(message+sb+MAXSW,"_\0");                                 // toggle sw                    -5    
 
 if(strlen(message)>LENVAL-4){Serial.print("******* LENVAL ***** MESSAGE ******");ledblink(BCODELENVAL);}      
   
@@ -755,7 +779,8 @@ bool wifiConnexion(const char* ssid,const char* password)
     //WiFi.forceSleepWake();delay(1);
     
     //WiFi.forceSleepEnd();       // réveil modem
-
+    
+    
     int wifistatus=printWifiStatus();
     if(wifistatus!=WL_CONNECTED){           
 
@@ -773,7 +798,7 @@ bool wifiConnexion(const char* ssid,const char* password)
       WL_IDLE_STATUS when Wi-Fi is in process of changing between statuses
       WL_DISCONNECTED if module is not configured in station mode
 */
-  
+      long startcx=millis();  
       Serial.print(" WIFI connecting to ");Serial.println(ssid);
       WiFi.begin(ssid,password);
       delay(1000);
@@ -788,10 +813,11 @@ bool wifiConnexion(const char* ssid,const char* password)
       Serial.print(" connected ; local IP : ");Serial.println(WiFi.localIP());
       cstRec.IpLocal=WiFi.localIP();        
       WiFi.macAddress(mac);
-      serialPrintMac(mac,1);
+      //serialPrintMac(mac,1);
       cstRec.serverPer=PERSERV;
       }
     else {Serial.println("\nfailed");if(nbreBlink==0){ledblink(BCODEWAITWIFI);}}
+    Serial.print("cxtime(ms)=");Serial.println(millis()-beg);
     return cxstatus;
 }
 
@@ -807,7 +833,7 @@ void modemsleep()
  
 void readTemp()
 {
-  if(cstRec.talkStep == 0){     // ne peut se produire qu'en NO_MODE 
+  if(cstRec.talkStep == 0){     // !=0 ne peut se produire qu'en NO_MODE 
                                 // (les autres modes terminent talkServer avec talkStep=0)
 
 #if POWER_MODE==DS_MODE

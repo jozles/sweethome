@@ -1,7 +1,7 @@
 #ifndef CONST_H_INCLUDED
 #define CONST_H_INCLUDED
 
-#define VERSION "1.f_"
+#define VERSION "1.g_"
 /* 1.1 allumage/extinction modem
  * 1.2 ajout voltage (n.nn) dans message ; modif unpackMac
  * 1.3 deep sleep (PERTEMP) ; gestion EEPROM ; conversion temp pendant sleep
@@ -38,6 +38,8 @@
  *                                                 actCde onCdeI (On prioritaire) et desCde offCdeI
  *                                                 swAction corrigé
  *     extinction des PO_MODE et DS_MODE si alim insuffisante
+ * 1.g ajout de la possibilité de 'toggle sw' : nouvelle action et ajout 4 caractères à dataread/datasave ; le serveur inverse l'état du switch concerné
+ *                                              (sans effet sur les pulses)
  * 
 Modifier : 
 
@@ -54,7 +56,7 @@ Modifier :
     toutes les 2 sec envoi RDY et attente réponse au format des messages http (avec longueur,fonctions,params et crc)
     sur le serveur : vidage réception série, attente 1 seconde, si vide attente RDY puis envoi, sinon vider et recommencer
   
-  commande à créer quiutilise la config du serveur :
+  commande à créer qui utilise la config du serveur :
   SSID1nnnnn...,SSID2nnnn....,PWD1nnnn....,PWD2nnnn....,SERVIPPxxx.xxx.xxx.xxx/nnnn, (16 car pour SSID et 48 car pour PWD) à stocker séparément des constantes)
   créer un protocole usb pour charger ssid, password, IP et port du host sans reprogrammer le 8266  
   
@@ -140,12 +142,12 @@ Modifier :
 /* >>> CARTES <<< */
 
 #define VR      'V'
-#define RELAY   
+//#define RELAY   
 #define THESP01 '1'
 #define THESP12 '2'
 
-#define CARTE THESP01                      // <------------- modèle carte
-#define POWER_MODE PO_MODE            // <------------- type d'alimentation 
+#define CARTE VR                      // <------------- modèle carte
+#define POWER_MODE NO_MODE            // <------------- type d'alimentation 
 
 #if POWER_MODE==NO_MODE
   #define _SERVER_MODE
@@ -307,11 +309,14 @@ typedef struct {
   byte      extDetEn;             //  1   1 bit enable par det externe   
   byte      extDetLev;            //  1   1 bit level  par det externe
   IPAddress IpLocal;              //  4
-  uint32_t  cxDurat;              //  4   durée last connexion  
-  byte      filler[75];           //  
+  uint32_t  cxDurat;              //  4   durée last connexion
+  byte      swToggle[MAXSW];      //  4   toogle switch (raz après dataSave)     
+  byte      filler[71];           //  
   uint8_t   cstcrc;               //  1   doit toujours être le dernier : utilisé pour calculer sa position
              // total 240 = 60 mots ; reste 256 dispo (sizeof(constantValues)=size(membres)+4)
 } constantValues;
+
+#define STEPDATASAVE 6            // code pour talkstep de dataSave()
 
 #define LENRTC 240
 

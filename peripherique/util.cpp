@@ -21,20 +21,23 @@ extern WiFiClient cliext;              // client externe du serveur local
 extern char model[LENMODEL];
 
 extern const char* host;
-//extern const int   port;
+
 extern char bufServer[LBUFSERVER];
 
-extern byte    mac[6];
-extern byte    staPulse[MAXSW];            // état clock pulses
-extern uint8_t pinSw[MAXSW];
-extern uint8_t pinDet[MAXDET];
-extern long    detTime[MAXDET+MAXDSP+MAXDEX];
+extern byte     mac[6];
+extern byte     staPulse[MAXSW];            // état clock pulses
+extern uint8_t  pinSw[MAXSW];
+extern uint8_t  pinDet[MAXDET];
+extern long     detTime[MAXDET+MAXDSP+MAXDEX];
 
-extern constantValues cstRec;
-extern char* cstRecA;
-extern long  dateon;
+extern          constantValues cstRec;
+extern char*    cstRecA;
+extern long     dateon;
 
-extern float voltage;
+extern long     tempTime;
+extern uint16_t tempPeriod;
+
+extern float    voltage;
 
 void checkVoltage()
 {
@@ -51,6 +54,11 @@ void checkVoltage()
 #endif DS_MODE        
 #endif NO_MODE
 }
+
+void trigTemp(){startto(&tempTime,&tempPeriod,cstRec.tempPer);}
+bool chkTrigTemp(){return ctlto(tempTime,tempPeriod);}
+void forceTrigTemp(){tempPeriod=0;}     // -------------> utilisé pour forcer une communication avec le serveur
+                                        //                après une éventuelle comm en cours
 
 bool readConstant()
 {
@@ -135,6 +143,7 @@ void initConstant()  // inits mise sous tension
   cstRec.extDetEn=0;
   cstRec.extDetLev=0;
   cstRec.cxDurat=0;
+  memset(cstRec.swToggle,0x00,MAXSW);
   Serial.println("Init Constant done");
   writeConstant();
 }

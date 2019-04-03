@@ -113,7 +113,7 @@
 #define BCODELENVAL       7   // LENVAL trop petit
 #define BCODECONFIGRECLEN 9   // CONFIGRECLEN faux -> blocage
 #define BCODEPERICACHEKO 11   // periSave et cache invalide
-#define BCODESYSERR      13   // system error (fdatasave>99)
+#define BCODESYSERR      13   // system error (fdatasave>99 STEPDATASAVE!=talkStep)
 
 
 enum {FAUX,VRAI};
@@ -303,6 +303,7 @@ enum {OFF,ON};
 #define PMDCA_SHORT 0x04       // short pulse
 #define PMDCA_END   0x05       // end pulse
 #define PMDCA_IMP   0x06       // start/stop impulsionnel
+#define PMDCA_TGL   0x07       // toggle switch
 
 /* codes etats générateur (bit droite=valeur) */
 

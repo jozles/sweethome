@@ -43,6 +43,7 @@ Mode d'emploi de la peritable :
                   5) fin : l'action fin termine le compteur courant. 
                   6) stop impulsionnel : stop si le compteur depuis le début a moins de DETIMP (1,5sec) start sinon 
                         (impDetTime=millis() si start, =0 si stop ou stop impulsionnel)
+                  7) toggle switch change l'état du(ou des) switch(s) utilisant le détecteur (voir const.h pour les^pb de mise en oeuvre)
                         
     3) le contrôle des switchs :
         (les lignes A et D sont inutilisées et sans effet)
