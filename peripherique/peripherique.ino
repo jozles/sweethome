@@ -665,7 +665,7 @@ void talkClient(char* etat) // réponse à une requête
 
 //***************** dataRead/dataSave
 
-int buildReadSave(char* nomfonction,char* data)   //   assemble et envoie read/save (sortie MESSCX connexion échouée)
+int buildReadSave(char* nomfonction,char* data,char* toggle)   //   assemble et envoie read/save (sortie MESSCX connexion échouée)
                                                   //   password__=nnnnpppppp..cc?
                                                   //   data_rs.._=nnnnppmm.mm.mm.mm.mm.mm_[-xx.xx_aaaaaaa_v.vv]_r.r_siiii_diiii_ffff_cc
 {
@@ -717,7 +717,7 @@ int buildReadSave(char* nomfonction,char* data)   //   assemble et envoie read/s
       strcpy(message+sb+LENMODEL,"_\0");                                                        //   - 7
 
       sb+=LENMODEL+1;
-      for(i=(NBSW-1);i>=0;i--){message[sb+(MAXSW-1)-i]=(char)(chexa[cstRec.swToggle[i]]);}
+      for(i=(NBSW-1);i>=0;i--){message[sb+(MAXSW-1)-i]=(char)(chexa[toggle[i]]);}
       strcpy(message+sb+MAXSW,"_\0");                                 // toggle sw                    -5    
 
 if(strlen(message)>LENVAL-4){Serial.print("******* LENVAL ***** MESSAGE ******");ledblink(BCODELENVAL);}      
@@ -742,12 +742,12 @@ int dataSave()
 #endif PM==NO_MODE       
       strcat(tempstr,"\0");                                               // 1 car
       
-      buildReadSave("data_save_",tempstr);
+      buildReadSave("data_save_",tempstr,(char*)cstRec.swToggle);
 }
 
 int dataRead()
 {
-      buildReadSave("data_read_","_");
+      buildReadSave("data_read_","_","0000");
 }
 
 void wifiStatusValues()
