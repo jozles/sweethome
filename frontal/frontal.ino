@@ -37,12 +37,14 @@ extern "C" {
 }
 
   EthernetClient cli_a;             // client du serveur periphériques et browser configuration
-  EthernetClient cli_b;             // client du serveur pilotage
-  EthernetClient cliext;            // client de serveur externe  
-
-    EthernetClient cliloc;
+  //EthernetClient cli_b;             // client du serveur pilotage
+  EthernetClient cliext(4);            // client de serveur externe  
+char ab;
+    
     IPAddress test(82,64,32,56);
     IPAddress espdev(192,168,0,38);
+    IPAddress esptv(192,168,0,208);
+    IPAddress gggg(74,125,232,128);    
 
     long mill=millis();
     
@@ -168,6 +170,8 @@ EthernetServer pilotserv(PORTPILOTSERVER);  // serveur pilotage
   byte*     periEndOfRecord;
 
   byte      lastIpAddr[4]; 
+
+byte   periRemoteStatus[NBPERIF];            // etat de la mise à jour des périphériques depuis le remote ctl (si 0 faire periload/perisend - voir remoteUpdate)
 
 struct swRemote remoteT[MAXREMLI];
 char*  remoteTA=(char*)&remoteT;
@@ -362,13 +366,18 @@ while(1){}
     // **** la connexion mac seul ne fonctionne pas ****    mais le test doit être fait pour que l'UDP marche ???!!!
     Ethernet.begin (mac, localIp); //initialisation de la communication Ethernet
     }
-  Serial.print(Ethernet.localIP());Serial.print(" ");
+  Serial.println(Ethernet.localIP());
 
-  periserv.begin();   // serveur périphériques
 
-  pilotserv.begin();  //  remote serveur
+  periserv.begin();Serial.println("periserv.begin ");   // serveur périphériques
 
-  if(cliext.connect(espdev,1791)){Serial.println("test connected");}
+  pilotserv.begin();Serial.println("pilotserv.begin ");  //  remote serveur
+  
+
+  if(cliext.connect(esptv,1791)){Serial.println("esptv connected");}
+  cliext.stop();
+
+  if(cliext.connect(gggg,80)){Serial.println("gggg connected");}
   cliext.stop();
   
   delay(1000);
@@ -511,8 +520,10 @@ void periDataRead()             // traitement d'une chaine "dataSave" ou "dataRe
     k+=1; *periDetVal=0;for(int i=MAXDET-1;i>=0;i--){*periDetVal |= ((*(k+i)-48)&DETBITLH_VB )<< 2*(MAXDET-1-i);}    // détecteurs
     k+=MAXDET+1;for(int i=0;i<MAXSW;i++){periSwPulseSta[i]=*(k+i);}                     // pulse clk status 
     k+=MAXSW+1;for(int i=0;i<LENMODEL;i++){periModel[i]=*(k+i);periNamer[i]=*(k+i);}    // model
-    k+=LENMODEL+1;
-    
+  if(memcmp(periVers,"1.g",3)>=0){
+    k+=LENMODEL+1;for(int i=MAXSW-1;i>=0;i--){if(*(k+i)=='1'){*periSwVal^(0x02<<(i*2));}} // toggle bits
+    k+=MAXSW+1; 
+  }  
     memcpy(periIpAddr,remote_IP_cur,4);            //for(int i=0;i<4;i++){periIpAddr[i]=remote_IP_cur[i];}      // Ip addr
     char date14[14];alphaNow(date14);checkdate(0);packDate(periLastDateIn,date14+2);    // maj dates
 Serial.println("periDataRead");periPrint(periCur);
@@ -520,12 +531,14 @@ Serial.println("periDataRead");periPrint(periCur);
   }
 }
 
-void periSend()                 // configure periParamsHtml pour envoyer un set_______ à un périph serveur
-{
-  checkdate(2);
-  char ipaddr[16];memset(ipaddr,'\0',16);
-  charIp(periIpAddr,ipaddr);
-  periParamsHtml(&cliext,ipaddr,PORTSERVPERI);
+void periSend()                 // configure periParamsHtml pour envoyer un set_______ à un périph serveur (avec cb prog cochée)
+{ 
+  if(*periProg!=0){
+    checkdate(2);
+    char ipaddr[16];memset(ipaddr,'\0',16);
+    charIp(periIpAddr,ipaddr);
+    periParamsHtml(&cliext,ipaddr,PORTSERVPERI);
+  }
 }
 
 int periParamsHtml(EthernetClient* cli,char* host,int port)   // fonction set ou ack vers périphérique
@@ -559,6 +572,7 @@ int periParamsHtml(EthernetClient* cli,char* host,int port)   // fonction set ou
             cli->println("</body></html>");
           }
           else {                                        // envoi vers périphérique en mode serveur
+            
             zz=messToServer(cli,host,port,bufServer);
             uint8_t fonct;
             if(zz==MESSOK){
@@ -566,9 +580,9 @@ int periParamsHtml(EthernetClient* cli,char* host,int port)   // fonction set ou
               if(zz==MESSOK && fonct!=fdone){zz=MESSFON;}
               delay(1);
               purgeServer(cli);
-              cli->stop();
             }
-            /*zz=MESSCX;
+            /*
+            zz=MESSCX;
             if(cliext.connect(espdev,1791)){
               Serial.println("cliext connected=========================");
               cliext.print(bufServer);
@@ -586,7 +600,7 @@ int periParamsHtml(EthernetClient* cli,char* host,int port)   // fonction set ou
           if(zz==MESSOK){packDate(periLastDateOut,date14+2);}
           *periErr=zz;
           periSave(periCur,PERISAVESD);                  // modifs de periTable et date effacèe par prochain periLoad si pas save
-
+          cli->stop();
           return zz;
 }
 
@@ -777,18 +791,29 @@ void switchCtl(uint8_t sw,byte val)
   }
 }
 
-void remoteUpdate()
+void periRemoteUpdate()
+{
+  Serial.print("periRemoteUpdate() ");
+  for(int pp=1;pp<=NBPERIF;pp++){
+    if(periRemoteStatus[pp-1]==0){periCur=pp;periLoad(periCur);periSend();periRemoteStatus[pp-1]=1;Serial.print(pp);Serial.print(" ");}
+  }
+  Serial.println();
+}
+
+void periRecRemoteUpdate()
 /* traitement et mise à jour lorsque toutes les fonctions ont été vues */
 {
-  Serial.println("remoteUpdate()");
+  Serial.println("periRecRemoteUpdate() ");
+  memset(periRemoteStatus,0x01,NBPERIF);   // effacement
   for(uint8_t nbr=0;nbr<NBREMOTE;nbr++){
     if(remoteN[nbr].onoff + remoteN[nbr].newonoff==1){
-      Serial.print("remote chge ");Serial.println(nbr);
+      Serial.print(" chges ");Serial.print(nbr);
       remoteN[nbr].onoff=remoteN[nbr].newonoff;
       for(uint8_t nbs=0;nbs<MAXREMLI;nbs++){
         if(remoteT[nbs].num==nbr+1){
-          periCur=remoteT[nbs].pernum;periLoad(periCur);switchCtl(remoteT[nbs].persw,remoteN[nbr].newonoff);
+          periCur=remoteT[nbs].pernum;periRemoteStatus[periCur-1]=0;periLoad(periCur);switchCtl(remoteT[nbs].persw,remoteN[nbr].newonoff);
           periSave(periCur,PERISAVESD);
+          Serial.print(" ");Serial.print(periCur);Serial.print("/");Serial.print(remoteT[nbs].persw);
           //Serial.print(remoteT[nbs].num);Serial.print(" ");Serial.print(remoteT[nbs].pernum);Serial.print(" ");Serial.print(remoteT[nbs].persw);Serial.print(" ");
           //Serial.println(*periSwVal,HEX);
         }
@@ -1008,60 +1033,60 @@ void commonserver(EthernetClient cli)
                         else {Serial.print("user ");Serial.print(usrnames+usernum*LENUSRNAME);Serial.println(" ok");usrtime[usernum]=millis();if(nbreparams==0){what=2;}}
                         }break;                                                                        
               case 5:  *toPassword=TO_PASSWORD;conv_atob(valf,toPassword);Serial.print(" topass=");Serial.println(valf);break;                     // to_passwd_
-              case 6:  what=2;perrefr=0;conv_atob(valf,&perrefr);                                    // periode refresh browser
+              case 6:  what=2;perrefr=0;conv_atob(valf,&perrefr);                                       // (en tête peritable) periode refresh browser
                        break;                                                                               
-              case 7:  *periThOffset=0;*periThOffset=convStrToNum(valf,&j);break;                    // Th Offset
-              case 8:  periCur=*(libfonctions+2*i+1)-PMFNCHAR;                                       // switchs___ 
+              case 7:  *periThOffset=0;*periThOffset=convStrToNum(valf,&j);break;                       // (ligne peritable) Th Offset
+              case 8:  periCur=*(libfonctions+2*i+1)-PMFNCHAR;                                       // bouton switchs___ 
                        periInitVar();periLoad(periCur);
                        SwCtlTableHtml(&cli,*periSwNb,4);
                        break;                                                                               
-              case 9:  autoreset=VRAI;break;                                                         // reset
-              case 10: dumpsd(&cli);break;                                                           // dump_sd
-              case 11: what=2;sdpos=0;conv_atobl(valf,&sdpos);break;                                        // SD pos
+              case 9:  autoreset=VRAI;break;                                                         // bouton reset
+              case 10: dumpsd(&cli);break;                                                           // bouton dump_sd
+              case 11: what=2;sdpos=0;conv_atobl(valf,&sdpos);break;                                    // (en-tete peritable) SD pos
               case 12: if(periPassOk==VRAI){what=1;periDataRead();periPassOk==FAUX;}break;           // data_save
               case 13: if(periPassOk==VRAI){what=3;periDataRead();periPassOk==FAUX;}break;           // data_read
-              case 14: what=5;{                                                                             // peri swb (buton)
-                       uint8_t sw;sw=*(libfonctions+2*i)-PMFNCHAR;                                          // sw n° switch
-                       uint8_t sh;sh=libfonctions[2*i+1]-PMFNCHAR;                                          // sh 0 ou 1 état demandé
+              case 14: what=5;{                                                                      // (bouton testsw ?) peri swb 
+                       uint8_t sw;sw=*(libfonctions+2*i)-PMFNCHAR;                                      // sw n° switch
+                       uint8_t sh;sh=libfonctions[2*i+1]-PMFNCHAR;                                      // sh 0 ou 1 état demandé
                        byte mask=(0x10<<sw*2);
                        *periSwVal&=~mask;*periSwVal|=mask;
                        }break;
-              case 15: what=4;periCur=0;conv_atob(valf,&periCur);                                           // peri cur  N° périph courant (1ère fonction ligne table)
-                       if(periCur>NBPERIF){periCur=NBPERIF;}                                                // fixe periCur et charge la ligne
+              case 15: what=5;periCur=0;conv_atob(valf,&periCur);                                    // submit modifs dans ligne de peritable (peri cur)
+                       if(periCur>NBPERIF){periCur=NBPERIF;}                                         
                        periInitVar();periLoad(periCur);
                        *periProg=0;
                        break;                                                                        
-              case 16: *periPerRefr=0;conv_atobl(valf,periPerRefr);break;                            // periode maxi accès serveur periph courant
-              case 17: memset(periNamer,0x00,PERINAMLEN-1);                                          // nom periph courant
+              case 16: *periPerRefr=0;conv_atobl(valf,periPerRefr);break;                               // (ligne peritable) periode maxi accès serveur periph courant
+              case 17: memset(periNamer,0x00,PERINAMLEN-1);                                             // (ligne peritable) nom periph courant
                        memcpy(periNamer,valf,nvalf[i+1]-nvalf[i]);
                        break;                                                                              
-              case 18: for(j=0;j<6;j++){conv_atoh(valf+j*2,(periMacr+j));}break;                     // Mac periph courant
+              case 18: Serial.print("mac valf ");Serial.println(valf);for(j=0;j<6;j++){conv_atoh(valf+j*2,(periMacr+j));}break;   // (ligne peritable) Mac periph courant
               case 19: accueilHtml(&cli);break;                                                      // accueil
               case 20: periTableHtml(&cli);break;                                                    // peri table
-              case 21: *periProg=*valf-48;break;                                                     // peri prog
-              case 22: *periSondeNb=*valf-48;if(*periSondeNb>MAXSDE){*periSondeNb=MAXSDE;}break;     // peri sonde
-              case 23: *periPitch=0;*periPitch=convStrToNum(valf,&j);break;                          // peri pitch
-              case 24: {                                                                             // peri SwPulseCtl (pmo) bits détecteurs
-                       uint8_t sw;sw=*(libfonctions+2*i)-PMFNCHAR;                                   // sw n° switch
-                       uint8_t sh;sh=libfonctions[2*i+1]-PMFNCHAR;if(sh>32){sh-=6;}                  // '-6' pour skip ponctuations (valeur maxi utilisable 2*26=52)
-                       uint64_t pipm;memcpy(&pipm,(char*)(periSwPulseCtl+sw),DLSWLEN);               // sh=[LENNOM-1]-PMFNCHAR nb de shifts dans le détecteur
-                       byte msk;msk=0x01;if((sw&0xf0)!=0){msk=mask[DLNULEN];sw&=0x0f;}               // si !=0 -> n° detecteurs ou code action sinon cb                               
+              case 21: *periProg=*valf-48;break;                                                        // (ligne peritable) peri prog
+              case 22: *periSondeNb=*valf-48;if(*periSondeNb>MAXSDE){*periSondeNb=MAXSDE;}break;        // (ligne peritable) peri sonde
+              case 23: *periPitch=0;*periPitch=convStrToNum(valf,&j);break;                             // (ligne peritable) peri pitch
+              case 24: {                                                                                // (switwhs) peri SwPulseCtl (pmo) bits détecteurs
+                       uint8_t sw;sw=*(libfonctions+2*i)-PMFNCHAR;                                        // sw n° switch
+                       uint8_t sh;sh=libfonctions[2*i+1]-PMFNCHAR;if(sh>32){sh-=6;}                       // '-6' pour skip ponctuations (valeur maxi utilisable 2*26=52)
+                       uint64_t pipm;memcpy(&pipm,(char*)(periSwPulseCtl+sw),DLSWLEN);                    // sh=[LENNOM-1]-PMFNCHAR nb de shifts dans le détecteur
+                       byte msk;msk=0x01;if((sw&0xf0)!=0){msk=mask[DLNULEN];sw&=0x0f;}                    // si !=0 -> n° detecteurs ou code action sinon cb                               
                        bitvSwCtl(periSwPulseCtl,sw,DLSWLEN,sh,msk);            // shift référencé au début du switch
                        }break;
-              case 25: *periDetNb=*valf-48;if(*periDetNb>MAXDET){*periDetNb=MAXDET;}break;           // peri det Nb  
-              case 26: *periSwNb=*valf-48;if(*periSwNb>MAXSW){*periSwNb=MAXSW;}break;                // peri sw Nb                       
+              case 25: *periDetNb=*valf-48;if(*periDetNb>MAXDET){*periDetNb=MAXDET;}break;              // (ligne peritable) peri det Nb  
+              case 26: *periSwNb=*valf-48;if(*periSwNb>MAXSW){*periSwNb=MAXSW;}break;                   // (ligne peritable) peri sw Nb                       
               case 27: Serial.print(" periPerTemp=");Serial.print(*periPerTemp);*periPerTemp=0;conv_atob(valf,periPerTemp);Serial.print(" periPerTemp=");Serial.println(*periPerTemp);break;                             // periode check température
-              case 28: cfgRemoteHtml(&cli);remotePrint();break;                                      // remotecfg_
-              case 29: testHtml(&cli);break;                                                         // testhtml
-              case 30: {uint8_t sw=*(libfonctions+2*i+1)-48;                                         // peri Sw Val 
+              case 28: cfgRemoteHtml(&cli);remotePrint();break;                                      // bouton remotecfg_
+              case 29: testHtml(&cli);break;                                                         // bouton testhtml
+              case 30: {uint8_t sw=*(libfonctions+2*i+1)-48;                                            // (ligne peritable) peri Sw Val 
                         switchCtl(sw,(byte)*valf);
 //                       Serial.print(" sw=");Serial.print(sw);Serial.print(" periSwVal=");Serial.println(*periSwVal,HEX);
                        }break;
-              case 31: what=5;periCur=0;conv_atob(valf,&periCur);                                    // peri_t_sw_
+              case 31: what=5;periCur=0;conv_atob(valf,&periCur);                                    // submit modifs dans tables sw (peri_t_sw_)
                        if(periCur>NBPERIF){periCur=NBPERIF;}
-                       periInitVar();periLoad(periCur);cbErase();                                    // effacement checkboxs des switchs du periphérique courant
+                       periInitVar();periLoad(periCur);cbErase();                                           // effacement checkboxs des switchs du periphérique courant
                        break;  
-              case 32: {uint8_t sw=*(libfonctions+2*i)-PMFNCHAR,b=*(libfonctions+2*i+1);             // peri SwPulseCtl (otf) bits généraux (FOT)
+              case 32: {uint8_t sw=*(libfonctions+2*i)-PMFNCHAR,b=*(libfonctions+2*i+1);                // (switchs) peri SwPulseCtl (otf) bits généraux (FOT)
                         uint8_t sh=0;
                         switch (b){
                            case 'F':sh=PMFRO_PB;break;
@@ -1071,76 +1096,76 @@ void commonserver(EthernetClient cli)
                         }
                         bitvSwCtl(periSwPulseCtl,sw,DLSWLEN,sh,0x01);   // shift référencé au début du switch
                        }break;       
-              case 33: {uint8_t v=0,b=0;frecupptr(libfonctions+2*i,&v,&b,MAXTAC);                    // periSwMode N° detec (imn)
+              case 33: {uint8_t v=0,b=0;frecupptr(libfonctions+2*i,&v,&b,MAXTAC);                       // (switchs) periSwMode N° detec (imn)
                         *(periSwMode+v) &= ~(mask[SWMDLNUMS_PB-SWMDLNULS_PB+1]<<SWMDLNULS_PB);
                         *(periSwMode+v) |= (*valf&mask[SWMDLNUMS_PB-SWMDLNULS_PB+1])<<SWMDLNULS_PB;
                        }break;                                                                      
-              case 34: {uint8_t v=0,b=0;frecupptr(libfonctions+2*i,&v,&b,MAXTAC);                    // periSwMode 6 checkbox (imc)
+              case 34: {uint8_t v=0,b=0;frecupptr(libfonctions+2*i,&v,&b,MAXTAC);                       // (switchs) periSwMode 6 checkbox (imc)
                         *(periSwMode+v) &= maskbit[b*2];if(*valf&0x01!=0){*(periSwMode+v) |= maskbit[b*2+1];} 
                        }break;                                                                      
-              case 35: {int sw=*(libfonctions+2*i)-PMFNCHAR;                                         // peri Pulse one (pto)
+              case 35: {int sw=*(libfonctions+2*i)-PMFNCHAR;                                            // (switchs) peri Pulse one (pto)
                         *(periSwPulseOne+sw)=0;*(periSwPulseOne+sw)=(uint32_t)convStrToNum(valf,&j);                              
                        }break;                                                                      
               case 36: {int sw=*(libfonctions+2*i)-PMFNCHAR;
                         *(periSwPulseTwo+sw)=0;*(periSwPulseTwo+sw)=(uint32_t)convStrToNum(valf,&j); 
-                       }break;                                                                       // peri Pulse two (ptt)
-              case 37: *periThmin=0;*periThmin=convStrToNum(valf,&j);break;                          // Th min
-              case 38: *periThmax=0;*periThmax=convStrToNum(valf,&j);break;                          // Th max
-              case 39: *periVmin=0;*periVmin=(float)convStrToNum(valf,&j);break;                     // V min
-              case 40: *periVmax=0;*periVmax=convStrToNum(valf,&j);break;                            // V max
+                       }break;                                                                          // (switchs) peri Pulse two (ptt)
+              case 37: *periThmin=0;*periThmin=convStrToNum(valf,&j);break;                             // (ligne peritable) Th min
+              case 38: *periThmax=0;*periThmax=convStrToNum(valf,&j);break;                             // (ligne peritable) Th max
+              case 39: *periVmin=0;*periVmin=(float)convStrToNum(valf,&j);break;                        // (ligne peritable) V min
+              case 40: *periVmax=0;*periVmax=convStrToNum(valf,&j);break;                               // (ligne peritable) V max
               case 41: *periDetServEn |= (byte)(*valf-48)<<(*(libfonctions+2*i+1)-PMFNCHAR);break;   // Det Serv enable bits
               case 42: memDetServ |= (byte)(*valf-48)<<(*(libfonctions+2*i+1)-PMFNCHAR);break;       // Det Serv level bits
-              case 43: {int nb=*(libfonctions+2*i+1)-PMFNCHAR;                                       // ssid[libf+1]
+              case 43: {int nb=*(libfonctions+2*i+1)-PMFNCHAR;                                          // (config) ssid[libf+1]
                        memset(ssid+nb*(LENSSID+1),0x00,LENSSID+1);memcpy(ssid+nb*(LENSSID+1),valf,nvalf[i+1]-nvalf[i]);
                        }break;
-              case 44: {int nb=*(libfonctions+2*i+1)-PMFNCHAR;                                       // passssid[libf+1]
+              case 44: {int nb=*(libfonctions+2*i+1)-PMFNCHAR;                                          // (config) passssid[libf+1]
                        memset(passssid+nb*(LPWSSID+1),0x00,LENSSID+1);memcpy(passssid+nb*(LPWSSID+1),valf,nvalf[i+1]-nvalf[i]);
                        }break;
-              case 45: {int nb=*(libfonctions+2*i+1)-PMFNCHAR;                                       // usrname[libf+1]
+              case 45: {int nb=*(libfonctions+2*i+1)-PMFNCHAR;                                          // (config) usrname[libf+1]
                        memset(usrnames+nb*(LENUSRNAME+1),0x00,LENUSRNAME+1);memcpy(usrnames+nb*(LENUSRNAME+1),valf,nvalf[i+1]-nvalf[i]);
                        }break;
-              case 46: {int nb=*(libfonctions+2*i+1)-PMFNCHAR;                                       // usrpass[libf+1]
+              case 46: {int nb=*(libfonctions+2*i+1)-PMFNCHAR;                                          // (config) usrpass[libf+1]
                        memset(usrpass+nb*(LENUSRPASS+1),0x00,LENUSRPASS+1);memcpy(usrpass+nb*(LENUSRPASS+1),valf,nvalf[i+1]-nvalf[i]);
                        }break;                       
-              case 47: cfgServerHtml(&cli);configPrint();break;                                      // config
-              case 48: what=6;                                                                       // 1ère fonction 
-                       memset(userpass,0x00,LPWD);memcpy(userpass,valf,nvalf[i+1]-nvalf[i]);break;   // pwdcfg____
-              case 49: memset(modpass,0x00,LPWD);memcpy(modpass,valf,nvalf[i+1]-nvalf[i]);break;     // modpcfg___
-              case 50: memset(peripass,0x00,LPWD);memcpy(peripass,valf,nvalf[i+1]-nvalf[i]);break;   // peripcfg__
-              case 51: for(j=0;j<6;j++){conv_atoh(valf+j*2,(mac+j));}break;                          // Mac config
-              case 52: what=8;                                                                       // remote_cfg (cdes de config)
+              case 47: cfgServerHtml(&cli);configPrint();break;                                      // bouton config
+              case 48: what=6;                                                                       // submit depuis cfgServervHtml 1ère fonction 
+                       memset(userpass,0x00,LPWD);memcpy(userpass,valf,nvalf[i+1]-nvalf[i]);break;      // (config) pwdcfg____
+              case 49: memset(modpass,0x00,LPWD);memcpy(modpass,valf,nvalf[i+1]-nvalf[i]);break;        // (config) modpcfg___
+              case 50: memset(peripass,0x00,LPWD);memcpy(peripass,valf,nvalf[i+1]-nvalf[i]);break;      // (config) peripcfg__
+              case 51: for(j=0;j<6;j++){conv_atoh(valf+j*2,(mac+j));}break;                             // (config) Mac config
+              case 52: what=8;                                                                       // submit depuis cfgRemotehtml
                        {int nb=*(libfonctions+2*i+1)-PMFNCHAR;
                         switch(*(libfonctions+2*i)){                                               
-                            case 'n': memset(remoteN[nb].nam,0x00,LENREMNAM);                        // no nom remote courante              
+                            case 'n': memset(remoteN[nb].nam,0x00,LENREMNAM);                           // (remotecfg) no nom remote courante              
                                       memcpy(remoteN[nb].nam,valf,nvalf[i+1]-nvalf[i]);
-                                      remoteN[nb].enable=0;remoteN[nb].onoff=0;break;                // effacement cb 
-                            case 'e': remoteN[nb].enable=*valf-48;break;                             // en enable remote courante
-                            case 'o': remoteN[nb].onoff=*valf-48;break;                              // on on/off remote courante
-                            case 'u': remoteT[nb].num=*valf-48;                                      // un N° remote table sw
-                                      remoteT[nb].enable=0;break;                                    // effacement cb
-                            case 'p': remoteT[nb].pernum=0;                                          // pn N° periph table sw
+                                      remoteN[nb].enable=0;remoteN[nb].onoff=0;break;                   // (remotecfg) effacement cb 
+                            case 'e': remoteN[nb].enable=*valf-48;break;                                // (remotecfg) en enable remote courante
+                            case 'o': remoteN[nb].onoff=*valf-48;break;                                 // (remotecfg) on on/off remote courante
+                            case 'u': remoteT[nb].num=*valf-48;                                         // (remotecfg) un N° remote table sw
+                                      remoteT[nb].enable=0;break;                                       // (remotecfg) effacement cb
+                            case 'p': remoteT[nb].pernum=0;                                             // (remotecfg) pn N° periph table sw
                                       conv_atob(valf,&remoteT[nb].pernum);
                                       if(remoteT[nb].pernum>NBPERIF){remoteT[nb].pernum=NBPERIF;}break;
-                            case 's': remoteT[nb].persw=*valf-48;
-                                      if(remoteT[nb].persw>MAXSW){remoteT[nb].persw=MAXSW;}break;    // sw N° sw table sw
-                            case 'x': remoteT[nb].enable=*valf-48;break;                             // xe enable table sw
+                            case 's': remoteT[nb].persw=*valf-48;                                       // (remotecfg) n° sw dans le peri
+                                      if(remoteT[nb].persw>MAXSW){remoteT[nb].persw=MAXSW;}break;       
+                            case 'x': remoteT[nb].enable=*valf-48;break;                                // (remotecfg) xe enable table sw
                             default:break;
                           }
                        }break;
-              case 53: what=9;{int nb=*(libfonctions+2*i+1)-PMFNCHAR;                                // remote_ctl (cdes on/off)
+              case 53: what=9;{int nb=*(libfonctions+2*i+1)-PMFNCHAR;                                // submit depuis remoteHtml (cdes on/off)
                        //Serial.print(nb);Serial.print(" ");Serial.println((char)*(libfonctions+2*i));
-                       if((char)*(libfonctions+2*i)=='n'){remoteN[nb].newonoff=0;}                   // effacement cb si cn
-                       else {remoteN[nb].newonoff=1;}                                                // check cb si ct
+                       if((char)*(libfonctions+2*i)=='n'){remoteN[nb].newonoff=0;}                      // effacement cb si cn
+                       else {remoteN[nb].newonoff=1;}                                                   // check cb si ct
                        }break;                                                                       
               case 54: Serial.println("remoteHtml()");remoteHtml(&cli);break;                        // remotehtml
-              case 55: {int nb=*(libfonctions+2*i+1)-PMFNCHAR;                                       // thername_
+              case 55: {int nb=*(libfonctions+2*i+1)-PMFNCHAR;                                          // thername_
                        memset(thermonames+nb*(LENTHNAME+1),0x00,LENTHNAME+1);memcpy(thermonames+nb*(LENTHNAME+1),valf,nvalf[i+1]-nvalf[i]);
                        }break;
-              case 56: {int nb=*(libfonctions+2*i+1)-PMFNCHAR;                                       // therperi_
+              case 56: {int nb=*(libfonctions+2*i+1)-PMFNCHAR;                                          // therperi_
                        *(thermoperis+nb)=0;conv_atob(valf,(uint16_t*)(thermoperis+nb));
                        if(*(thermoperis+nb)>NBPERIF){*(thermoperis+nb)=NBPERIF;}
                        }break;
-              case 57: Serial.println("thermoHtml()");thermoHtml(&cli);break;                        // thermohtml
+              case 57: Serial.println("thermoHtml()");thermoHtml(&cli);break;                        // thermoHtml
               case 58: break;                                                                        // done                        
                               
               default:break;
@@ -1156,28 +1181,31 @@ void commonserver(EthernetClient cli)
 
 /*
    periParamsHtml (fait perisave) effectue une réponse ack ou set ou envoie une commande get /set si applelé par perisend
-*/
-        if(what==4 && *periProg){what=5;}                     // si périphérique serveur -> perisend                           
+*/                          
        
         switch(what){                                           
           case 0:break;                                       // fonctions ponctuelles du serveur
           case 1:periParamsHtml(&cli," ",0);break;            // data_save
-          case 2:if(cli==cli_a){periTableHtml(&cli);}         // peritable
-                 if(cli==cli_b){remoteHtml(&cli);} break;     // remote suite à login
+          case 2:if(ab=='a'){periTableHtml(&cli);}            // peritable ou remote suite à login
+                 if(ab=='b'){remoteHtml(&cli);} break;     
           case 3:periParamsHtml(&cli," ",0);break;            // data_read
-          case 4:periSave(periCur,PERISAVESD);periTableHtml(&cli);break; // periphériques non serveurs pas de commande get /set ...
-          case 5:periSend();periTableHtml(&cli);break;        // périphériques serveurs            commande get /set ... (fait periParamsHtml)
-          case 6:configSave();periTableHtml(&cli);break;      // config        
-          case 7:periSend();SwCtlTableHtml(&cli,*periSwNb,4);break; // config switchs - smise à jour des périphériques (fait periParamsHtml)
-          case 8:remoteSave();periTableHtml(&cli);break;      // cfgRemote
-          case 9:remoteUpdate();remoteHtml(&cli);
-                  cli.stop();periSend();break;                // remote suite à modif ctl depuis remote
+          case 4:break;                                       // unused                                      
+          case 5:periSave(periCur,PERISAVESD);periTableHtml(&cli); // browser modif ligne de peritable ou switchs
+                  cli.stop();periSend();break;                
+          case 6:configSave();periTableHtml(&cli);break;      // config serveur
+          case 7:break;                                       // unused
+          case 8:remoteSave();periTableHtml(&cli);break;      // bouton remotecfg puis submit
+          case 9:periRecRemoteUpdate();remoteHtml(&cli);      // bouton remotehtml ou remote ctl puis submit
+                  cli.stop();
+                  periRemoteUpdate();break;        // remoteHtml nécessite la mise à jour de perirec et la connexion cli ; 
+                                                              // perisend nécessite qu'elle soit arrêtée ; donc mise à jour en 2 étape via periRemoteStatus
             
 
           default:accueilHtml(&cli);break;
         }
 
         valeurs[0]='\0';
+        purgeServer(&cli);
         cli.stop();
 
         delay(1);
@@ -1188,6 +1216,7 @@ void commonserver(EthernetClient cli)
 
 void periserver()
 {
+  ab='a';
       if(cli_a = periserv.available())      // attente d'un client
       {
         commonserver(cli_a);
@@ -1196,9 +1225,11 @@ void periserver()
 
 void pilotserver()
 {
-      if(cli_b = pilotserv.available())      // attente d'un client
+  ab='b';
+     // if(cli_b = pilotserv.available())      // attente d'un client
+      if(cli_a = pilotserv.available())      // attente d'un client
         {
-          commonserver(cli_b);
+          commonserver(cli_a);
         }     
 }
 
