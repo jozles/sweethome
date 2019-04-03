@@ -269,7 +269,9 @@ void cfgRemoteHtml(EthernetClient* cli)
                 else {cli->print(" </td><td>");}
                 cli->print("</td>");
 
+                memcpy(nf,"remotecfs_",LENNOM);nf[LENNOM-1]=(char)(nb+PMFNCHAR);
                 numTableHtml(cli,'b',&remoteT[nb].persw,nf,1,1,0);
+                
                 memcpy(nf,"remotecfx_",LENNOM);nf[LENNOM-1]=(char)(nb+PMFNCHAR);
                 uint8_t ren=(uint8_t)remoteT[nb].enable;
                 checkboxTableHtml(cli,&ren,nf,-1,1);         

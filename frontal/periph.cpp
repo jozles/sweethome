@@ -733,7 +733,7 @@ void remPrint(int num)
   Serial.print(remoteT[num].pernum);Serial.print(" ");Serial.print(remoteT[num].persw);Serial.print(" ");
   Serial.print(remoteT[num].enable);Serial.print(" ");
   int v=remoteT[num].persw;
-  Serial.print((*periSwVal>>(2*(v+1)))&0x01);
+  Serial.print((*periSwVal>>((2*v)+1))&0x01);
   Serial.println();
 }
 

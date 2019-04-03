@@ -40,6 +40,12 @@ extern "C" {
   EthernetClient cli_b;             // client du serveur pilotage
   EthernetClient cliext;            // client de serveur externe  
 
+    EthernetClient cliloc;
+    IPAddress test(82,64,32,56);
+    IPAddress espdev(192,168,0,38);
+
+    long mill=millis();
+    
 /* >>>> config server <<<<<< */
 
 char configRec[CONFIGRECLEN];
@@ -357,11 +363,13 @@ while(1){}
     Ethernet.begin (mac, localIp); //initialisation de la communication Ethernet
     }
   Serial.print(Ethernet.localIP());Serial.print(" ");
-    
-  
+
   periserv.begin();   // serveur périphériques
 
   pilotserv.begin();  //  remote serveur
+
+  if(cliext.connect(espdev,1791)){Serial.println("test connected");}
+  cliext.stop();
   
   delay(1000);
 
@@ -416,6 +424,7 @@ void loop()                             // =====================================
             ledblink(0);  
 
             if((millis()-temptime)>pertemp*1000){   // *** maj température  
+
               temptime=millis();
               char buf[]={0,0,'.',0,0,0};
               float th;
@@ -425,7 +434,9 @@ void loop()                             // =====================================
                 sdstore_textdh(&fhisto,"T=",buf,"<br>\n\0");
               }
             }       
-} 
+}
+
+ 
 
 
 // ========================================= tools ====================================
@@ -549,14 +560,27 @@ int periParamsHtml(EthernetClient* cli,char* host,int port)   // fonction set ou
           }
           else {                                        // envoi vers périphérique en mode serveur
             zz=messToServer(cli,host,port,bufServer);
+            uint8_t fonct;
             if(zz==MESSOK){
+              zz=getHttpResponse(cli,bufServer,LBUFSERVER,&fonct);
+              if(zz==MESSOK && fonct!=fdone){zz=MESSFON;}
+              delay(1);
+              purgeServer(cli);
+              cli->stop();
+            }
+            /*zz=MESSCX;
+            if(cliext.connect(espdev,1791)){
+              Serial.println("cliext connected=========================");
+              cliext.print(bufServer);
+              cliext.print("\r\n HTTP/1.1\r\n Connection:close\r\n\r\n");
               uint8_t fonct;
               zz=getHttpResponse(&cliext,bufServer,LBUFSERVER,&fonct);
               if(zz==MESSOK && fonct!=fdone){zz=MESSFON;}
-            }
-            purgeServer(&cliext);
-            cli->stop();
-            delay(1);
+              delay(1);
+              purgeServer(&cliext);
+              cliext.stop();
+            }*/
+            
           }
           checkdate(5);
           if(zz==MESSOK){packDate(periLastDateOut,date14+2);}
@@ -764,10 +788,10 @@ void remoteUpdate()
       for(uint8_t nbs=0;nbs<MAXREMLI;nbs++){
         if(remoteT[nbs].num==nbr+1){
           periCur=remoteT[nbs].pernum;periLoad(periCur);switchCtl(remoteT[nbs].persw,remoteN[nbr].newonoff);
-          periSave(periCur,PERISAVESD);periSend();
-          Serial.print(remoteT[nbs].num);Serial.print(" ");Serial.print(remoteT[nbs].pernum);Serial.print(" ");Serial.print(remoteT[nbs].persw);Serial.print(" ");
-          Serial.println(*periSwVal,HEX);
-          }
+          periSave(periCur,PERISAVESD);
+          //Serial.print(remoteT[nbs].num);Serial.print(" ");Serial.print(remoteT[nbs].pernum);Serial.print(" ");Serial.print(remoteT[nbs].persw);Serial.print(" ");
+          //Serial.println(*periSwVal,HEX);
+        }
       }
     }
   }
@@ -1104,7 +1128,7 @@ void commonserver(EthernetClient cli)
                           }
                        }break;
               case 53: what=9;{int nb=*(libfonctions+2*i+1)-PMFNCHAR;                                // remote_ctl (cdes on/off)
-                       Serial.print(nb);Serial.print(" ");Serial.println((char)*(libfonctions+2*i));
+                       //Serial.print(nb);Serial.print(" ");Serial.println((char)*(libfonctions+2*i));
                        if((char)*(libfonctions+2*i)=='n'){remoteN[nb].newonoff=0;}                   // effacement cb si cn
                        else {remoteN[nb].newonoff=1;}                                                // check cb si ct
                        }break;                                                                       
@@ -1146,14 +1170,16 @@ void commonserver(EthernetClient cli)
           case 6:configSave();periTableHtml(&cli);break;      // config        
           case 7:periSend();SwCtlTableHtml(&cli,*periSwNb,4);break; // config switchs - smise à jour des périphériques (fait periParamsHtml)
           case 8:remoteSave();periTableHtml(&cli);break;      // cfgRemote
-          case 9:for(int xx=0;xx<NBREMOTE;xx++){Serial.print(remoteN[xx].newonoff);Serial.print(" - ");Serial.println(remoteN[xx].onoff);}
-                  remoteUpdate();remoteHtml(&cli);break;      // remote suite à modif ctl depuis remote
+          case 9:remoteUpdate();remoteHtml(&cli);
+                  cli.stop();periSend();break;                // remote suite à modif ctl depuis remote
+            
 
           default:accueilHtml(&cli);break;
         }
 
         valeurs[0]='\0';
         cli.stop();
+
         delay(1);
         Serial.println("---- cli stopped"); 
 
