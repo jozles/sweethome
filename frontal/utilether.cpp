@@ -7,17 +7,19 @@
 #include "periph.h"
 #include "shconst.h"
 
-
+#ifdef UDPUSAGE
 
 // udp DATA
 
 unsigned int localUDPPort = 8888;         // local port to listen for UDP packets
-char timeServer[] = "ntp-p1.obspm.fr\0"; //"ntp-p1.obspm.fr\0";      // 145.238.203.14  NTP.MIDWAY.OVH ntp.unice.fr ntp.uvsq.fr ntp-p1.obspm.fr
+char timeServer[] = "ntp-p1.obspm.fr\0";  //"ntp-p1.obspm.fr\0";      // 145.238.203.14  NTP.MIDWAY.OVH ntp.unice.fr ntp.uvsq.fr ntp-p1.obspm.fr
 const int NTP_PACKET_SIZE = 48;           // NTP time stamp is in the first 48 bytes of the message
 byte packetBuffer[ NTP_PACKET_SIZE];      // buffer to hold incoming and outgoing packets
 
 // UDP instance
 EthernetUDP Udp;
+
+#endif UDPUSAGE
 
 extern char months[36];
 extern char days[21];
@@ -130,29 +132,6 @@ void getdate_google(EthernetClient* cligoogle)
 }
 */
 
-void sendNTPpacket(char* address)
-{
-  // set all bytes in the buffer to 0
-  memset(packetBuffer, 0, NTP_PACKET_SIZE);
-  // Initialize values needed to form NTP request
-  // (see URL above for details on the packets)
-  packetBuffer[0] = 0b11100011;   // LI, Version, Mode
-  packetBuffer[1] = 0;     // Stratum, or type of clock
-  packetBuffer[2] = 6;     // Polling Interval
-  packetBuffer[3] = 0xEC;  // Peer Clock Precision
-  // 8 bytes of zero for Root Delay & Root Dispersion
-  packetBuffer[12]  = 49;
-  packetBuffer[13]  = 0x4E;
-  packetBuffer[14]  = 49;
-  packetBuffer[15]  = 52;
-
-  // all NTP fields have been given values, now
-  // you can send a packet requesting a timestamp:
-  Udp.beginPacket(address, 123); //NTP requests are to port 123
-  Udp.write(packetBuffer, NTP_PACKET_SIZE);
-  Udp.endPacket();
-}
-
 void convertNTP(long *dateUnix,int *year,int *month,int *day,byte *js,int *hour,int *minute,int *second)
 {
     int feb29;
@@ -198,34 +177,6 @@ Serial.print(*year);Serial.print("/");Serial.print(*month);Serial.print("/");Ser
 Serial.print(*hour);Serial.print(":");Serial.print(*minute);Serial.print(":");Serial.println(*second);
 }
 
-int getUDPdate(uint32_t* hms,uint32_t* amj,byte* js)
-{
-  int year=0,month=0,day=0,hour=0,minute=0,second=0;
-
-  Udp.begin(localUDPPort);
-
-  sendNTPpacket(timeServer); // send an NTP packet to a time server
-
-  // wait to see if a reply is available
-  delay(1000);
-  if (Udp.parsePacket()) {                    // packet received
-    Udp.read(packetBuffer, NTP_PACKET_SIZE);  // get it                 // sec1900- 2208988800UL;
-    unsigned long highWord = word(packetBuffer[40], packetBuffer[41]);
-    unsigned long lowWord = word(packetBuffer[42], packetBuffer[43]);
-    long secsSince1900 = highWord << 16 | lowWord;
-    long secsSince1970 = secsSince1900 -2208988800UL;          //sec1970=1456790399UL;  // 29/02/2016
-
-//Serial.print("packetBuffer 40-43 : ");Serial.print(packetBuffer[40]);Serial.print(" ");Serial.print(packetBuffer[41]);Serial.print(" ");Serial.print(packetBuffer[42]);Serial.print(" ");Serial.println(packetBuffer[43]);
-//Serial.print(" sin 1900/1970 : ");Serial.print(secsSince1900,10);Serial.print("/");Serial.println(secsSince1970,10);
-    convertNTP(&secsSince1970,&year,&month,&day,js,&hour,&minute,&second);
-    *amj=year*10000L+month*100+day;*hms=hour*10000L+minute*100+second;
-//Serial.print(*amj);Serial.print(" ");Serial.println(*hms);
-    return 1;
-  }
-  return 0;
-}
-
-
 long genUnixDate(int* year,int* month, int* day, int* hour,int* minute,int* seconde)
 {
     unsigned long secDay=24*3600L;
@@ -257,4 +208,64 @@ void calcDate(int bd,int* yy,int*mm,int* dd,int* js,int*hh,int* mi,int* ss)     
   convertNTP(&udate,yy,mm,dd,&js0,hh,mi,ss);
   *js=js0;  
 }
+
+
+#ifdef UDPUSAGE
+
+void sendNTPpacket(char* address)
+{
+  // set all bytes in the buffer to 0
+  memset(packetBuffer, 0, NTP_PACKET_SIZE);
+  // Initialize values needed to form NTP request
+  // (see URL above for details on the packets)
+  packetBuffer[0] = 0b11100011;   // LI, Version, Mode
+  packetBuffer[1] = 0;     // Stratum, or type of clock
+  packetBuffer[2] = 6;     // Polling Interval
+  packetBuffer[3] = 0xEC;  // Peer Clock Precision
+  // 8 bytes of zero for Root Delay & Root Dispersion
+  packetBuffer[12]  = 49;
+  packetBuffer[13]  = 0x4E;
+  packetBuffer[14]  = 49;
+  packetBuffer[15]  = 52;
+
+  // all NTP fields have been given values, now
+  // you can send a packet requesting a timestamp:
+  Udp.beginPacket(address, 123); //NTP requests are to port 123
+  Udp.write(packetBuffer, NTP_PACKET_SIZE);
+  Udp.endPacket();
+}
+
+
+int getUDPdate(uint32_t* hms,uint32_t* amj,byte* js)
+{
+  int returnStatus=0;
+  int year=0,month=0,day=0,hour=0,minute=0,second=0;
+
+  Udp.begin(localUDPPort);
+
+  sendNTPpacket(timeServer); // send an NTP packet to a time server
+
+  // wait to see if a reply is available
+  delay(1000);
+  if (Udp.parsePacket()) {                    // packet received
+    Udp.read(packetBuffer, NTP_PACKET_SIZE);  // get it                 // sec1900- 2208988800UL;
+    unsigned long highWord = word(packetBuffer[40], packetBuffer[41]);
+    unsigned long lowWord = word(packetBuffer[42], packetBuffer[43]);
+    long secsSince1900 = highWord << 16 | lowWord;
+    long secsSince1970 = secsSince1900 -2208988800UL;          //sec1970=1456790399UL;  // 29/02/2016
+
+//Serial.print("packetBuffer 40-43 : ");Serial.print(packetBuffer[40]);Serial.print(" ");Serial.print(packetBuffer[41]);Serial.print(" ");Serial.print(packetBuffer[42]);Serial.print(" ");Serial.println(packetBuffer[43]);
+//Serial.print(" sin 1900/1970 : ");Serial.print(secsSince1900,10);Serial.print("/");Serial.println(secsSince1970,10);
+    convertNTP(&secsSince1970,&year,&month,&day,js,&hour,&minute,&second);
+    *amj=year*10000L+month*100+day;*hms=hour*10000L+minute*100+second;
+//Serial.print(*amj);Serial.print(" ");Serial.println(*hms);
+    returnStatus=1;
+  }
+  Udp.stop();
+  return returnStatus;
+}
+
+#endif UDPUSAGE
+
+
 

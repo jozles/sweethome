@@ -390,7 +390,8 @@ while(1){}
 
   digitalWrite(PINGNDDS,LOW);pinMode(PINGNDDS,OUTPUT);  
   digitalWrite(PINVCCDS,HIGH);pinMode(PINVCCDS,OUTPUT);  
-  
+
+#ifdef UDPUSAGE
   i=getUDPdate(&hms,&amj,&js);
   if(!i){Serial.println("pb NTP");ledblink(BCODEPBNTP);} // pas de service date externe 
   else {
@@ -402,6 +403,11 @@ while(1){}
       getdate(&hms2,&amj2,&js2);sdstore_textdh0(&fhisto,"ST","RE"," ");
     }
   }
+#endif UDPUSAGE
+#ifndef UDPUSAGE
+  getdate(&hms2,&amj2,&js2);sdstore_textdh0(&fhisto,"ST","RE"," ");
+  Serial.print(" DS3231 time ");Serial.print(js2);Serial.print(" ");Serial.print(amj2);Serial.print(" ");Serial.println(hms2);
+#endif UDPUSAGE
   
   sdstore_textdh(&fhisto,".3","RE","<br>\n\0");
 
@@ -1197,7 +1203,7 @@ void commonserver(EthernetClient cli)
           case 8:remoteSave();periTableHtml(&cli);break;      // bouton remotecfg puis submit
           case 9:periRecRemoteUpdate();remoteHtml(&cli);      // bouton remotehtml ou remote ctl puis submit
                   cli.stop();
-                  periRemoteUpdate();break;        // remoteHtml nécessite la mise à jour de perirec et la connexion cli ; 
+                  periRemoteUpdate();break;                   // remoteHtml nécessite la mise à jour de perirec et la connexion cli ; 
                                                               // perisend nécessite qu'elle soit arrêtée ; donc mise à jour en 2 étape via periRemoteStatus
             
 

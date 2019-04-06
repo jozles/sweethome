@@ -69,6 +69,8 @@
 #define LNSERV  17
 #endif _MODE_DEVT
 
+#define UDPUSAGE
+
 #define DS3231_I2C_ADDRESS 0x68         // adresse 3231 sur bus I2C
 
 #define PINDHT11 2
