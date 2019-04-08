@@ -294,7 +294,8 @@ void remoteHtml(EthernetClient* cli)
 
             usrFormHtml(cli,1);
             
-            boutRetour(cli,"retour",0,0);
+            boutRetour(cli,"retour",0,0);cli->print(" ");
+            boutFonction(cli,"remotehtml","","refresh",0,0,0,0);            
             cli->println("<br>");
 
 /* table remotes */
@@ -455,7 +456,8 @@ void thermoHtml(EthernetClient* cli)
             intro(cli);
             
             cli->print("<body>");cli->print(VERSION);cli->print(" ");
-            boutRetour(cli,"retour",0,1);
+            boutRetour(cli,"retour",0,0);cli->print(" ");
+            boutFonction(cli,"thermohtml","","refresh",0,0,0,0);
 
 /* peritable températures */
 
