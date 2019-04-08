@@ -146,8 +146,8 @@ Modifier :
 #define THESP01 '1'
 #define THESP12 '2'
 
-#define CARTE VR                      // <------------- modèle carte
-#define POWER_MODE NO_MODE            // <------------- type d'alimentation 
+#define CARTE THESP01                      // <------------- modèle carte
+#define POWER_MODE PO_MODE            // <------------- type d'alimentation 
 
 #if POWER_MODE==NO_MODE
   #define _SERVER_MODE
@@ -271,7 +271,7 @@ Modifier :
 
 // timings
 
-#define TCONVERSIONB       400    // millis délai conversion temp
+#define TCONVERSIONB       500    // millis délai conversion temp
 #define TCONVERSIONS       500    // millis délai conversion temp
 
 #define PERSERVKO 7200/PERTEMP    // secondes période par défaut accès serveur si connexion wifi ko

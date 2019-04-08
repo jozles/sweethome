@@ -211,7 +211,7 @@ delay(1);
   delay(tconversion);
 #endif PM==NO_MODE
 #if POWER_MODE==PO_MODE
-  ds1820.convertDs(WPIN);
+  ds1820.convertDs(WPIN);delay(tconversion);ds1820.convertDs(WPIN);
   debConv=millis();
 #endif PM==PO_MODE
 
