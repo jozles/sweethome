@@ -39,8 +39,11 @@ extern byte dsmodel;
   const int   port = PORTPERISERVER; 
 
 WiFiClient cli;                 // client local du serveur externe (utilisé pour dataread/save)
-WiFiServer server(PORTSERVPERI);
 WiFiClient cliext;              // client externe du serveur local
+
+#ifdef  _SERVER_MODE
+WiFiServer server(PORTSERVPERI);
+#endif  _SERVER
 
   String headerHttp;
 
@@ -437,7 +440,8 @@ void dataTransfer(char* data)           // transfert contenu de set ou ack dans 
         else if(!compMac(mac,fromServerMac)){periMess=MESSMAC;}
         else {
                              // si ok transfert des données
-            strncpy(cstRec.numPeriph,data+MPOSNUMPER,2);                        // num périph
+            memcpy(cstRec.numPeriph,data+MPOSNUMPER,2);                        // num périph
+
             int sizeRead;
             cstRec.serverPer=(long)convStrToNum(data+MPOSPERREFR,&sizeRead);    // per refresh server
             cstRec.tempPer=(uint16_t)convStrToNum(data+MPOSTEMPPER,&sizeRead);  // per check température (invalide/sans effet en PO_MODE)
@@ -533,7 +537,7 @@ switch(cstRec.talkStep){
                   // sinon recommencer au prochain timing
       
       if(cstRec.talkStep!=STEPDATASAVE){ledblink(BCODESYSERR);}
-      
+    
       if(memcmp(cstRec.numPeriph,"00",2)==0){cstRec.talkStep=9;}
       else {  
         v=dataSave();infos("  dataSave","",v);
@@ -742,12 +746,12 @@ int dataSave()
 #endif PM==NO_MODE       
       strcat(tempstr,"\0");                                               // 1 car
       
-      buildReadSave("data_save_",tempstr,(char*)cstRec.swToggle);
+      return buildReadSave("data_save_",tempstr,(char*)cstRec.swToggle);
 }
 
 int dataRead()
 {
-      buildReadSave("data_read_","_","0000");
+      return buildReadSave("data_read_","_","0000");
 }
 
 void wifiStatusValues()
