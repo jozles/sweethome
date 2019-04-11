@@ -77,7 +77,7 @@
 
 #define NBPERIF 20                           
 #define PERINAMLEN 16+1                      // longueur nom perif
-#define PERIRECLEN 213 // V1.1k              // longueur record périph
+#define PERIRECLEN 215 // V1.2a              // longueur record périph
 
 #define NBTHERMO  NBPERIF
 #define LENTHNAME 16

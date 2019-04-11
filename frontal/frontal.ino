@@ -88,7 +88,7 @@ EthernetServer pilotserv(PORTPILOTSERVER);  // serveur pilotage
 
 
   int8_t  numfonct[NBVAL];             // les fonctions trouvées  (au max version 1.1k 23+4*57=251)
-  char*   fonctions="per_temp__peri_pass_username__password__user_ref__to_passwd_per_refr__peri_tofs_switchs___reset_____dump_sd___sd_pos____data_save_data_read_peri_swb__peri_cur__peri_refr_peri_nom__peri_mac__accueil___peri_tableperi_prog_peri_sondeperi_pitchperi_pmo__peri_detnbperi_intnbperi_rtempremote____testhtml__peri_vsw__peri_t_sw_peri_otf__peri_imn__peri_imc__peri_pto__peri_ptt__peri_thminperi_thmaxperi_vmin_peri_vmax_peri_dsv__mem_dsrv__ssid______passssid__usrname___usrpass____cfgserv___pwdcfg____modpcfg___peripcfg__maccfg____remotecfg_remote_ctlremotehtmlthername__therperi__thermohtmldone______last_fonc_";  //};
+  char*   fonctions="per_temp__peri_pass_username__password__user_ref__to_passwd_per_refr__peri_tofs_switchs___reset_____dump_sd___sd_pos____data_save_data_read_peri_swb__peri_cur__peri_refr_peri_nom__peri_mac__accueil___peri_tableperi_prog_peri_sondeperi_pitchperi_pmo__peri_detnbperi_intnbperi_rtempremote____testhtml__peri_vsw__peri_t_sw_peri_otf__peri_imn__peri_imc__peri_pto__peri_ptt__peri_thminperi_thmaxperi_vmin_peri_vmax_peri_dsv__mem_dsrv__ssid______passssid__usrname___usrpass____cfgserv___pwdcfg____modpcfg___peripcfg__maccfg____remotecfg_remote_ctlremotehtmlthername__therperi__thermohtmlperi_port_done______last_fonc_";  //};
   /*  nombre fonctions, valeur pour accueil, data_save_ fonctions multiples etc */
   int     nbfonct=0,faccueil=0,fdatasave=0,fperiSwVal=0,fperiDetSs=0,fdone=0,fpericur=0,fperipass=0,fpassword=0,fusername=0,fuserref=0;
   char    valeurs[LENVALEURS];         // les valeurs associées à chaque fonction trouvée
@@ -143,6 +143,7 @@ EthernetServer pilotserv(PORTPILOTSERVER);  // serveur pilotage
   char*     periModel;                      // ptr ds buffer : model du périphérique
   byte*     periMacr;                       // ptr ds buffer : mac address 
   byte*     periIpAddr;                     // ptr ds buffer : Ip address
+  uint16_t* periPort;                       // ptr ds buffer : port periph server
   byte*     periSwNb;                       // ptr ds buffer : Nbre d'interrupteurs (0 aucun ; maxi 4(MAXSW)            
   byte*     periSwVal;                      // ptr ds buffer : état/cde des inter  
   byte*     periSwMode;                     // ptr ds buffer : Mode fonctionnement inters (4 par switch)           
@@ -537,13 +538,13 @@ Serial.println("periDataRead");periPrint(periCur);
   }
 }
 
-void periSend()                 // configure periParamsHtml pour envoyer un set_______ à un périph serveur (avec cb prog cochée)
+void periSend()                 // configure periParamsHtml pour envoyer un set_______ au périph serveur de periCur (avec cb prog cochée)
 { 
-  if(*periProg!=0){
+  if(*periProg!=0 && *periPort!=0){
     checkdate(2);
     char ipaddr[16];memset(ipaddr,'\0',16);
     charIp(periIpAddr,ipaddr);
-    periParamsHtml(&cliext,ipaddr,PORTSERVPERI);
+    periParamsHtml(&cliext,ipaddr,(int)*periPort);
   }
 }
 
@@ -1172,7 +1173,8 @@ void commonserver(EthernetClient cli)
                        if(*(thermoperis+nb)>NBPERIF){*(thermoperis+nb)=NBPERIF;}
                        }break;
               case 57: Serial.println("thermoHtml()");thermoHtml(&cli);break;                        // thermoHtml
-              case 58: break;                                                                        // done                        
+              case 58: *periPort=0;conv_atob(valf,periPort);break;                                   // (ligne peritable) peri_port_
+              case 59: break;                                                                        // done                        
                               
               default:break;
               }

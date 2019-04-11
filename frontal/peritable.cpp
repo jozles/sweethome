@@ -51,6 +51,7 @@ extern char*     periVers;                     // ptr ds buffer : version logici
 extern char*     periModel;                    // ptr ds buffer : model du périphérique
 extern byte*     periMacr;                     // ptr ds buffer : mac address 
 extern byte*     periIpAddr;                   // ptr ds buffer : Ip address
+extern uint16_t* periPort;                     // ptr ds buffer : port periph server
 extern byte*     periSwNb;                     // ptr ds buffer : Nbre d'interrupteurs (0 aucun ; maxi 4(MAXSW)            
 extern byte*     periSwVal;                    // ptr ds buffer : état/cde des inter  
 extern byte*     periSwMode;                   // ptr ds buffer : Mode fonctionnement inters (4 bytes par switch)           
@@ -328,7 +329,8 @@ Serial.print("début péritable ; remote_IP ");serialPrintIp(remote_IP_cur);Seri
                       for(uint8_t k=0;k<*periDetNb;k++){char oi[2]={'O','I'};cli->print(oi[(*periDetVal>>(k*2))&DETBITLH_VB]);if(k<*periDetNb-1){cli->print("<br>");}}
                       cli->println("</td>");
                       cli->print("<td><input type=\"text\" name=\"peri_mac__\" value=\"");for(int k=0;k<6;k++){cli->print(chexa[periMacr[k]/16]);cli->print(chexa[periMacr[k]%16]);}
-                        cli->println("\" size=\"11\" maxlength=\"12\" ><br><br>");
+                        cli->println("\" size=\"11\" maxlength=\"12\" ><br>");
+                      if(*periProg!=0){cli->print("port=");numTableHtml(cli,'d',periPort,"peri_port_",4,0,0);}cli->println("<br>");
                       cli->print("<font size=\"2\">");for(j=0;j<4;j++){cli->print(periIpAddr[j]);if(j<3){cli->print(".");}}cli->println("</font></td>");
                       cli->print("<td><font size=\"2\">");for(j=0;j<LENVERSION;j++){cli->print(periVers[j]);}cli->println("<br>");
                       

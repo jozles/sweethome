@@ -61,6 +61,7 @@ extern char*     periVers;                     // ptr ds buffer : version logici
 extern char*     periModel;                    // ptr ds buffer : model du périphérique
 extern byte*     periMacr;                     // ptr ds buffer : mac address 
 extern byte*     periIpAddr;                   // ptr ds buffer : Ip address
+extern uint16_t* periPort;                     // ptr ds buffer : port periph server
 extern byte*     periSwNb;                     // ptr ds buffer : Nbre d'interrupteurs (0 aucun ; maxi 4(MAXSW)            
 extern byte*     periSwVal;                    // ptr ds buffer : état/cde des inter  
 extern byte*     periSwMode;                   // ptr ds buffer : Mode fonctionnement inters (1 par switch)           
@@ -478,7 +479,8 @@ void periInit()                 // pointeurs de l'enregistrement de table couran
   temp +=1*sizeof(byte);
   periPerTemp=(uint16_t*)temp;
   temp +=sizeof(uint16_t);
-//  dispo=(byte*)temp;
+  periPort=(uint16_t*)temp;
+  temp +=sizeof(uint16_t);
   temp +=1*sizeof(byte);
   periEndOfRecord=(byte*)temp;      // doit être le dernier !!!
   temp ++;
@@ -504,6 +506,7 @@ void periInitVar()
   memset(periModel,' ',LENMODEL);
   memset(periMacr,0x00,6);
   memset(periIpAddr,0x00,4);
+  *periPort=0;
   *periSwNb=0;
   *periSwVal=0;
    memset(periSwMode,0x00,MAXSW*MAXTAC);

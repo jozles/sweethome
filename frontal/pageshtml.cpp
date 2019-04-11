@@ -294,8 +294,7 @@ void remoteHtml(EthernetClient* cli)
 
             usrFormHtml(cli,1);
             
-            boutRetour(cli,"retour",0,0);cli->print(" ");
-            boutFonction(cli,"remotehtml","","refresh",0,0,0,0);            
+            boutRetour(cli,"retour",0,0);cli->print(" ");          
             cli->println("<br>");
 
 /* table remotes */
@@ -323,8 +322,11 @@ void remoteHtml(EthernetClient* cli)
             }
             cli->println("</table>");
             
+            cli->print("<p align=\"center\">");
             cli->println("<p align=\"center\" ><input type=\"submit\" value=\"MàJ\" style=\"height:120px;width:400px;background-color:LightYellow;font-size:40px;font-family:Courier,sans-serif;\"></p><br>");
-            boutFonction(cli,"thermohtml","","températures",0,0,7,1);                        
+            boutFonction(cli,"thermohtml","","températures",0,0,7,0);cli->print(" ");
+            boutFonction(cli,"remotehtml","","refresh",0,0,0,0);
+            cli->print("</p>");
             
             cli->println("</form></body></html>");
 }
@@ -457,7 +459,7 @@ void thermoHtml(EthernetClient* cli)
             
             cli->print("<body>");cli->print(VERSION);cli->print(" ");
             boutRetour(cli,"retour",0,0);cli->print(" ");
-            boutFonction(cli,"thermohtml","","refresh",0,0,0,0);
+
 
 /* peritable températures */
 
@@ -485,9 +487,11 @@ void thermoHtml(EthernetClient* cli)
               }
           cli->println("</table>");
 
-        //boutRetour(cli,"retour",0,0);
-        boutFonction(cli,"remotehtml","","remote",0,0,7,1);                        
-
+        cli->print("<p align=\"center\">");
+        boutFonction(cli,"remotehtml","","remote",0,0,7,0);cli->print(" ");                        
+        boutFonction(cli,"thermohtml","","refresh",0,0,7,0);
+        cli->print("</p>");
+        
         cli->println("</body></html>");
 }
 
