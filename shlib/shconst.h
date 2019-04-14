@@ -2,7 +2,7 @@
 #define _SHCONST_H_
 
 
-//#define PERIF
+#define PERIF
 
 #define LENVERSION  4
 #define LENMODEL    6
@@ -10,7 +10,7 @@
 #define LENPERIDATE 6
 
 #define PORTPERISERVER  1790    // port du serveur pour périphériques et maintenance
-#define PORTSERVPERI    1791    // port des périphériqes en mode serveur
+//#define PORTSERVPERI    1791    // port des périphériqes en mode serveur
 #define PORTPILOTSERVER 1792    // port du serveur de remote
 
 #define HOSTIPADDR "192.168.0.35"
@@ -28,7 +28,7 @@
 
     // messages
 
-#define LENMESS     240             // longueur buffer message
+#define LENMESS     250             // longueur buffer message
 #define MPOSFONC    0               // position fonction
 #define MPOSLEN     11              // position longueur (longueur fonction excluse)
 #define MPOSNUMPER  MPOSLEN+5       // position num périphérique
@@ -42,8 +42,9 @@
 #define MPOSPULSONE MPOSINTPAR0+MAXSW*9 // Timers tOne (4bytes)*4
 #define MPOSPULSTWO MPOSPULSONE+MAXSW*9 // Timers tTwo (4bytes+1sep)*4
 #define MPOSPULSCTL MPOSPULSTWO+MAXSW*9 // paramètres timers (2*HH+1sep)*4
-#define MPOSEXTDEN  MPOSPULSCTL+MAXSW*(DLSWLEN+1) // ext detec enable+level
-#define MPOSMDIAG   MPOSEXTDEN+4    // texte diag
+#define MPOSEXTDEN  MPOSPULSCTL+MAXSW*(DLSWLEN*2+1) // ext detec enable+level
+#define MPOSPORTSRV MPOSEXTDEN+5    // port perif serveur
+#define MPOSMDIAG   MPOSPORTSRV+3   // texte diag
 #define MLMSET      MPOSMDIAG+5     // longueur message fonction incluse
 
 

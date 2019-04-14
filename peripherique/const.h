@@ -146,8 +146,8 @@ Modifier :
 #define THESP01 '1'
 #define THESP12 '2'
 
-#define CARTE THESP01                      // <------------- modèle carte
-#define POWER_MODE PO_MODE            // <------------- type d'alimentation 
+#define CARTE VR                      // <------------- modèle carte
+#define POWER_MODE NO_MODE            // <------------- type d'alimentation 
 
 #if POWER_MODE==NO_MODE
   #define _SERVER_MODE
@@ -311,7 +311,8 @@ typedef struct {
   IPAddress IpLocal;              //  4
   uint32_t  cxDurat;              //  4   durée last connexion
   byte      swToggle[MAXSW];      //  4   toogle switch (raz après dataSave)     
-  byte      filler[71];           //  
+  uint16_t  portServer;           //  2   port en mode serveur          
+  byte      filler[69];           //  
   uint8_t   cstcrc;               //  1   doit toujours être le dernier : utilisé pour calculer sa position
              // total 240 = 60 mots ; reste 256 dispo (sizeof(constantValues)=size(membres)+4)
 } constantValues;

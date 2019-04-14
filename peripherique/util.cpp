@@ -144,6 +144,7 @@ void initConstant()  // inits mise sous tension
   cstRec.extDetLev=0;
   cstRec.cxDurat=0;
   memset(cstRec.swToggle,0x00,MAXSW);
+  cstRec.portServer=9999;
   Serial.println("Init Constant done");
   writeConstant();
 }

@@ -36,9 +36,10 @@ extern char*     periVers;                     // ptr ds buffer : version logici
 extern char*     periModel;                    // ptr ds buffer : model du périphérique
 extern byte*     periMacr;                     // ptr ds buffer : mac address
 extern byte*     periIpAddr;                   // ptr ds buffer : Ip address
+extern uint16_t* periPort;                     // ptr ds buffer : port periph server
 extern byte*     periSwNb;                     // ptr ds buffer : Nbre d'interrupteurs (0 aucun ; maxi 4(MAXSW)
 extern byte*     periSwVal;                    // ptr ds buffer : état/cde des inter
-extern byte*     periSwMode;                    // ptr ds buffer : Mode fonctionnement inters (MAXTAC=4 par switch)
+extern byte*     periSwMode;                   // ptr ds buffer : Mode fonctionnement inters (MAXTAC=4 par switch)
 extern uint32_t* periSwPulseOne;               // ptr ds buffer : durée pulses sec ON (0 pas de pulse)
 extern uint32_t* periSwPulseTwo;               // ptr ds buffer : durée pulses sec OFF(mode astable)
 extern uint32_t* periSwPulseCurrOne;           // ptr ds buffer : temps courant pulses ON
@@ -272,18 +273,18 @@ void assySet(char* message,int periCur,char* diag,char* date14)
             //Serial.println(date14);
             strcat(message,"_");
 
-            long v1=0;
+            long v1,v2=0;
             if(periCur!=0){                                         // periCur!=0 tfr params
-                v1=*periPerRefr;
-                sprintf((message+strlen(message)),"%05d",v1);       // periPerRefr
+                v2=*periPerRefr;
+                sprintf((message+strlen(message)),"%05d",v2);       // periPerRefr
                 strcat(message,"_");
 
-                v1=*periPerTemp;
-                sprintf((message+strlen(message)),"%05d",v1);       // periPerTemp
+                v2=*periPerTemp;
+                sprintf((message+strlen(message)),"%05d",v2);       // periPerTemp
                 strcat(message,"_");
 
-                v1=*periPitch*100;
-                sprintf((message+strlen(message)),"%04d",v1);      // periPitch
+                v2=*periPitch*100;
+                sprintf((message+strlen(message)),"%04d",v2);      // periPitch
                 strcat(message,"_");
 
                 v1=strlen(message);                                 // 4 bits commande (8,6,4,2)
@@ -318,6 +319,11 @@ void assySet(char* message,int periCur,char* diag,char* date14)
                 v1+=MAXSW*(DLSWLEN*2+1);
                 conv_htoa(message+v1,(byte*)periDetServEn);
                 conv_htoa(message+v1+2,(byte*)(&memDetServ));
+                memcpy(message+v1+4,"_\0",2);
+
+                v1+=5;
+                v2=*periPort;
+                sprintf((message+v1),"%04d",v2);     // periPort
                 memcpy(message+v1+4,"_\0",2);
 
             }  // pericur != 0

@@ -42,7 +42,7 @@ WiFiClient cli;                 // client local du serveur externe (utilisé pou
 WiFiClient cliext;              // client externe du serveur local
 
 #ifdef  _SERVER_MODE
-WiFiServer server(PORTSERVPERI);
+WiFiServer server(9999); // PORTSERVPERI);
 #endif  _SERVER
 
   String headerHttp;
@@ -264,9 +264,11 @@ delay(100);
 
   #ifdef  _SERVER_MODE
 //    wifiConnexion("devolo-5d3","JNCJTRONJMGZEEQL");
-    timeservbegin=millis();
+/*    timeservbegin=millis();
     server.begin(PORTSERVPERI);
     Serial.print("server.begin(");Serial.print((int)PORTSERVPERI);Serial.print(") durée=");Serial.println(millis()-timeservbegin);
+*/
+  clkFastStep=1;cstRec.talkStep=1 ; // forçage com pour acquisition port perif server
   #endif  def_SERVER_MODE
 
   }    // fin setup NO_MODE
@@ -295,12 +297,14 @@ delay(100);
   
       if(millis()>(clkTime+PERFASTCLK)){        // période 5mS/step
         switch(clkFastStep++){
-          case 1:   timeOvfSet(1);ordreExt();timeOvfCtl(1);break;
-          case 2:   break;
-          case 3:   timeOvfSet(3);swAction();timeOvfCtl(3);break;
-          case 4:   break;
-          case 5:   timeOvfSet(5);if(cstRec.talkStep!=0){talkServer();}timeOvfCtl(5);
+/* En 1 toujours talkstep pour le forçage de communication d'acquisitrion du port au reset */
+/* clkFastStep et cstRec.talkStep == 1 */          
+          case 1:   timeOvfSet(1);if(cstRec.talkStep!=0){talkServer();}timeOvfCtl(1);
                     break;
+          case 2:   break;
+          case 3:   timeOvfSet(3);ordreExt();timeOvfCtl(3);break;
+          case 4:   break;
+          case 5:   timeOvfSet(5);swAction();timeOvfCtl(5);break;
           case 6:   break;
           case 7:   break;
           case 8:   swDebounce();break;                                 // doit être avant polDx
@@ -463,6 +467,8 @@ void dataTransfer(char* data)           // transfert contenu de set ou ack dans 
               cstRec.durPulseTwo[i]=(long)convStrToNum(data+MPOSPULSTWO+i*(MAXSW*2+1),&sizeRead);
               conv_atoh((data+MPOSEXTDEN),&cstRec.extDetEn);
               conv_atoh((data+MPOSEXTDEN+2),&cstRec.extDetLev);
+              cstRec.portServer=(uint16_t)convStrToNum(data+MPOSPORTSRV,&sizeRead);    // port server
+              Serial.print("data ");Serial.print((char*)(data+MPOSPORTSRV));Serial.print(" portServer ");Serial.println(cstRec.portServer);
             }
             printConstant();
         }
@@ -563,8 +569,8 @@ switch(cstRec.talkStep){
 
 #ifdef  _SERVER_MODE
   timeservbegin=millis();
-  server.begin(PORTSERVPERI);
-  Serial.print("server.begin(");Serial.print((int)PORTSERVPERI);Serial.print(") durée=");Serial.println(millis()-timeservbegin);
+  server.begin(cstRec.portServer);
+  Serial.print("server.begin(");Serial.print((int)cstRec.portServer);Serial.print(") durée=");Serial.println(millis()-timeservbegin);
 #endif  def_SERVER_MODE
 
        break;
@@ -580,7 +586,7 @@ switch(cstRec.talkStep){
         
   default: break;
   }
-  //if(cstRec.talkStep>=9){server.begin(PORTSERVPERI);}  
+ 
 }
 
 #ifdef _SERVER_MODE
