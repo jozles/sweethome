@@ -90,13 +90,18 @@ extern byte      periMacBuf[6];
 
 extern byte      lastIpAddr[4];
 
-extern struct swRemote remoteT[MAXREMLI];
+extern struct SwRemote remoteT[MAXREMLI];
 extern char*  remoteTA;
 extern long   remoteTlen;
 extern struct Remote remoteN[NBREMOTE];
 extern char*  remoteNA;
 extern long   remoteNlen;
 File fremote;     // fichier remotes
+
+extern struct Timers timersN[NBTIMERS];
+extern char*  timersNA;
+extern long   timersNlen;
+File ftimers;     // fichier timers
 
 extern char strdate[33];
 extern char temp[3],temp0[3],humid[3];
@@ -147,8 +152,8 @@ void readDS3231time(byte *second,byte *minute,byte *hour,
 Ymdhms now()
 {
   Ymdhms ndt;
-  uint8_t dayOfWeek;
-  readDS3231time(&ndt.second,&ndt.minute,&ndt.hour,&dayOfWeek,&ndt.day,&ndt.month,&ndt.year);
+  
+  readDS3231time(&ndt.second,&ndt.minute,&ndt.hour,&ndt.dow,&ndt.day,&ndt.month,&ndt.year);
   //Serial.print("DS3231=");Serial.print(ndt.year);Serial.print(ndt.month);Serial.println(ndt.day);
   return ndt;
 }
@@ -197,7 +202,8 @@ void alphaNow(char* buff)
   
   sprintf(buff,"%.8lu",(long)(ndt.year+2000)*10000+(long)ndt.month*100+(long)ndt.day);
   sprintf((buff+8),"%.2u",ndt.hour);sprintf((buff+10),"%.2u",ndt.minute);sprintf((buff+12),"%.2u",ndt.second);
-  buff[14]='\0';
+  buff[14]=ndt.dow;
+  buff[15]='\0';
   //Serial.print("alphaNow ");Serial.print(buff);Serial.print(" ");Serial.print(ndt.hour);Serial.print(" ");Serial.print(ndt.minute);Serial.print(" ");Serial.println(ndt.second);
   //Serial.println();
 }
@@ -729,6 +735,10 @@ Serial.print(" save ");
 */
 }
 
+
+
+/*********** remotes ************/
+
 void remPrint(int num)
 {
   periLoad(remoteT[num].pernum);
@@ -790,4 +800,60 @@ void remoteSave()
   remSave(REMOTENFNAME,remoteNlen,remoteNA);
   remotePrint();
 }
+
+/*********** timers ************/
+
+void timersPrint()
+{
+  char jourst[]={0x80,0x40,0x20,0x10,0x08,0x04,0x02,0x01};
+  for(uint8_t nt=0;nt<NBTIMERS;nt++){
+    Serial.print("   ");Serial.print(nt);Serial.print("/");Serial.print(timersN[nt].numdetec);Serial.print(" ");
+    Serial.print(timersN[nt].nom);Serial.print(" ");
+    Serial.print(timersN[nt].enable);Serial.print(" ");Serial.print(timersN[nt].currstate);Serial.print(" ");
+    Serial.print(timersN[nt].cyclic);Serial.print(" ");Serial.print(timersN[nt].forceonoff);Serial.print(" ");
+    Serial.print(timersN[nt].heuredeb);Serial.print(" ");Serial.print(timersN[nt].heurefin);Serial.print(" ");
+    Serial.print((long)(strchr(jourst,timersN[nt].dw)-jourst));Serial.print(" "); // 0=tous 1-7
+    Serial.print(timersN[nt].dhdebcycle);Serial.print(" ");Serial.println(timersN[nt].dhfincycle);
+  }
+}
+
+void timersInit()
+{
+  memset(timersN,0x00,timersNlen);
+  
+/*  for(uint8_t nt=0;nt<NBTIMERS;nt++){  
+    timersN[nt].numdetec=0;
+    memset(timersN[nt].nom,0x00,LENTIMNAM);
+    memset(timersN[nt].heuredeb,0x00,7);
+    memset(timersN[nt].heurefin,0x00,7);
+    timersN[nt].cyclic=0;
+    timersN[nt].enable=0; 
+    timersN[nt].currstate=0;
+    timersN[nt].forceonoff=0;
+    timersN[nt].dw=0;
+    memset(timersN[nt].dhdebcycle,0x00,16);
+    memset(timersN[nt].dhfincycle,16); 
+  }*/
+}
+
+int timersLoad()
+{
+    Serial.print("Load timers ");
+    if(sdOpen(FILE_READ,&ftimers,TIMERSNFNAME)==SDKO){Serial.println(" KO");return SDKO;}
+    ftimers.seek(0);
+    for(uint16_t i=0;i<timersNlen;i++){*(timersNA+i)=ftimers.read();}             
+    ftimers.close();Serial.println(" OK");
+    return SDOK;
+}
+
+int timersSave()
+{
+    Serial.print("Save timers ");
+    if(sdOpen(FILE_WRITE,&ftimers,TIMERSNFNAME)==SDKO){Serial.println(" KO");return SDKO;}
+    ftimers.seek(0);
+    for(uint16_t i=0;i<timersNlen;i++){ftimers.write(*(timersNA+i));}             
+    ftimers.close();Serial.println(" OK");
+    return SDOK;
+}
+
 

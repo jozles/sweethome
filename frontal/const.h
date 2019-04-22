@@ -103,7 +103,7 @@
 #define REMOTENFNAME "noms_rem"
 #define REMOTETFNAME "tablerem"
 
-struct swRemote
+struct SwRemote
 {
   uint8_t  num;           // remote number
   uint16_t pernum;        // periph number
@@ -119,6 +119,26 @@ struct Remote
   bool    newonoff;       // buffer pour reception et traitement cb par GET /
 };
 
+#define NBTIMERS 8
+#define LENTIMNAM 16
+#define TIMERSNFNAME "noms_timers"
+
+struct Timers
+{
+  uint8_t numdetec;      // numéro détecteur associé --- plusieurs timers possibles pour un détecteur ; voir le forçage
+  char    nom[LENTIMNAM];// nom 
+  char    heuredeb[7];   // heure début
+  char    heurefin[7];   // heure fin
+  bool    cyclic;        // cyclique/one time
+  bool    enable;        // 
+  bool    currstate;     // etat courant du timer
+  bool    forceonoff;    // forçage on ou off ; 
+                         // le timer force la valeur du détecteur on si forceonoff = 1 et currstate = on 
+                         //                                      off si forceonoff = 0 et currstate = off
+  byte    dw;            // jours semaine xyyyyyyyy ; x si tout
+  char    dhdebcycle[16];
+  char    dhfincycle[16];
+};
 
 
 /* codes fonctions

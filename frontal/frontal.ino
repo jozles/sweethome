@@ -174,13 +174,17 @@ EthernetServer pilotserv(PORTPILOTSERVER);  // serveur pilotage
 
 byte   periRemoteStatus[NBPERIF];            // etat de la mise à jour des périphériques depuis le remote ctl (si 0 faire periload/perisend - voir remoteUpdate)
 
-struct swRemote remoteT[MAXREMLI];
+struct SwRemote remoteT[MAXREMLI];
 char*  remoteTA=(char*)&remoteT;
-long   remoteTlen=(sizeof(swRemote))*MAXREMLI;
+long   remoteTlen=(sizeof(SwRemote))*MAXREMLI;
+
 struct Remote remoteN[NBREMOTE];
 char*  remoteNA=(char*)&remoteN;
 long   remoteNlen=(sizeof(Remote))*NBREMOTE;
 
+struct Timers timersN[NBTIMERS];
+char*  timersNA=(char*)&timersN;
+long   timersNlen=(sizeof(Timers))*NBTIMERS;
 
 /* alimentation DS3231 */
 
@@ -413,6 +417,7 @@ while(1){}
   sdstore_textdh(&fhisto,".3","RE","<br>\n\0");
 
   remoteLoad();
+  timersLoad();
 
   Serial.println("fin setup");
 }
@@ -532,7 +537,7 @@ void periDataRead()             // traitement d'une chaine "dataSave" ou "dataRe
     k+=MAXSW+1; 
   }  
     memcpy(periIpAddr,remote_IP_cur,4);            //for(int i=0;i<4;i++){periIpAddr[i]=remote_IP_cur[i];}      // Ip addr
-    char date14[14];alphaNow(date14);checkdate(0);packDate(periLastDateIn,date14+2);    // maj dates
+    char date14[16];alphaNow(date14);checkdate(0);packDate(periLastDateIn,date14+2);    // maj dates
 Serial.println("periDataRead");periPrint(periCur);
     periSave(periCur,PERISAVESD);checkdate(6);
   }
@@ -560,7 +565,7 @@ int periParamsHtml(EthernetClient* cli,char* host,int port)   // fonction set ou
   char message[LENMESS]={'\0'};
   char nomfonct[LENNOM+1]={'\0'};
   int8_t zz=MESSOK;
-  char date14[15];alphaNow(date14);
+  char date14[16];alphaNow(date14);
   
   if((periCur!=0) && (what==1) && (port==0)){strcpy(nomfonct,"ack_______");}    // ack pour datasave (what=1)
   else strcpy(nomfonct,"set_______");
@@ -837,13 +842,13 @@ void test2Switchs()
   charIp(lastIpAddr,ipAddr);
   for(int x=0;x<4;x++){
 //Serial.print(x);Serial.print(" test2sw ");Serial.println(ipAddr);
-    testSwitch("GET /testb_on__=0006AB8B",ipAddr,PORTSERVPERI);
+    testSwitch("GET /testb_on__=0006AB8B",ipAddr,*periPort);
     delay(2000);
-    testSwitch("GET /testa_on__=0006AB8B",ipAddr,PORTSERVPERI);
+    testSwitch("GET /testa_on__=0006AB8B",ipAddr,*periPort);
     delay(2000);
-    testSwitch("GET /testboff__=0006AB8B",ipAddr,PORTSERVPERI);
+    testSwitch("GET /testboff__=0006AB8B",ipAddr,*periPort);
     delay(2000);
-    testSwitch("GET /testaoff__=0006AB8B",ipAddr,PORTSERVPERI);
+    testSwitch("GET /testaoff__=0006AB8B",ipAddr,*periPort);
     delay(2000);
   }
 }

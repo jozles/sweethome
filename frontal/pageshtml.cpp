@@ -53,7 +53,7 @@ extern byte*     periSwVal;                    // ptr ds buffer peri : état/cde
 
 File fimg;     // fichier image
 
-extern struct swRemote remoteT[MAXREMLI];
+extern struct SwRemote remoteT[MAXREMLI];
 extern struct Remote remoteN[NBREMOTE];
 
 extern char*     periNamer;                    // ptr ds buffer : description périphérique
@@ -322,10 +322,9 @@ void remoteHtml(EthernetClient* cli)
             }
             cli->println("</table>");
             
-            cli->print("<p align=\"center\">");
-            cli->println("<p align=\"center\" ><input type=\"submit\" value=\"MàJ\" style=\"height:120px;width:400px;background-color:LightYellow;font-size:40px;font-family:Courier,sans-serif;\"></p><br>");
+            cli->println("<p align=\"center\" ><input type=\"submit\" value=\"MàJ\" style=\"height:120px;width:400px;background-color:LightYellow;font-size:40px;font-family:Courier,sans-serif;\"><br>");
             boutFonction(cli,"thermohtml","","températures",0,0,7,0);cli->print(" ");
-            boutFonction(cli,"remotehtml","","refresh",0,0,0,0);
+            boutFonction(cli,"remotehtml","","refresh",0,0,7,0);
             cli->print("</p>");
             
             cli->println("</form></body></html>");

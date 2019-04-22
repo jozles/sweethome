@@ -247,9 +247,9 @@ Serial.print("début péritable ; remote_IP ");serialPrintIp(remote_IP_cur);Seri
   htmlIntro(nomserver,cli);
 
   
-  char bufdate[15];alphaNow(bufdate);
+  char bufdate[16];alphaNow(bufdate);
   char pkdate[7];packDate(pkdate,bufdate+2); // skip siècle
-  float th;                                 // pour temp DS3231
+  float th;                                  // pour temp DS3231
   readDS3231temp(&th);
 
         cli->println("<body>");

@@ -12,11 +12,12 @@ struct Ymdhms
   uint8_t hour;
   uint8_t minute;
   uint8_t second;
+  uint8_t dow;
 };
 
 Ymdhms now();
 
-void alphaNow(char* buff);  // charge 15 car YYYYMMDDHHMMSS\0
+void alphaNow(char* buff);  // charge 16 car YYYYMMDDHHMMSSd\0
 void setDS3231time(byte second, byte minute, byte hour,byte dayOfWeek,byte dayOfMonth, byte month, byte year);
 void readDS3231time(byte *second,byte *minute,byte *hour,byte *dayOfWeek,byte *dayOfMonth,byte *month,byte *year);
 void readDS3231temp(float* th);
@@ -52,5 +53,10 @@ void remInit();
 int  remSave(char* remF,uint16_t remL,char* remA);
 void remoteLoad();
 void remoteSave();
+
+void timersPrint();
+void timersInit();
+int  timersLoad();
+int  timersSave();
 
 #endif // _PERIPH_
