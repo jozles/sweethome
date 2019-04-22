@@ -146,8 +146,8 @@ Modifier :
 #define THESP01 '1'
 #define THESP12 '2'
 
-#define CARTE VR                      // <------------- modèle carte
-#define POWER_MODE NO_MODE            // <------------- type d'alimentation 
+#define CARTE THESP01                      // <------------- modèle carte
+#define POWER_MODE PO_MODE            // <------------- type d'alimentation 
 
 #if POWER_MODE==NO_MODE
   #define _SERVER_MODE

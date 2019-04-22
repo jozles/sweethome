@@ -30,10 +30,19 @@ extern byte dsmodel;
 
   const char* ssid;
   const char* password;
+#define DEVOLO  
+#ifdef DEVOLO
+  const char* ssid2= "pinks";
+  const char* password2 = "cain ne dormant pas songeait au pied des monts";
+  const char* ssid1= "devolo-5d3";
+  const char* password1= "JNCJTRONJMGZEEQL";
+#endif DEVOLO
+#ifndef DEVOLO
   const char* ssid1= "pinks";
   const char* password1 = "cain ne dormant pas songeait au pied des monts";
   const char* ssid2= "devolo-5d3";
   const char* password2= "JNCJTRONJMGZEEQL";
+#endif DEVOLO
 
   const char* host = HOSTIPADDR;
   const int   port = PORTPERISERVER; 
