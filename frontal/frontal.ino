@@ -364,6 +364,12 @@ while(1){}
     Serial.println("terminé");
     while(1){}
 */
+/*  init timers
+ 
+    timersInit();
+    timersSave();
+    while(1){}; 
+*/
   
   sdOpen(FILE_WRITE,&fhisto,"fdhisto.txt");
   //sdstore_textdh0(&fhisto,".1","RE"," ");
@@ -486,11 +492,11 @@ void scantimers()
           timersN[nt].enable 
           && (timersN[nt].perm || (memcmp(timersN[nt].dhdebcycle,now,14)<0 && memcmp(timersN[nt].dhfincycle,now,14)>0)) 
           && memcmp(timersN[nt].hdeb,(now+8),6)<0 && memcmp(timersN[nt].hfin,(now+8),6)>0
-          && (timersN[nt].dw && maskbit[1+now[14]*2])==1 )
+          && (timersN[nt].dw && maskbit[1+now[14]*2])!=0 )
           {
-          timersN[nt].curstate=1;memDetServ != maskbit[1+(timersN[nt].detec)*2];      
+          //timersN[nt].curstate=1;memDetServ != maskbit[1+(timersN[nt].detec)*2];      
           }
-        else {timersN[nt].curstate=0;memDetServ &= !maskbit[1+(timersN[nt].detec)*2];}
+       // else {timersN[nt].curstate=0;memDetServ &= !maskbit[1+(timersN[nt].detec)*2];}
       }
       Serial.println(millis()-timerstime);  
     }
@@ -1219,8 +1225,9 @@ void commonserver(EthernetClient cli)
                        }break;
               case 57: Serial.println("thermoHtml()");thermoHtml(&cli);break;                        // thermoHtml
               case 58: *periPort=0;conv_atob(valf,periPort);break;                                   // (ligne peritable) peri_port_
-              case 59: {int nb=*(libfonctions+2*i+1)-PMFNCHAR;                                       // (timers) tim_name__
+              case 59: what=7;{int nb=*(libfonctions+2*i+1)-PMFNCHAR;                                // (timers) tim_name__
                        textfonc(timersN[nb].nom,LENTIMNAM);
+                       Serial.print("efface cb timers ");Serial.print(nb);Serial.print(" ");Serial.print(timersN[nb].nom);
                        timersN[nb].enable=0;                                                         // (timers) effacement cb     
                        timersN[nb].perm=0;
                        timersN[nb].cyclic=0;
@@ -1231,27 +1238,29 @@ void commonserver(EthernetClient cli)
               case 60: {int nb=*(libfonctions+2*i+1)-PMFNCHAR;                                       // (timers) tim_det___
                        timersN[nb].detec=*valf-48;
                        if(timersN[nb].detec>NBDSRV){timersN[nb].detec=NBDSRV;}
+                       Serial.print(" ");Serial.print(timersN[nb].detec);
                        }break;
               case 61: {int nb=*(libfonctions+2*i+1)-PMFNCHAR;                                       // (timers) tim_hdf___
                         switch (*(libfonctions+2*i)){         
-                         case 'd':textfonc(timersN[nb].hdeb,6);break;
-                         case 'f':textfonc(timersN[nb].hfin,6);break;
-                         case 'b':textfonc(timersN[nb].dhdebcycle,14);break;
-                         case 'e':textfonc(timersN[nb].dhfincycle,14);break;
+                         case 'd':textfonc(timersN[nb].hdeb,6);Serial.print(" ");Serial.print(timersN[nb].hdeb);break;
+                         case 'f':textfonc(timersN[nb].hfin,6);Serial.print(" ");Serial.print(timersN[nb].hfin);break;
+                         case 'b':textfonc(timersN[nb].dhdebcycle,14);Serial.print(" ");Serial.print(timersN[nb].dhdebcycle);break;
+                         case 'e':textfonc(timersN[nb].dhfincycle,14);Serial.print(" ");Serial.println(timersN[nb].dhfincycle);break;
                          default:break;
                         } 
                        }break;
               case 62: {int nb=*(libfonctions+2*i+1)-PMFNCHAR;                                       // (timers) tim_chkb__
                         int nv=*(libfonctions+2*i)-PMFNCHAR;
-                        if(nv>5){
-                          timersN[nb].dw|=maskbit[1+2*(nv-6)];                          
+                        Serial.println();Serial.print(nb);Serial.print(" ");Serial.print(nv);Serial.println(" ");
+                        if(nv>4){
+                          timersN[nb].dw|=maskbit[1+2*(7-nv+5)];                          
                         }
                         switch (nv){         
-                         case '1':timersN[nb].enable=*valf-48;break;
-                         case '2':timersN[nb].perm=*valf-48;break;
-                         case '3':timersN[nb].cyclic=*valf-48;break;
-                         case '4':timersN[nb].curstate=*valf-48;break;
-                         case '5':timersN[nb].forceonoff=*valf-48;break;                        
+                         case 0:timersN[nb].enable=*valf-48;break;
+                         case 1:timersN[nb].perm=*valf-48;break;
+                         case 2:timersN[nb].cyclic=*valf-48;break;
+                         case 3:timersN[nb].curstate=*valf-48;break;
+                         case 4:timersN[nb].forceonoff=*valf-48;break;                        
                          default:break;
                         } 
                        }break;
@@ -1282,9 +1291,9 @@ void commonserver(EthernetClient cli)
           case 4:break;                                       // unused                                      
           case 5:periSave(periCur,PERISAVESD);periTableHtml(&cli); // browser modif ligne de peritable ou switchs
                   cli.stop();periSend();break;                
-          case 6:configSave();periTableHtml(&cli);break;      // config serveur
-          case 7:break;                                       // unused
-          case 8:remoteSave();periTableHtml(&cli);break;      // bouton remotecfg puis submit
+          case 6:configSave();cfgServerHtml(&cli);break;      // config serveur
+          case 7:timersSave();timersHtml(&cli);break;         // timers
+          case 8:remoteSave();cfgRemoteHtml(&cli);break;      // bouton remotecfg puis submit
           case 9:periRecRemoteUpdate();remoteHtml(&cli);      // bouton remotehtml ou remote ctl puis submit
                   cli.stop();
                   periRemoteUpdate();break;                   // remoteHtml nécessite la mise à jour de perirec et la connexion cli ; 

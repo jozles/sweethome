@@ -121,7 +121,7 @@ struct Remote
 
 #define NBTIMERS 8
 #define LENTIMNAM 16
-#define TIMERSNFNAME "noms_timers"
+#define TIMERSNFNAME "NOMS_TIM"
 
 struct Timers
 {
