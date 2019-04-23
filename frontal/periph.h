@@ -17,7 +17,8 @@ struct Ymdhms
 
 Ymdhms now();
 
-void alphaNow(char* buff);  // charge 16 car YYYYMMDDHHMMSSd\0
+#define LNOW 16             // len chargée par alphanow 
+void alphaNow(char* buff);  // charge LNOW (16) car YYYYMMDDHHMMSSd\0
 void setDS3231time(byte second, byte minute, byte hour,byte dayOfWeek,byte dayOfMonth, byte month, byte year);
 void readDS3231time(byte *second,byte *minute,byte *hour,byte *dayOfWeek,byte *dayOfMonth,byte *month,byte *year);
 void readDS3231temp(float* th);

@@ -247,7 +247,7 @@ Serial.print("début péritable ; remote_IP ");serialPrintIp(remote_IP_cur);Seri
   htmlIntro(nomserver,cli);
 
   
-  char bufdate[16];alphaNow(bufdate);
+  char bufdate[LNOW];alphaNow(bufdate);
   char pkdate[7];packDate(pkdate,bufdate+2); // skip siècle
   float th;                                  // pour temp DS3231
   readDS3231temp(&th);
@@ -272,6 +272,7 @@ Serial.print("début péritable ; remote_IP ");serialPrintIp(remote_IP_cur);Seri
           boutFonction(cli,"remote____","","remote_cfg",0,0,0,0);
           boutFonction(cli,"remotehtml","","remotehtml",0,0,0,0);
           boutFonction(cli,"thermohtml","","thermohtml",0,0,0,0);
+          boutFonction(cli,"timershtml","","timershtml",0,0,0,0);          
 
           cli->print("(");long sdsiz=fhisto.size();cli->print(sdsiz);cli->println(") ");
           numTableHtml(cli,'i',(uint32_t*)&sdpos,"sd_pos____",9,0,0);cli->println("<input type=\"submit\" value=\"ok\"> ");

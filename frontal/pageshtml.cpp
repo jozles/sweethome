@@ -56,6 +56,8 @@ File fimg;     // fichier image
 extern struct SwRemote remoteT[MAXREMLI];
 extern struct Remote remoteN[NBREMOTE];
 
+extern struct Timers timersN[NBTIMERS];
+
 extern char*     periNamer;                    // ptr ds buffer : description périphérique
 
 extern int       fdatasave;
@@ -140,6 +142,16 @@ void accueilHtml(EthernetClient* cli)
             cli->println("</form></body></html>");
 }          
 
+void sscb(EthernetClient* cli,bool val,char* nomfonct,int nuf,int etat,uint8_t td,uint8_t nb)
+{                                                                               // saisie checkbox ; 
+                                                                                // le nom de fonction reçoit 2 caractères
+  char nf[LENNOM];
+  memcpy(nf,nomfonct,LENNOM);
+  nf[LENNOM-1]=(char)(nb+PMFNCHAR);
+  nf[LENNOM-2]=(char)(nuf+PMFNCHAR);
+  checkboxTableHtml(cli,(uint8_t*)&val,nf,etat,td);
+}
+
 void sscfgt(EthernetClient* cli,char* nom,uint8_t nb,void* value,int len)
 {
   cli->print("<td><input type=\"text\" name=\"");cli->print(nom);cli->print((char)(nb+PMFNCHAR));cli->print("\" value=\"");
@@ -158,13 +170,9 @@ void subcfgtable(EthernetClient* cli,char* titre,int nbl,char* nom1,char* value1
       cli->println("<tr>");
       cli->print("<td>");cli->print(nb);cli->print("</td>");
 
-      sscfgt(cli,nom1,nb,value1,len1);
-//                  cli->print("<td><input type=\"text\" name=\"");cli->print(nom1);cli->print((char)(nb+PMFNCHAR));cli->print("\" value=\"");    
-//                      cli->print(value1+(nb*(len1+1)));cli->print("\" size=\"");cli->print(len1/2);cli->print("\" maxlength=\"");cli->print(len1);cli->println("\" ></td>");
-                      
+      sscfgt(cli,nom1,nb,value1,len1);                      
       sscfgt(cli,nom2,nb,value2,len2);
-//                  cli->print("<td><input type=\"text\" name=\"");cli->print(nom2);cli->print((char)(nb+PMFNCHAR));cli->print("\" value=\"");
-//                      cli->print((char*)(value2+(nb*(len2+1))));cli->print("\" size=\"");cli->print(len2/2);cli->print("\" maxlength=\"");cli->print(len2);cli->println("\" ></td>");
+
       if(len2==-1){
         int16_t peri=*((int16_t*)value2+nb);
         if(peri>0){Serial.print(peri);periLoad(peri);cli->println("<td>");cli->println(periNamer);cli->println("</td>");}
@@ -493,6 +501,56 @@ void thermoHtml(EthernetClient* cli)
         
         cli->println("</body></html>");
 }
+
+void timersHtml(EthernetClient* cli)
+{           
+            Serial.println("saisie timers");
+            htmlIntro(nomserver,cli);
+            
+            cli->print("<body>");cli->print(VERSION);cli->print(" ");
+            boutRetour(cli,"retour",0,0);cli->print(" ");
+
+         cli->println("<table>");
+              cli->println("<tr>");
+                cli->println("<th>nom</th><th>det</th><th>h_beg</th><th>h_end</th><th>_e_p_c_s_f_</th><th>dw</th><th>dw</th><th>dh_beg_cycle</th><th>dh_end_cycle</th>");
+              cli->println("</tr>");
+
+              for(int nt=0;nt<NBTIMERS;nt++){
+
+                    cli->println("<tr>");
+                    cli->println("</form>");
+                      cli->print("<td>");cli->print(nt);cli->println("</td>");
+                      sscfgt(cli,"tim_name__",nt,&timersN[nt].nom,LENTIMNAM);
+                      /*memcpy(nf,"tim_det___",LENNOM);nf[LENNOM-1]=(char)(nt+PMFNCHAR);
+                      numTableHtml(cli,'b',&timersN[nt].detec,nf,1,1,0);*/
+                      sscfgt(cli,"tim_det___",nt,&timersN[nt].detec,6);                                            
+                      sscfgt(cli,"tim_hdf_d_",nt,&timersN[nt].hdeb,6);                                            
+                      sscfgt(cli,"tim_hdf_f_",nt,&timersN[nt].hfin,6);                   
+                      cli->println("<td>");
+                      int nucb;
+                      nucb=0;sscb(cli,&timersN[nt].enable,"tim_chkb__",nucb,-1,0,nt);
+                      nucb++;sscb(cli,&timersN[nt].perm,"time_chkb__",nucb,-1,0,nt);
+                      nucb++;sscb(cli,&timersN[nt].cyclic,"tim_chkb__",nucb,-1,0,nt);   
+                      nucb++;sscb(cli,&timersN[nt].curstate,"tim_chkb__",nucb,-1,0,nt);
+                      nucb++;sscb(cli,&timersN[nt].forceonoff,"tim_chkb__",nucb,-1,0,nt);
+                      cli->println("</td><td>");
+                      for(int nj=7;nj>=0;nj--){
+                        bool vnj; 
+                        vnj=(timersN[nt].dw>>nj)&0x01;
+                        nucb++;sscb(cli,vnj,"time_chkb__",nucb,-1,0,nt);
+                      }
+                      cli->println("</td>");
+                      sscfgt(cli,"tim_hdf_b_",nt,&timersN[nt].dhdebcycle,14);
+                      sscfgt(cli,"tim_hdf_e_",nt,&timersN[nt].dhfincycle,14); 
+                    cli->println(" <input type=\"submit\" value=\"MàJ\"><br>");
+                    cli->println("</form>");
+                    cli->println("</tr>");
+                  }
+
+        cli->println("</table>");
+        cli->println("</body></html>");
+}
+
 
 void testHtml(EthernetClient* cli)
 {

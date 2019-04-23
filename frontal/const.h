@@ -125,13 +125,14 @@ struct Remote
 
 struct Timers
 {
-  uint8_t numdetec;      // numéro détecteur associé --- plusieurs timers possibles pour un détecteur ; voir le forçage
+  uint8_t detec;         // numéro détecteur associé --- plusieurs timers possibles pour un détecteur ; voir le forçage
   char    nom[LENTIMNAM];// nom 
-  char    heuredeb[7];   // heure début
-  char    heurefin[7];   // heure fin
-  bool    cyclic;        // cyclique/one time
+  char    hdeb[7];       // heure début
+  char    hfin[7];       // heure fin
+  bool    perm;          // permanent (pas de test sur deb/fin cycle ni cyclic)
+  bool    cyclic;        // cyclique/one time (si one time pas de test de heuredeb/fin)
   bool    enable;        // 
-  bool    currstate;     // etat courant du timer
+  bool    curstate;      // etat courant du timer
   bool    forceonoff;    // forçage on ou off ; 
                          // le timer force la valeur du détecteur on si forceonoff = 1 et currstate = on 
                          //                                      off si forceonoff = 0 et currstate = off
