@@ -16,6 +16,7 @@ extern char* modpass;          // mot de passe modif
 extern char* peripass;         // mot de passe périphériques
 
 extern char* chexa;
+extern byte  maskbit[];
 
 extern int   periCur;          // Numéro du périphérique courant
 
@@ -62,6 +63,7 @@ extern char*     periNamer;                    // ptr ds buffer : description p�
 
 extern int       fdatasave;
 
+extern byte      memDetServ;  // image mémoire NBDSRV détecteurs (8)
 
 int htmlImg(EthernetClient* cli,char* fimgname)    // suffisant pour commande péripheriques
 {
@@ -501,22 +503,29 @@ void thermoHtml(EthernetClient* cli)
         boutFonction(cli,"remotehtml","","remote",0,0,7,0);cli->print(" ");                        
         boutFonction(cli,"thermohtml","","refresh",0,0,7,0);
         cli->print("</p>");
-        
-        cli->println("</body></html>");
+        cli->print("<br><br><br>");for(int d=0;d<NBDSRV;d++){cli->print((char)(((memDetServ>>d)&0x01)+48));cli->print(" ");}
+        cli->println("/n</body></html>");
 }
 
 void timersHtml(EthernetClient* cli)
-{           
+{
+  int nucb;           
+  char a;
+  char bufdate[LNOW];alphaNow(bufdate);
+  
             Serial.println("saisie timers");
             htmlIntro(nomserver,cli);
             
             cli->print("<body>");cli->print(VERSION);cli->print(" ");
             
-            boutRetour(cli,"retour",0,0);cli->print(" ");
+            boutRetour(cli,"retour",0,0);cli->print(" ");boutFonction(cli,"timershtml","","refresh",0,0,1,0);cli->print(" ");
+
+            for(int zz=0;zz<14;zz++){cli->print(bufdate[zz]);if(zz==7){cli->print("-");}}cli->print("-");cli->print((char)(bufdate[14]+48));
+            cli->println(" GMT");
 
          cli->println("<table>");
               cli->println("<tr>");
-                cli->println("<th></th><th>nom</th><th>det</th><th>h_beg</th><th>h_end</th><th>e_p_c_s_f_</th><th>7_l_m_m_j_v_s_d</th><th>dh_beg_cycle</th><th>dh_end_cycle</th>");
+                cli->println("<th></th><th>nom</th><th>det</th><th>h_beg</th><th>h_end</th><th></th><th>e_p_c_f_</th><th>7_d_l_m_m_j_v_s</th><th>dh_beg_cycle</th><th>dh_end_cycle</th>");
               cli->println("</tr>");
 
               for(int nt=0;nt<NBTIMERS;nt++){
@@ -525,20 +534,21 @@ void timersHtml(EthernetClient* cli)
                     cli->println("<form method=\"GET \">");
                       usrFormHtml(cli,1);
                       cli->print("<td>");cli->print(nt+1);cli->println("</td>");
-                      Serial.print(nt);Serial.print(" ");Serial.print(timersN[nt].nom);Serial.print(" ");Serial.println(timersN[nt].detec);
+                      //Serial.print(nt);Serial.print(" ");Serial.print(timersN[nt].nom);Serial.print(" ");Serial.println(timersN[nt].detec);
+                      
                       sscfgt(cli,"tim_name_",nt,timersN[nt].nom,LENTIMNAM,0);
-                      /*memcpy(nf,"tim_det___",LENNOM);nf[LENNOM-1]=(char)(nt+PMFNCHAR);
-                      numTableHtml(cli,'b',&timersN[nt].detec,nf,1,1,0);*/
                       sscfgt(cli,"tim_det__",nt,&timersN[nt].detec,1,3);                                            
                       sscfgt(cli,"tim_hdf_d",nt,timersN[nt].hdeb,6,0);                                            
                       sscfgt(cli,"tim_hdf_f",nt,timersN[nt].hfin,6,0);                   
-                      cli->println("<td>");
-                      int nucb;
+                      
+                      cli->print("<td>");a='I';if(timersN[nt].curstate!=0){a='O';}cli->println(a);
+                      cli->println("</td><td>");
+                      
                       nucb=0;sscb(cli,timersN[nt].enable,"tim_chkb__",nucb,-1,0,nt);
                       nucb++;sscb(cli,timersN[nt].perm,"tim_chkb__",nucb,-1,0,nt);
                       nucb++;sscb(cli,timersN[nt].cyclic,"tim_chkb__",nucb,-1,0,nt);   
-                      nucb++;sscb(cli,timersN[nt].curstate,"tim_chkb__",nucb,-1,0,nt);
                       nucb++;sscb(cli,timersN[nt].forceonoff,"tim_chkb__",nucb,-1,0,nt);
+                     
                       cli->println("</td><td>");
                       for(int nj=7;nj>=0;nj--){
                         bool vnj; 
@@ -549,6 +559,7 @@ void timersHtml(EthernetClient* cli)
                       sscfgt(cli,"tim_hdf_b",nt,&timersN[nt].dhdebcycle,14,0);
                       sscfgt(cli,"tim_hdf_e",nt,&timersN[nt].dhfincycle,14,0); 
                       cli->print("<td>");cli->print(" <input type=\"submit\" value=\"MàJ\"><br>");cli->println("</td>");
+                    cli->print("<td>");cli->print(timersN[nt].dw,HEX);cli->print(" ");cli->print(maskbit[1+bufdate[14]*2],HEX);cli->println("</td>");
                     cli->println("</form>");
                     cli->println("</tr>");
                   }

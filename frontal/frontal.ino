@@ -480,23 +480,48 @@ void scantemp()
     }       
 }
 
+void poolperif(uint8_t nt)
+{
+  Serial.print("poolperif(");Serial.print(nt);Serial.println(")");
+  for(int np=0;np<NBPERIF;np++){
+    periLoad(np);
+    if(*periSwNb!=0){
+      for(int sw=0;sw<*periSwNb;sw++){            // boucle switchs
+        for(int nd=0;nd<DLNB;nd++){              // boucle détecteurs
+          uint64_t pipm=0;memcpy(&pipm,((char*)(periSwPulseCtl+sw*DLSWLEN)),DLSWLEN); // mot switch   
+          uint8_t locext=(pipm>>(nd*DLBITLEN+DLEL_PB)&0x01);                          // local / externe
+          uint8_t numdet=(pipm>>(nd*DLBITLEN+DLNLS_PB)&mask[DLNULEN]);                // num détecteur
+          if(numdet!=0 && locext==0){
+            Serial.print(" p=");Serial.print(np);Serial.print(" sw=");Serial.print(sw);
+            Serial.print("/");Serial.print(nd);Serial.print(" l/e=");Serial.print(locext);Serial.print(" d=");Serial.println(numdet);
+          }
+        }
+      }
+    }
+  }
+}
+
 void scantimers()
 {
     if((millis()-timerstime)>pertimers*1000){
-      Serial.print("scan timers =");
+      Serial.println("scan timers =");
       timerstime=millis();
       char now[LNOW];
       alphaNow(now);
       for(int nt=0;nt<NBTIMERS;nt++){
+        //Serial.print("nt=");Serial.print(nt);Serial.print(" timersN[nt].enable=");Serial.print(timersN[nt].enable);Serial.print(" timersN[nt].curstate=");Serial.println(timersN[nt].curstate);
         if(
-          timersN[nt].enable 
-          && (timersN[nt].perm || (memcmp(timersN[nt].dhdebcycle,now,14)<0 && memcmp(timersN[nt].dhfincycle,now,14)>0)) 
-          && memcmp(timersN[nt].hdeb,(now+8),6)<0 && memcmp(timersN[nt].hfin,(now+8),6)>0
-          && (timersN[nt].dw && maskbit[1+now[14]*2])!=0 )
+          timersN[nt].enable==1
+          && (timersN[nt].perm==1 || (memcmp(timersN[nt].dhdebcycle,now,14)<0 && memcmp(timersN[nt].dhfincycle,now,14)>0)) 
+          && memcmp(timersN[nt].hdeb,(now+8),6)<0 
+          && memcmp(timersN[nt].hfin,(now+8),6)>0
+          && (timersN[nt].dw & maskbit[1+now[14]*2])!=0 )
           {
-          //timersN[nt].curstate=1;memDetServ != maskbit[1+(timersN[nt].detec)*2];      
+          if(timersN[nt].curstate!=1){timersN[nt].curstate=1;memDetServ |= maskbit[1+(timersN[nt].detec)*2];poolperif(nt);}
           }
-       // else {timersN[nt].curstate=0;memDetServ &= !maskbit[1+(timersN[nt].detec)*2];}
+        else {
+          if(timersN[nt].curstate!=0){timersN[nt].curstate=0;memDetServ &= !maskbit[1+(timersN[nt].detec)*2];poolperif(nt);}
+          }
       }
       Serial.println(millis()-timerstime);  
     }
@@ -1238,7 +1263,7 @@ void commonserver(EthernetClient cli)
               case 60: {int nb=*(libfonctions+2*i+1)-PMFNCHAR;                                       // (timers) tim_det___
                        timersN[nb].detec=*valf-48;
                        if(timersN[nb].detec>NBDSRV){timersN[nb].detec=NBDSRV;}
-                       Serial.print(" ");Serial.print(timersN[nb].detec);
+                       Serial.print(" ");Serial.println(timersN[nb].detec);
                        }break;
               case 61: {int nb=*(libfonctions+2*i+1)-PMFNCHAR;                                       // (timers) tim_hdf___
                         switch (*(libfonctions+2*i)){         
@@ -1251,18 +1276,22 @@ void commonserver(EthernetClient cli)
                        }break;
               case 62: {int nb=*(libfonctions+2*i+1)-PMFNCHAR;                                       // (timers) tim_chkb__
                         int nv=*(libfonctions+2*i)-PMFNCHAR;
-                        Serial.println();Serial.print(nb);Serial.print(" ");Serial.print(nv);Serial.println(" ");
-                        if(nv>4){
-                          timersN[nb].dw|=maskbit[1+2*(7-nv+5)];                          
-                        }
+                        Serial.print(nb);Serial.print(" ");Serial.print(nv);Serial.print(" ");
+                        /* e_p_c_f */
                         switch (nv){         
-                         case 0:timersN[nb].enable=*valf-48;break;
-                         case 1:timersN[nb].perm=*valf-48;break;
-                         case 2:timersN[nb].cyclic=*valf-48;break;
-                         case 3:timersN[nb].curstate=*valf-48;break;
-                         case 4:timersN[nb].forceonoff=*valf-48;break;                        
+                         case 0:timersN[nb].enable=*valf-48;Serial.print(timersN[nb].enable);break;
+                         case 1:timersN[nb].perm=*valf-48;Serial.print(timersN[nb].perm);break;
+                         case 2:timersN[nb].cyclic=*valf-48;Serial.print(timersN[nb].cyclic);break;
+                         case 3:timersN[nb].forceonoff=*valf-48;Serial.print(timersN[nb].forceonoff);break;                        
                          default:break;
-                        } 
+                        }
+                        /* dw */
+                        if(nv=NBCBTIM){timersN[nb].dw=0xFF;}
+                        if(nv>NBCBTIM){
+                          timersN[nb].dw|=maskbit[1+2*(7-nv+NBCBTIM)];                          
+                        }
+                        Serial.println();
+                         
                        }break;
               case 63: Serial.println("timersHtml()");timersHtml(&cli);break;                        // timershtml
               case 64: break;                                                                        // done                        

@@ -820,6 +820,10 @@ void timersPrint()
 void timersInit()
 {
   memset(timersN,0x00,timersNlen);
+  for(int nt=0;nt<NBTIMERS;nt++){
+    memset(timersN[nt].dhdebcycle,'0',16);
+    memset(timersN[nt].dhfincycle,'9',16); 
+  }
   
 /*  for(uint8_t nt=0;nt<NBTIMERS;nt++){  
     timersN[nt].numdetec=0;
@@ -831,8 +835,6 @@ void timersInit()
     timersN[nt].currstate=0;
     timersN[nt].forceonoff=0;
     timersN[nt].dw=0;
-    memset(timersN[nt].dhdebcycle,0x00,16);
-    memset(timersN[nt].dhfincycle,16); 
   }*/
 }
 

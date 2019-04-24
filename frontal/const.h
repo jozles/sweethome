@@ -119,9 +119,10 @@ struct Remote
   bool    newonoff;       // buffer pour reception et traitement cb par GET /
 };
 
-#define NBTIMERS 8
-#define LENTIMNAM 16
+#define NBTIMERS     8
+#define LENTIMNAM    16
 #define TIMERSNFNAME "NOMS_TIM"
+#define NBCBTIM      4   // nbre check box (hors dw)   
 
 struct Timers
 {

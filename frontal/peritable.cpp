@@ -165,7 +165,7 @@ void SwCtlTableHtml(EthernetClient* cli,int nbsw,int nbtypes)
     cli->println("<br>");
 
     cli->println("<table>");
-      cli->println("<tr><th>sw</th><th>time One<br>time Two</th><th>f<br>r</th><th>e.l _f_H.a<br>n.x _t_L.c</th><th>0-3<br>___det__srv._pul</th></tr>");
+      cli->println("<tr><th>sw</th><th>time One<br>time Two</th><th>f<br>r</th><th>e.l_f_H.a<br>n.x _t_L.c</th><th>0-3<br>___det__srv._pul</th></tr>");
   
   
       char nfonc[]="peri_imn__\0";            // transporte le numéro de detecteur des sources
