@@ -504,7 +504,7 @@ void poolperif(uint8_t nt)
 void scantimers()
 {
     if((millis()-timerstime)>pertimers*1000){
-      Serial.println("scan timers =");
+      
       timerstime=millis();
       char now[LNOW];
       alphaNow(now);
@@ -523,7 +523,7 @@ void scantimers()
           if(timersN[nt].curstate!=0){timersN[nt].curstate=0;memDetServ &= !maskbit[1+(timersN[nt].detec)*2];poolperif(nt);}
           }
       }
-      Serial.println(millis()-timerstime);  
+      if((millis()-timerstime)>1){Serial.print("scan timers =");Serial.println(millis()-timerstime);}
     }
 }
 
@@ -603,13 +603,14 @@ void periDataRead()             // traitement d'une chaine "dataSave" ou "dataRe
   }  
     memcpy(periIpAddr,remote_IP_cur,4);            //for(int i=0;i<4;i++){periIpAddr[i]=remote_IP_cur[i];}      // Ip addr
     char date14[LNOW];alphaNow(date14);checkdate(0);packDate(periLastDateIn,date14+2);    // maj dates
-Serial.println("periDataRead");periPrint(periCur);
+    Serial.print("periDataRead peri=");periPrint(periCur);
     periSave(periCur,PERISAVESD);checkdate(6);
   }
 }
 
 void periSend()                 // configure periParamsHtml pour envoyer un set_______ au périph serveur de periCur (avec cb prog cochée)
 { 
+  Serial.print("periSend(peri=");Serial.print(periCur);Serial.print("-port=");Serial.print(*periPort);Serial.println(")");
   if(*periProg!=0 && *periPort!=0){
     checkdate(2);
     char ipaddr[16];memset(ipaddr,'\0',16);
@@ -634,6 +635,7 @@ int periParamsHtml(EthernetClient* cli,char* host,int port)   // fonction set ou
   
   if((periCur!=0) && (what==1) && (port==0)){strcpy(nomfonct,"ack_______");}    // ack pour datasave (what=1)
   else strcpy(nomfonct,"set_______");
+  Serial.print("periParamsHtml(peri=");Serial.print(periCur);Serial.print("-port=");Serial.print(port);Serial.println(")");
   checkdate(3);
   assySet(message,periCur,periDiag(periMess),date14);
   checkdate(4);
@@ -658,20 +660,6 @@ int periParamsHtml(EthernetClient* cli,char* host,int port)   // fonction set ou
               delay(1);
               purgeServer(cli);
             }
-            /*
-            zz=MESSCX;
-            if(cliext.connect(espdev,1791)){
-              Serial.println("cliext connected=========================");
-              cliext.print(bufServer);
-              cliext.print("\r\n HTTP/1.1\r\n Connection:close\r\n\r\n");
-              uint8_t fonct;
-              zz=getHttpResponse(&cliext,bufServer,LBUFSERVER,&fonct);
-              if(zz==MESSOK && fonct!=fdone){zz=MESSFON;}
-              delay(1);
-              purgeServer(&cliext);
-              cliext.stop();
-            }*/
-            
           }
           checkdate(5);
           if(zz==MESSOK){packDate(periLastDateOut,date14+2);}
@@ -1143,7 +1131,7 @@ void commonserver(EthernetClient cli)
               case 17: memset(periNamer,0x00,PERINAMLEN-1);                                             // (ligne peritable) nom periph courant
                        memcpy(periNamer,valf,nvalf[i+1]-nvalf[i]);
                        break;                                                                              
-              case 18: Serial.print("mac valf ");Serial.println(valf);for(j=0;j<6;j++){conv_atoh(valf+j*2,(periMacr+j));}break;   // (ligne peritable) Mac periph courant
+              case 18: for(j=0;j<6;j++){conv_atoh(valf+j*2,(periMacr+j));}break;                        // (ligne peritable) Mac periph courant
               case 19: accueilHtml(&cli);break;                                                      // accueil
               case 20: periTableHtml(&cli);break;                                                    // peri table
               case 21: *periProg=*valf-48;break;                                                        // (ligne peritable) peri prog
@@ -1158,7 +1146,7 @@ void commonserver(EthernetClient cli)
                        }break;
               case 25: *periDetNb=*valf-48;if(*periDetNb>MAXDET){*periDetNb=MAXDET;}break;              // (ligne peritable) peri det Nb  
               case 26: *periSwNb=*valf-48;if(*periSwNb>MAXSW){*periSwNb=MAXSW;}break;                   // (ligne peritable) peri sw Nb                       
-              case 27: Serial.print(" periPerTemp=");Serial.print(*periPerTemp);*periPerTemp=0;conv_atob(valf,periPerTemp);Serial.print(" periPerTemp=");Serial.println(*periPerTemp);break;                             // periode check température
+              case 27: *periPerTemp=0;conv_atob(valf,periPerTemp);break;                             // periode check température
               case 28: cfgRemoteHtml(&cli);remotePrint();break;                                      // bouton remotecfg_
               case 29: testHtml(&cli);break;                                                         // bouton testhtml
               case 30: {uint8_t sw=*(libfonctions+2*i+1)-48;                                            // (ligne peritable) peri Sw Val 

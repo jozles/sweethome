@@ -518,7 +518,8 @@ void timersHtml(EthernetClient* cli)
             
             cli->print("<body>");cli->print(VERSION);cli->print(" ");
             
-            boutRetour(cli,"retour",0,0);cli->print(" ");boutFonction(cli,"timershtml","","refresh",0,0,1,0);cli->print(" ");
+            boutRetour(cli,"retour",0,0);cli->print(" ");
+            boutFonction(cli,"timershtml","","refresh",0,0,1,0);cli->print(" ");
 
             for(int zz=0;zz<14;zz++){cli->print(bufdate[zz]);if(zz==7){cli->print("-");}}cli->print("-");cli->print((char)(bufdate[14]+48));
             cli->println(" GMT");

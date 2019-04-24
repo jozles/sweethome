@@ -3,7 +3,7 @@
 
 //#define WEMOS
 
-#define VERSION "1.2a"
+#define VERSION "1.2b"
 /* 1.1 ajout voltage dans données data_read_ ; modif unpackMac
  * 1.1a ajout volts et version dans table
  * 1.1b suppression dht ; ajout periDetVal et periSwVal avec affichage/saisie dans la table ; gestion serveur dev
@@ -35,17 +35,16 @@
  * 1.2a ajout dans fichier config de la table username/usrpass
  *      commonserver() 
  *      nouveau système password et TO (voir commonserver()) (boutRetour,boutFonction,usrForm)
+ *      ajout periPort et tfr via ack/set ; accés aux périph serveurs débuggé (fermeture connection "cli.stop")
+ * 1.2b ajout timers ; periTableHtml() protège periCur ;    
  *      
  * à faire :
  *     
- *    ajouter les adresses IP et les ports dans la config  
+ *    timers : ajouter option "1 jour sur n" : dhdebcycle=1ère date... calculer si date curante ok (récupérer un bool inutile - cyclic? )
  *    
- *    ajouter alarmes dans peritable : alim+/- temp+/- detecteurs temps non communication
+ *    ajouter alarmes dans peritable : alim+/- temp+/- detecteurs temps non communication et envoi mails
  *    mettre en sub tout le traitement des fonctions (depuis cli.connected jusqu'après what) et ajouter connexion/server spécial browser
  *     
- *     html :
- *     comment faire un bouton pour renvoyer "GET /fonction..." (switchs____ dans periTableHtml, lien "retour" un peu partout)
- *     comment renvoyer une fonction par submit sans élément à saisir/cliquer (peri_erase dans SwCtlTableHtml)
  *     
  */
 

@@ -241,6 +241,7 @@ void SwCtlTableHtml(EthernetClient* cli,int nbsw,int nbtypes)
 void periTableHtml(EthernetClient* cli)
 {
   int i,j;
+  int savePeriCur=periCur;   // save periCur et restore à la fin de periTable
 
 Serial.print("début péritable ; remote_IP ");serialPrintIp(remote_IP_cur);Serial.println();
 
@@ -357,6 +358,7 @@ Serial.print("début péritable ; remote_IP ");serialPrintIp(remote_IP_cur);Seri
               }
           cli->println("</table>");
         cli->println("</body></html>");
+periCur=savePeriCur;periLoad(periCur);
 Serial.println("fin péritable");
 }
 

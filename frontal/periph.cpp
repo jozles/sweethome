@@ -355,7 +355,9 @@ void periFname(int num,char* fname)
 void  periPrint(int num)
 {
   Serial.print(num);Serial.print("/");Serial.print(*periNum);Serial.print(" ");Serial.print(periNamer);Serial.print(" ");
-  serialPrintMac(periMacr,0);Serial.print(" ");serialPrintIp(periIpAddr);Serial.print(" millis=");Serial.print(millis());Serial.print(" sw=");Serial.print(*periSwNb);Serial.print(" det=");Serial.print(*periDetNb);Serial.print(" ");Serial.println(periVers);
+  serialPrintMac(periMacr,0);Serial.print(" ");serialPrintIp(periIpAddr);Serial.print(" millis=");Serial.print(millis());
+  Serial.print(" sw=");Serial.print(*periSwNb);Serial.print(" det=");Serial.print(*periDetNb);Serial.print(" ");
+  for(int ver=0;ver<LENVERSION;ver++){Serial.print(periVers[ver]);}Serial.println();
 }
 
 int periLoad(int num)
