@@ -32,15 +32,15 @@ void getdate(uint32_t* hms2,uint32_t* amj2,byte* js);
 #define PERISAVESD    VRAI                     // copie du cache sur le disque lors de periSave
 #define PERISAVELOCAL FAUX                     // pas de copie du cache sur le disque lors de periSave
 
-int   periLoad(int num);
-int   periSave(int num,bool sd);
-int   periRemove(int num);
+int   periLoad(uint16_t num);
+int   periSave(uint16_t num,bool sd);
+int   periRemove(uint16_t num);
 void  periModif();
 void  periConvert();
 void  periInit();
 void  periInitVar(); // le contenu de periRec seul
-void  periCheck(int num,char* text);
-void  periPrint(int num);
+void  periCheck(uint16_t num,char* text);
+void  periPrint(uint16_t num);
 
 void  configInit();
 int   configLoad();

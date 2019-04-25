@@ -46,7 +46,7 @@ extern byte      periCacheStatus[NBPERIF];     // indicateur de validité du cac
   
 extern int       periCur;                      // Numéro du périphérique courant
 
-extern int16_t*  periNum;                      // ptr ds buffer : Numéro du périphérique courant
+extern uint16_t*  periNum;                     // ptr ds buffer : Numéro du périphérique courant
 extern int32_t*  periPerRefr;                  // ptr ds buffer : période datasave minimale
 extern uint16_t* periPerTemp;                  // ptr ds buffer : période de lecture tempèrature
 extern float*    periPitch;                    // ptr ds buffer : variation minimale de température pour datasave
@@ -341,10 +341,10 @@ int configSave()
 
 /* >>>>>>>>> périphériques <<<<<<<<<< */
 
-void periCheck(int num,char* text){periSave(NBPERIF+1,PERISAVESD);periLoad(num);Serial.print(" ");Serial.print(text);Serial.print(" Nb(");Serial.print(num);Serial.print(") sw=");Serial.print(*periSwNb);Serial.print(" det=");Serial.println(*periDetNb);periLoad(NBPERIF+1);}
+void periCheck(uint16_t num,char* text){periSave(NBPERIF+1,PERISAVESD);periLoad(num);Serial.print(" ");Serial.print(text);Serial.print(" Nb(");Serial.print(num);Serial.print(") sw=");Serial.print(*periSwNb);Serial.print(" det=");Serial.println(*periDetNb);periLoad(NBPERIF+1);}
 
 
-void periFname(int num,char* fname)
+void periFname(uint16_t num,char* fname)
 {
   strcpy(fname,"PERI");
   fname[4]=(char)(num/10+48);
@@ -352,7 +352,7 @@ void periFname(int num,char* fname)
   fname[6]='\0';
 }
 
-void  periPrint(int num)
+void  periPrint(uint16_t num)
 {
   Serial.print(num);Serial.print("/");Serial.print(*periNum);Serial.print(" ");Serial.print(periNamer);Serial.print(" ");
   serialPrintMac(periMacr,0);Serial.print(" ");serialPrintIp(periIpAddr);Serial.print(" millis=");Serial.print(millis());
@@ -360,7 +360,7 @@ void  periPrint(int num)
   for(int ver=0;ver<LENVERSION;ver++){Serial.print(periVers[ver]);}Serial.println();
 }
 
-int periLoad(int num)
+int periLoad(uint16_t num)
 {
   int i=0;
   if(periCacheStatus[num]==0){
@@ -374,7 +374,7 @@ int periLoad(int num)
   return SDOK;
 }
 
-int periRemove(int num)
+int periRemove(uint16_t num)
 {
   int i=0;
   char periFile[7];periFname(num,periFile);
@@ -382,7 +382,7 @@ int periRemove(int num)
   return SDOK;
 }
 
-int periSave(int num,bool sd)
+int periSave(uint16_t num,bool sd)
 {
 
   int i=0;
@@ -412,15 +412,15 @@ int periSave(int num,bool sd)
 
 void periInit()                 // pointeurs de l'enregistrement de table courant
 {
-  for(int nbp=0;nbp<NBPERIF;nbp++){periCacheStatus[nbp]=0x00;}
+  for(uint16_t nbp=0;nbp<NBPERIF;nbp++){periCacheStatus[nbp]=0x00;}
   
   periCur=0;
   int* filler;
   byte* temp=(byte*)periRec;
 
   periBegOfRecord=temp;         // doit être le premier !!!
-  periNum=(int16_t*)temp;                           
-  temp +=sizeof(int16_t);
+  periNum=(uint16_t*)temp;                           
+  temp +=sizeof(uint16_t);
   periPerRefr=(int32_t*)temp;
   temp +=sizeof(int32_t);
   periPitch=(float*)temp;
@@ -554,7 +554,7 @@ void periConvert()
   char periFile[7];
   int i=0;
   periInitVar();            // les champs ajoutés sont initialisés ; les autres récupèreront les valeurs précédentes
-  for(i=1;i<=NBPERIF+1;i++){
+  for(uint16_t i=1;i<=NBPERIF+1;i++){
     periFname(i,periFile);Serial.print(periFile);
     if(periLoad(i)!=SDOK){Serial.print(" load KO");}
     else{
@@ -741,7 +741,7 @@ Serial.print(" save ");
 
 /*********** remotes ************/
 
-void remPrint(int num)
+void remPrint(uint8_t num)
 {
   periLoad(remoteT[num].pernum);
   Serial.print("   ");Serial.print(num);Serial.print("/");Serial.print(remoteT[num].num);Serial.print(" ");

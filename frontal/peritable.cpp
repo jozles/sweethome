@@ -34,9 +34,9 @@ extern uint8_t   remote_IP[4],remote_IP_cur[4];
 
 extern char      periRec[PERIRECLEN];        // 1er buffer de l'enregistrement de périphérique
   
-extern int       periCur;                    // Numéro du périphérique courant
+extern uint16_t  periCur;                    // Numéro du périphérique courant
 
-extern int*      periNum;                      // ptr ds buffer : Numéro du périphérique courant
+extern uint16_t* periNum;                      // ptr ds buffer : Numéro du périphérique courant
 extern long*     periPerRefr;                  // ptr ds buffer : période maximale accés au serveur
 extern uint16_t* periPerTemp;                  // ptr ds buffer : période de lecture tempèrature
 extern float*    periPitch;                    // ptr ds buffer : variation minimale de température pour datasave
@@ -157,15 +157,15 @@ void SwCtlTableHtml(EthernetClient* cli,int nbsw,int nbtypes)
     cli->println("<input type=\"submit\" value=\"MàJ\">");
     
     cli->print(" détecteurs serveur enable ");
-    for(int k=0;k<NBDSRV;k++){subDSn(cli,"peri_dsv__\0",*periDetServEn,k);}
+    for(int k=NBDSRV-1;k>=0;k--){subDSn(cli,"peri_dsv__\0",*periDetServEn,k);}
 
     cli->print(" état : ");
     char hl[]={"LH"};
-    for(int k=0;k<NBDSRV;k++){cli->print(hl[(memDetServ>>k)&0x01]);cli->print(" ");}
+    for(int k=NBDSRV-1;k>=0;k--){cli->print(hl[(memDetServ>>k)&0x01]);cli->print(" ");}cli->print(memDetServ/16,HEX);cli->print(memDetServ%16,HEX);
     cli->println("<br>");
 
     cli->println("<table>");
-      cli->println("<tr><th>sw</th><th>time One<br>time Two</th><th>f<br>r</th><th>e.l_f_H.a<br>n.x _t_L.c</th><th>0-3<br>___det__srv._pul</th></tr>");
+      cli->println("<tr><th>sw</th><th>time One<br>time Two</th><th>f<br>r</th><th>e.l_f_H.a<br>n.x_t_L.c</th><th>0-3<br>___det_srv_pul</th></tr>");
   
   
       char nfonc[]="peri_imn__\0";            // transporte le numéro de detecteur des sources
@@ -282,7 +282,7 @@ Serial.print("début péritable ; remote_IP ");serialPrintIp(remote_IP_cur);Seri
           cli->println(" détecteurs serveur :");
           for(int k=0;k<NBDSRV;k++){subDSn(cli,"mem_dsrv__\0",memDetServ,k);}
         
-        cli->println("</form>");  
+        cli->println("</form>");
 
           cli->println("<table>");
               cli->println("<tr>");

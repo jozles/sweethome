@@ -81,7 +81,7 @@ void purgeServer(WiFiClient* cli)
 #endif // PERIF
 {
     if(cli->connected()){
-        Serial.print(" purge ");
+        //Serial.print(" purge ");
         while (cli->available()){Serial.print(cli->read());delay(1);}
         Serial.println();
     }

@@ -16,9 +16,9 @@ extern uint8_t   remote_IP[4],remote_IP_cur[4];
 
 extern char      periRec[PERIRECLEN];        // 1er buffer de l'enregistrement de périphérique
   
-extern int       periCur;                    // Numéro du périphérique courant
+extern uint16_t  periCur;                    // Numéro du périphérique courant
 
-extern int*      periNum;                      // ptr ds buffer : Numéro du périphérique courant
+extern uint16_t* periNum;                      // ptr ds buffer : Numéro du périphérique courant
 extern long*     periPerRefr;                  // ptr ds buffer : période maximale accés au serveur
 extern uint16_t* periPerTemp;                  // ptr ds buffer : période de lecture tempèrature
 extern float*    periPitch;                    // ptr ds buffer : variation minimale de température pour datasave

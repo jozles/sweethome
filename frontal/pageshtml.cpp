@@ -432,7 +432,7 @@ int scalcTh(int bd)           // maj temp min/max des périphériques sur les bd
       }      
     }
   }
-  for(int pp=1;pp<=NBPERIF;pp++){periLoad(pp);if(periMacr[0]!=0x00){periSave(pp,PERISAVESD);}}   // écriture SD
+  for(uint16_t pp=1;pp<=NBPERIF;pp++){periLoad(pp);if(periMacr[0]!=0x00){periSave(pp,PERISAVESD);}}   // écriture SD
   
   Serial.print("--- fin balayage ");Serial.print(nbli);Serial.print(" lignes ; ");Serial.print(nbth);Serial.print(" màj ; millis=");Serial.print(millis()-t0);Serial.println("");
  
@@ -542,7 +542,8 @@ void timersHtml(EthernetClient* cli)
                       sscfgt(cli,"tim_hdf_d",nt,timersN[nt].hdeb,6,0);                                            
                       sscfgt(cli,"tim_hdf_f",nt,timersN[nt].hfin,6,0);                   
                       
-                      cli->print("<td>");a='I';if(timersN[nt].curstate!=0){a='O';}cli->println(a);
+                      char oi[]="OI",md=memDetServ>>timersN[nt].detec;
+                      cli->print("<td>");cli->print(oi[timersN[nt].curstate]);cli->print(md/16,HEX);cli->print(md%16,HEX);
                       cli->println("</td><td>");
                       
                       nucb=0;sscb(cli,timersN[nt].enable,"tim_chkb__",nucb,-1,0,nt);
