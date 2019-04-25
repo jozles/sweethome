@@ -113,35 +113,45 @@ extern  int*  int0=&(0x00);*/
 
 uint8_t rdy(byte modesw,int sw) // pour les 3 sources, check bit enable puis etat source ; retour numéro source valorisé si valide sinon 0
 {
-/* pour chacune des sources, test du bit enable de la source SWxxEN_VB (xx=DL pour détecteur logique, MS pour serveur, MP pour pulse)
+/*  modesw copie du mot de contrôle du switch (OffCdeO, OnCdeO, OnCdeI, OffCdeI) 2 bits valide par source ;
+ *  pour chacune des sources, test du bit enable de la source SWxxEN_VB (xx=DL pour détecteur logique, MS pour serveur, MP pour pulse)
    si pas enable, source suivante ; 
 */
   
   /* ------ détecteur --------- 
-   si enable, recup n° detec logique 'det' pour isoler les bits d'info du det logique parmi 4 dans la description du switch
-   dans les bits d'infos : enable du det logique, local si !=0 ou externe, le n° de det physique si local, l'état du détecteur
-   Enfin, comparaison du niveau demandé avec l'image mémoire du détecteur physique dans memDetec
-   (détecteurs externes à traiter)
+   si contrôle enable pour cette source, 
+   recup n° detec logique 'det' pour isoler les bits d'info du det logique parmi 4 dans la description du switch
+   (bits d'infos : enable det logique, n° det (physique si local, rang si externe), local si !=0 ou externe, état actif du détecteur)
+   (le bit "état actif du détecteur" semble inutile et n'est pas traité pour cette source)
+   Enfin, test enable et comparaison avec la consigne : (si physique) l'image mémoire du détecteur physique dans memDetec
+                                                        (si externe)  le bit correspondant dans la copie des bits externes (masqué par enable externe)
   */
-  if((modesw & SWMDLEN_VB) !=0){                      // det enable
-    uint8_t det=(modesw>>SWMDLNULS_PB)&0x03;          // numéro det logique
+  if((modesw & SWMDLEN_VB) !=0){                                      // det source bit enable 
+    uint8_t det=(modesw>>SWMDLNULS_PB)&0x03;                          // numéro det logique
     uint64_t swctl;memcpy(&swctl,cstRec.pulseCtl+sw*DLSWLEN,DLSWLEN); // les 6 bytes de description du switch courant
-    uint16_t dlctl=(uint16_t)(swctl>>(det*DLBITLEN)); // calés en poids faibles les bits du détecteur logique
-//Serial.print(" det=");Serial.print(det);Serial.print(" dlctl=");Serial.print(dlctl,HEX);Serial.print(" dlctl&DLENA_VB=");Serial.print(dlctl&DLENA_VB,HEX);Serial.print(" dlctl&DLEL_VB=");Serial.print(dlctl&DLEL_VB,HEX);
-    if((uint16_t)(dlctl&DLENA_VB) != 0){                                              // dl enable
-      if((uint16_t)(dlctl&DLEL_VB) != 0){                                             // dl local
-        uint8_t locdet=(dlctl>>DLNLS_PB)&0x07;                                        // num det physique local
-        if(((dlctl>>DLMHL_PB)&0x01)==((cstRec.memDetec[locdet]>>DETBITLH_PB)&0x01)){  // etat actif ?
-//Serial.print("sw=");Serial.print(sw);Serial.print(" locdet=");Serial.print(locdet);Serial.print(" memDetec=");Serial.print(cstRec.memDetec[locdet],HEX);
-//Serial.print(" SWMDHL=");Serial.print((modesw>>SWMDLHL_PB)&0x01);Serial.print(" DETBITLH=");Serial.println((cstRec.memDetec[locdet]>>DETBITLH_PB)&0x01);
-          if(((modesw>>SWMDLHL_PB)&0x01)==((cstRec.memDetec[locdet]>>DETBITLH_PB)&0x01)){return 1;} // comparaison bit et consigne
-        }
+    uint16_t dlctl=(uint16_t)(swctl>>(det*DLBITLEN));                 // calés en poids faibles les bits du détecteur logique
+    if((uint16_t)(dlctl&DLENA_VB) != 0){                              // dl bit enable
+      uint8_t lexdet=(dlctl>>DLNLS_PB)&0x07;                          // num det local ou externe
+      if((uint16_t)(dlctl&DLEL_VB) != 0){                             // dl local
+        uint8_t locdet=(cstRec.memDetec[lexdet]>>DETBITLH_PB)&0x01;   // det local
+        if(
+          ((modesw>>SWMDLHL_PB)&0x01)==locdet){
+//         && ((dlctl>>DLMHL_PB)&0x01)==locdet                          // etat actif ?
+          }{return 1;}
       }
-      else {}                                         // dl externe à traiter
-    }                                                                                                              
+      else {                                                           // dl externe ; extdetlev les 8 det (bits) 
+        uint8_t extdet=(cstRec.extDetLev>>lexdet)&0x01;                // det externe
+        //Serial.print("extdet=");Serial.print(extdet);Serial.print(" lexdet=");Serial.print(lexdet);Serial.print(" extDetLev=");Serial.print(cstRec.extDetLev/16,HEX);Serial.print(cstRec.extDetLev%16,HEX);Serial.print(" extDetEn=");Serial.print(cstRec.extDetEn/16,HEX);Serial.println(cstRec.extDetEn%16,HEX);
+        if(
+          ((cstRec.extDetEn>>lexdet)&0x01)!=0                          // ext det enable 
+          && ((modesw>>SWMDLHL_PB)&0x01)==extdet                       // consigne ?
+//          && ((dlctl>>DLMHL_PB)&0x01)==extdet                          // etat actif ?          
+        ){return 1;}                                        
+      }                                                                                                              
+    }
   }
   /* --------- serveur ---------- */
-  if((modesw & SWMSEN_VB) != 0){                      // serveur enable
+  if((modesw & SWMSEN_VB) != 0){                                       // server source bit enable
     if (((modesw>>SWMSHL_PB)&0x01)==((cstRec.swCde>>((2*sw)+1))&0x01)){return 2;}    // comparaison bit et consigne
   }
 
@@ -149,7 +159,7 @@ uint8_t rdy(byte modesw,int sw) // pour les 3 sources, check bit enable puis eta
   si enable, selon staPulse et consigne détermination état du switch (ou pas) 
   (voir états staPulse dans const.h de frontal)
   */
-  if((modesw & SWMPEN_VB) != 0){
+  if((modesw & SWMPEN_VB) != 0){                                       // pulse source bit enable
   //Serial.print(" sw=");Serial.print(sw);Serial.print(" stapulse=");Serial.print(staPulse[sw]);
   bool lh=(modesw>>SWMPHL_PB)&0x01;
   //Serial.print(" LH=");Serial.print(lh);Serial.print(" cnt1=");Serial.print(cstRec.cntPulseOne[sw]);Serial.print(" cnt2=");Serial.print(cstRec.cntPulseTwo[sw]);
@@ -167,7 +177,7 @@ uint8_t rdy(byte modesw,int sw) // pour les 3 sources, check bit enable puis eta
       default: break;
     }
   }
-  return 0; // disable 
+  return 0;                                      // disable 
 }
 
 void swAction()         // poling check cde des switchs

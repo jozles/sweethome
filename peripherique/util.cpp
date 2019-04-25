@@ -197,14 +197,14 @@ void printConstant()
   Serial.print(" ");}Serial.println(" 3/2/1/0 cde/état(pin)");
   Serial.print("staPulse=");for(int s=0;s<MAXSW;s++){Serial.print(s);Serial.print("-");Serial.print(staPulse[s],HEX);
   Serial.print(" ");}Serial.println("  C=DIS 0=IDLE 5=RUN1 7=RUN2 4=END1 6=END2");
-  Serial.print("memDetec=");for(int s=0;s<(MAXDET+MAXDSP+MAXDEX);s++){Serial.print(s);Serial.print("-");
+  Serial.print("memDetec (0-n)=");for(int s=0;s<(MAXDET+MAXDSP+MAXDEX);s++){Serial.print(s);Serial.print("-");
   Serial.print((cstRec.memDetec[s]>>DETBITST_PB)&0x03,HEX);Serial.print(" ");
   Serial.print((cstRec.memDetec[s]>>DETBITUD_PB)&0x01,HEX);Serial.print(" ");
   Serial.print((cstRec.memDetec[s]>>DETBITLH_PB)&0x01,HEX);Serial.print("  ");}
   Serial.println(" 3-TRIG 2-WAIT 1-IDLE 0-DIS");
-  Serial.print("detTime =    ");for(int s=0;s<MAXDET;s++){Serial.print(detTime[s]);Serial.print("  -  ");}Serial.println();
-  Serial.print("detect  =    ");for(int s=0;s<MAXDET;s++){Serial.print(digitalRead(pinDet[s]));Serial.print("   -   ");}Serial.println();  
-  Serial.print("ext detec =  ");for(int s=0;s<MAXDEX;s++){Serial.print((cstRec.extDetEn>>s)&0x01);Serial.print((cstRec.extDetLev>>s)&0x01);Serial.print(" ");}Serial.println();
+  Serial.print("detTime =    ");for(int s=MAXDET-1;s>=0;s--){Serial.print(detTime[s]);Serial.print("  -  ");}Serial.println();
+  Serial.print("detect  =    ");for(int s=MAXDET-1;s>=0;s--){Serial.print(digitalRead(pinDet[s]));Serial.print("   -   ");}Serial.println();  
+  Serial.print("ext detec (en/lev)=  ");for(int s=MAXDEX-1;s>=0;s--){Serial.print((cstRec.extDetEn>>s)&0x01);Serial.print((cstRec.extDetLev>>s)&0x01);Serial.print(" ");}Serial.println();
   for(int i=0;i<NBSW;i++){
     Serial.print("sw=");Serial.print(i+1);Serial.print("-");Serial.print(digitalRead(pinSw[i]),HEX);
     Serial.print(" Cde=");Serial.print((cstRec.swCde>>(i*2+1))&0x01);

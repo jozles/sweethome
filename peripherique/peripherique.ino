@@ -30,7 +30,7 @@ extern byte dsmodel;
 
   const char* ssid;
   const char* password;
-#define DEVOLO  
+//#define DEVOLO  
 #ifdef DEVOLO
   const char* ssid2= "pinks";
   const char* password2 = "cain ne dormant pas songeait au pied des monts";
@@ -477,7 +477,7 @@ void dataTransfer(char* data)           // transfert contenu de set ou ack dans 
               conv_atoh((data+MPOSEXTDEN),&cstRec.extDetEn);
               conv_atoh((data+MPOSEXTDEN+2),&cstRec.extDetLev);
               cstRec.portServer=(uint16_t)convStrToNum(data+MPOSPORTSRV,&sizeRead);    // port server
-              Serial.print("data ");Serial.print((char*)(data+MPOSPORTSRV));Serial.print(" portServer ");Serial.println(cstRec.portServer);
+              //Serial.print("data ");Serial.print((char*)(data+MPOSPORTSRV));Serial.print(" portServer ");Serial.println(cstRec.portServer);
             }
             printConstant();
         }
