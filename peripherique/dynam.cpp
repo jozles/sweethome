@@ -119,10 +119,10 @@ uint8_t rdy(byte modesw,int sw) // pour les 3 sources, check bit enable puis eta
 */
   
   /* ------ détecteur --------- 
-   si contrôle enable pour cette source, 
+   si enable=1 pour cette source, 
    recup n° detec logique 'det' pour isoler les bits d'info du det logique parmi 4 dans la description du switch
    (bits d'infos : enable det logique, n° det (physique si local, rang si externe), local si !=0 ou externe, état actif du détecteur)
-   (le bit "état actif du détecteur" semble inutile et n'est pas traité pour cette source)
+   (le bit "état actif du détecteur" semble inutile et n'est pas traité pour cette source... en faire un inverseur ?)
    Enfin, test enable et comparaison avec la consigne : (si physique) l'image mémoire du détecteur physique dans memDetec
                                                         (si externe)  le bit correspondant dans la copie des bits externes (masqué par enable externe)
   */

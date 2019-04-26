@@ -2,18 +2,24 @@
 #define _SHCONST_H_
 
 
-#define PERIF
+//#define PERIF
 
 #define LENVERSION  4
 #define LENMODEL    6
 #define SIZEPULSE   4  // uint32_t
 #define LENPERIDATE 6
 
-#define PORTPERISERVER  1790    // port du serveur pour périphériques et maintenance
-//#define PORTSERVPERI    1791    // port des périphériqes en mode serveur
+///* 1er serveur
+#define PORTPERISERVER  1790    // port du serveur pour périphériques et maintenance (RUN 1789)
 #define PORTPILOTSERVER 1792    // port du serveur de remote
+//*/
+/* 2nd serveur
+#define PORTPERISERVER2  1786    // port du serveur pour périphériques et maintenance
+#define PORTPILOTSERVER2 1788    // port du serveur de remote
+*/
 
-#define HOSTIPADDR "192.168.0.35"
+
+//#define HOSTIPADDR "192.168.0.35"
 
 #ifdef PERIF
  #define PINLED 0                    //  0 = ESP-12  ; 2 = ESP-01

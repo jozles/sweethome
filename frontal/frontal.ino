@@ -54,7 +54,7 @@ char configRec[CONFIGRECLEN];
 
   byte* mac;              // adresse server
   byte* localIp;          // adresse server
-  int*  portserver;       //
+  uint16_t* portserver;   //
   char* nomserver;        //
   char* userpass;         // mot de passe browser
   char* modpass;          // mot de passe modif
@@ -76,8 +76,8 @@ char configRec[CONFIGRECLEN];
   int     usernum=-1;       // numéro(0-n) de l'utilisateur connecté (valide durant commonserver)   
 
 
-EthernetServer periserv(PORTPERISERVER);    // port 1789 service, 1790 devt
-EthernetServer pilotserv(PORTPILOTSERVER);  // serveur pilotage
+EthernetServer periserv(PORTSERVER);  // serveur perif et table port 1789 service, 1790 devt, 1786 devt2
+EthernetServer pilotserv(PORTPILOT);  // serveur pilotage 1792 devt, 1788 devt2
 
   uint8_t remote_IP[4]={0,0,0,0};           // periserver
   uint8_t remote_IP_cur[4]={0,0,0,0};       // périphériques periserver
@@ -89,7 +89,7 @@ EthernetServer pilotserv(PORTPILOTSERVER);  // serveur pilotage
 
   int8_t  numfonct[NBVAL];             // les fonctions trouvées  (au max version 1.1k 23+4*57=251)
   
-  char*   fonctions="per_temp__peri_pass_username__password__user_ref__to_passwd_per_refr__peri_tofs_switchs___reset_____dump_sd___sd_pos____data_save_data_read_peri_swb__peri_cur__peri_refr_peri_nom__peri_mac__accueil___peri_tableperi_prog_peri_sondeperi_pitchperi_pmo__peri_detnbperi_intnbperi_rtempremote____testhtml__peri_vsw__peri_t_sw_peri_otf__peri_imn__peri_imc__peri_pto__peri_ptt__peri_thminperi_thmaxperi_vmin_peri_vmax_peri_dsv__mem_dsrv__ssid______passssid__usrname___usrpass____cfgserv___pwdcfg____modpcfg___peripcfg__maccfg____remotecfg_remote_ctlremotehtmlthername__therperi__thermohtmlperi_port_tim_name__tim_det___tim_hdf___tim_chkb__timershtmldone______last_fonc_";
+  char*   fonctions="per_temp__peri_pass_username__password__user_ref__to_passwd_per_refr__peri_tofs_switchs___reset_____dump_sd___sd_pos____data_save_data_read_peri_swb__peri_cur__peri_refr_peri_nom__peri_mac__accueil___peri_tableperi_prog_peri_sondeperi_pitchperi_pmo__peri_detnbperi_intnbperi_rtempremote____testhtml__peri_vsw__peri_t_sw_peri_otf__peri_imn__peri_imc__peri_pto__peri_ptt__peri_thminperi_thmaxperi_vmin_peri_vmax_peri_dsv__mem_dsrv__ssid______passssid__usrname___usrpass____cfgserv___pwdcfg____modpcfg___peripcfg__ethcfg____remotecfg_remote_ctlremotehtmlthername__therperi__thermohtmlperi_port_tim_name__tim_det___tim_hdf___tim_chkb__timershtmldone______last_fonc_";
   
   /*  nombre fonctions, valeur pour accueil, data_save_ fonctions multiples etc */
   int     nbfonct=0,faccueil=0,fdatasave=0,fperiSwVal=0,fperiDetSs=0,fdone=0,fpericur=0,fperipass=0,fpassword=0,fusername=0,fuserref=0;
@@ -115,7 +115,7 @@ EthernetServer pilotserv(PORTPILOTSERVER);  // serveur pilotage
   uint16_t  perrefr=0;                     // periode rafraichissement de l'affichage
 
   long      timerstime=0;                  // last millis pour timers
-#define PTIMERS 20;                        // secondes
+#define PTIMERS 10;                        // secondes
   uint32_t  pertimers=PTIMERS;             // période ctle timers
   
   int   stime=0;int mtime=0;int htime=0;
@@ -306,9 +306,9 @@ void setup() {                              // =================================
   
   delay(1000);
   Serial.println();Serial.print(VERSION);
-  #ifdef _MODE_DEVT
+  #ifdef _MODE_DEVT || MODE_DEVT2
   Serial.print(" MODE_DEVT");Serial.print(" free=");Serial.println(freeMemory(), DEC);
-  #endif _MODE_DEVT
+  #endif _MODE_DEVT/2
 
   Serial.print("\nSD card ");
   if(!SD.begin(4)){Serial.println("KO");ledblink(BCODESDCARDKO);}
@@ -379,8 +379,7 @@ while(1){}
   Wire.begin();
 
   if(Ethernet.begin(mac) == 0)
-    {//Serial.println("Failed with DHCP");
-    // **** la connexion mac seul ne fonctionne pas ****    mais le test doit être fait pour que l'UDP marche ???!!!
+    {Serial.print("Failed with DHCP... forcing Ip ");serialPrintIp(localIp);Serial.println();
     Ethernet.begin (mac, localIp); //initialisation de la communication Ethernet
     }
   Serial.println(Ethernet.localIP());
@@ -1219,7 +1218,15 @@ void commonserver(EthernetClient cli)
                        memset(userpass,0x00,LPWD);memcpy(userpass,valf,nvalf[i+1]-nvalf[i]);break;      // (config) pwdcfg____
               case 49: memset(modpass,0x00,LPWD);memcpy(modpass,valf,nvalf[i+1]-nvalf[i]);break;        // (config) modpcfg___
               case 50: memset(peripass,0x00,LPWD);memcpy(peripass,valf,nvalf[i+1]-nvalf[i]);break;      // (config) peripcfg__
-              case 51: for(j=0;j<6;j++){conv_atoh(valf+j*2,(mac+j));}break;                             // (config) Mac config
+              case 51: char eth;eth=*(libfonctions+2*i+1);                                              // (config) eth config
+                       switch(eth){
+                          case 'i': break;memset(localIp,0x00,4);                                     // (config) localIp
+//                                    for(j=0;j<4;j++){conv_atob(valf,localIp+j);}break;   // **** à faire ****
+                          case 'p': *portserver=0;conv_atob(valf,portserver);break;                   // (config) portserver
+                          case 'm': for(j=0;j<6;j++){conv_atoh(valf+j*2,(mac+j));}break;              // (config) mac
+                          default: break;
+                       }
+                       break;
               case 52: what=8;                                                                       // submit depuis cfgRemotehtml
                        {int nb=*(libfonctions+2*i+1)-PMFNCHAR;
                         switch(*(libfonctions+2*i)){                                               

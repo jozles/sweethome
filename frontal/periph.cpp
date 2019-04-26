@@ -46,7 +46,7 @@ extern byte      periCacheStatus[NBPERIF];     // indicateur de validité du cac
   
 extern int       periCur;                      // Numéro du périphérique courant
 
-extern uint16_t*  periNum;                     // ptr ds buffer : Numéro du périphérique courant
+extern uint16_t* periNum;                      // ptr ds buffer : Numéro du périphérique courant
 extern int32_t*  periPerRefr;                  // ptr ds buffer : période datasave minimale
 extern uint16_t* periPerTemp;                  // ptr ds buffer : période de lecture tempèrature
 extern float*    periPitch;                    // ptr ds buffer : variation minimale de température pour datasave
@@ -264,10 +264,8 @@ memset(nomserver,0x00,LNSERV);memcpy(nomserver,NOMSERV,strlen(NOMSERV));
 memset(userpass,0x00,LPWD+1);memcpy(userpass,USRPASS,strlen(SRVPASS));
 memset(modpass,0x00,LPWD+1);memcpy(modpass,MODPASS,strlen(MODPASS));
 memset(peripass,0x00,LPWD+1);memcpy(peripass,SRVPASS,strlen(PERIPASS));
-//Serial.print(" strlen(SRVPASS)=");Serial.print(strlen(SRVPASS));Serial.print(" peripass=");for(int pp=0;pp<(LPWD+1);pp++){Serial.print(peripass[pp],HEX);Serial.print(" ");}Serial.println();
 memset(ssid,0x00,MAXSSID*(LENSSID+1));
 memcpy(ssid,SSID1,strlen(SSID1));memcpy(ssid+LENSSID+1,SSID2,strlen(SSID2));   
-//Serial.print(" strlen(SSID1)=");Serial.print(strlen(SSID1));Serial.print(" ssid=");for(int pp=0;pp<(LENSSID+1);pp++){Serial.print(ssid[pp]);}Serial.println();
 memset(passssid,0x00,MAXSSID*(LPWSSID+1));
 memcpy(passssid,PWDSSID1,strlen(PWDSSID1));memcpy(passssid+LPWSSID+1,PWDSSID2,strlen(PWDSSID2));
 *nbssid = MAXSSID;

@@ -36,7 +36,7 @@
  *      commonserver() 
  *      nouveau système password et TO (voir commonserver()) (boutRetour,boutFonction,usrForm)
  *      ajout periPort et tfr via ack/set ; accés aux périph serveurs débuggé (fermeture connection "cli.stop")
- * 1.2b ajout timers ; periTableHtml() protège periCur ;    
+ * 1.2b ajout timers ; periTableHtml() protège periCur ; periSend valorise periCur + periLoad   
  *      
  * à faire :
  *     
@@ -48,25 +48,58 @@
  *     
  */
 
+/* mac,adressage,port
+  
+  (MACADDR) mac du fichier config définit la carte ethernet.
+  Le routeur doit la connaitre via la table DHCP pour lui attribuer une adresse IP fixe
+  ce qui permet de démarrer le service avec "Ethernet.begin(mac)"
+  Sinon utiliser "Ethernet.begin(mac,localIp)" pour forcer une adresse IP particulière (localIp provient du fichier de config)
+  (si elle est déjà prise sur le routeur ça ne fonctionnera pas). 
+  Pour configurer la table DHCP de la box, l'adresse MAC doit en être connue : 
+    démarrer le serveur avec Ethernet.begin(mac), la box fourni une adresse Ip quelconque, puis configurer DHCP sur la box)
+  localIp ne sert à rien en cas de bail fixe sur la box.
+  mac et localIp du fichier config sont inutilisés (v1.2b)
+  
+
+  PORTSERVER et PORTPILOT sont les port des serveurs. 
+  Pour permettre aux appels entrants sur l'adresse de la box (forme xxx.xxx.xxx.xxx/pppp) d'aboutir aux serveurs,
+  la box doit avoir une redirection de port paramétrée vers l'IP de la carte ethernet (donc de préférence un bail fixe).
+  (PORTPERISERVER et PORTPILOTSERVER proviennent de shconst.h)
+  "portserver" du fichier config est inutilisé (v1.2b)
+
+  pour initialiser un serveur : 
+  configurer (MACADDR) mac de config + PORTSERVER et PORTPILOT qui doivent correspondre au DHCP et redirection de port de la box
+
+*/
+
 #define _MODE_DEVT    // change l'adresse Mac de la carte IP, l'adresse IP et le port
+
+#ifdef _MODE_DEVT2
+#define MACADDR "\x90\xA2\xDA\x0F\xDF\xAE"    
+#define LOCALSERVERIP {192,168,0,36}          
+#define PORTSERVER PORTPERISERVER2
+#define PORTPILOT  PORTPILOTSERVER2
+#define NOMSERV "sweet dev2\0"
+#define LNSERV  17
+#endif _MODE_DEVT2
 
 #ifdef _MODE_DEVT
 #define MACADDR "\x90\xA2\xDA\x0F\xDF\xAC"    //adresse mac carte ethernet AB service ; AC devt
 #define LOCALSERVERIP {192,168,0,35}                   //adresse IP    ---- 34 service, 35 devt
-#define PORTSERVER 1790
+#define PORTSERVER PORTPERISERVER
+#define PORTPILOT  PORTPILOTSERVER
 #define NOMSERV "sweet hdev\0"
 #define LNSERV  17
 #endif _MODE_DEVT
 
-#ifndef _MODE_DEVT
+#ifdef _MODE_RUN
 #define MACADDR "\x90\xA2\xDA\x0F\xDF\xAB"    //adresse mac carte ethernet AB service ; AC devt
-#define MACADDRREM "\x90\xA2\xDA\x0F\xDF\xAD"
 #define LOCALSERVERIP {192,168,0,34}                   //adresse IP    ---- 34 service, 35 devt
-#define REMOTESERVERIP {192,168,0,36}
-#define PORTSERVER 1789
+#define PORTSERVER PORTPERISERVER
+#define PORTPILOT  PORTPILOTSERVER
 #define NOMSERV "sweet home\0"
 #define LNSERV  17
-#endif _MODE_DEVT
+#endif _MODE_RUN
 
 #define UDPUSAGE
 

@@ -9,16 +9,18 @@
 #include "periph.h"
 #include "pageshtml.h"
 
-extern char* nomserver;
-extern byte* mac;              // adresse server
-extern char* userpass;         // mot de passe browser
-extern char* modpass;          // mot de passe modif
-extern char* peripass;         // mot de passe périphériques
+extern char*     nomserver;
+extern byte*     mac;              // adresse server
+extern byte*     localIp;
+extern uint16_t* portserver;
+extern char*     userpass;         // mot de passe browser
+extern char*     modpass;          // mot de passe modif
+extern char*     peripass;         // mot de passe périphériques
 
-extern char* chexa;
-extern byte  maskbit[];
+extern char*     chexa;
+extern byte      maskbit[];
 
-extern int   periCur;          // Numéro du périphérique courant
+extern int       periCur;          // Numéro du périphérique courant
 
 extern byte*     periMacr;                     // ptr ds buffer : mac address 
 extern char*     periNamer;                    // ptr ds buffer : description périphérique
@@ -206,7 +208,9 @@ void cfgServerHtml(EthernetClient* cli)
             cli->print("  modpass <input type=\"text\" name=\"modpcfg___\" value=\"");cli->print(modpass);cli->print("\" size=\"5\" maxlength=\"");cli->print(LPWD);cli->println("\" >");            
             cli->print(" peripass <input type=\"text\" name=\"peripcfg__\" value=\"");cli->print(peripass);cli->print("\" size=\"5\" maxlength=\"");cli->print(LPWD);cli->println("\" >");            
             cli->print(" to password");numTableHtml(cli,'d',toPassword,"to_passwd_",6,0,0);cli->println("<br>");
-            cli->print(" serverMac <input type=\"text\" name=\"maccfg____\" value=\"");for(int k=0;k<6;k++){cli->print(chexa[mac[k]/16]);cli->print(chexa[mac[k]%16]);}cli->print("\" size=\"11\" maxlength=\"");cli->print(12);cli->println("\" >");                        
+            cli->print(" serverMac <input type=\"text\" name=\"ethcfg___m\" value=\"");for(int k=0;k<6;k++){cli->print(chexa[mac[k]/16]);cli->print(chexa[mac[k]%16]);}cli->print("\" size=\"11\" maxlength=\"");cli->print(12);cli->println("\" >");                        
+            cli->print(" localIp <input type=\"text\" name=\"ethcfg___i\" value=\"");for(int k=0;k<4;k++){cli->print(localIp[k]);if(k!=3){cli->print(".");}}cli->print("\" size=\"11\" maxlength=\"");cli->print(15);cli->println("\" >");                        
+            cli->print(" portserver ");numTableHtml(cli,'d',portserver,"ethcfg___p",4,0,0);cli->println("<br>");
 
             subcfgtable(cli,"SSID",MAXSSID,"ssid_____",ssid,LENSSID,1,"passssid_",passssid,LPWSSID,"password",1);
             subcfgtable(cli,"USERNAME",NBUSR,"usrname__",usrnames,LENUSRNAME,1,"usrpass__",usrpass,LENUSRPASS,"password",1);

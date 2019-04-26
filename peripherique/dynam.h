@@ -54,6 +54,15 @@ Mode d'emploi de la peritable :
         2nde source : le serveur : bit enable, bit H/L
         3ème source : le générateur d'impulsion : bit enable, bit H/L
 
+Modification à faire : la source serveur devient la source remote : ajouter 4 bits remote pour 4 switchs (cstRec.remote et ack/set) ; 
+                       les remotes fonctionnent en OU pour l'allumage (plusieurs remotes possibles sur le même switch)
+                       periSwVal devient un disjoncteur qui coupe tout
+                       ajout d'un écran de disjoncteurs et forçages d'allumages pour les switchs (1 ligne avec 2 inters par switch)
+                       3 lignes deviennent valides dans le contrôle des switchs : 
+                            I forçage ON 
+                            O forçage OFF (si pas I)
+                            X On (si pas O)
+                            
 exemple : positionner le switch 0 selon l'état du détecteur local 2 (P4 de la carte VR) et switch 1 à l'inverse
           (contrôle des détecteurs / conrôle des switchs)    (contrôle des détecteurs / conrôle des switchs)    (x coché, _ vide)
                   xx2_x0                I 1 xx____                  xx2__0                I 0 x_____                  
@@ -72,7 +81,6 @@ exemple : faire clignoter le switch 0 sur déclenchement du détecteur local 2 a
              x  4                              __0__0                O 0 ____x_       
                                                __0__0
                                                __0__0
-
  
 exemple : volets roulants avec détecteurs 0 et 1 (sur inter on off on P12 carte VR)
            compteurs  freerun          (contrôle des détecteurs / conrôle des switchs)    (x coché, _ vide)
@@ -80,6 +88,21 @@ exemple : volets roulants avec détecteurs 0 et 1 (sur inter on off on P12 carte
              x  12                             xx0_x6                O 0 __x_x_       
                                                xx1__1
                                                __0__0
+
+exemple : déclencher avec timer 2 (utilisation du détecteur serveur 3(0-7)) 
+          timers
+          n° nom     det hdeb   hfin    e p c f 7lmmjvsd dhdeb   dhfin
+          2  exemple 3   hhmmss hhmmss  1 1     11111111 0000... 9999....   le bit e déclenche le détec au passage à 1
+                                                                            mais est sans effet au passage à 0            
+
+         (contrôle des détecteurs / conrôle des switchs)    (x coché, _ vide)  (utilisation dl 2)
+                  __0__0                I 2 xx____                  
+                  __0__0                O 2 x_____       
+                  x_3__0
+                  __0__0
+
+            
+
 */         
  
 
